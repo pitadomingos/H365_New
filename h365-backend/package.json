@@ -1,0 +1,21 @@
+{
+  "name": "h365-backend",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mysql2": "^3.0.0"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^9.8.0",
+    "dotenv": "^16.0.0"
+  }
+}

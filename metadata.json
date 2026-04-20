@@ -1,0 +1,8 @@
+{
+  "name": "HealthFlow H365",
+  "description": "Nationwide Public Hospital SaaS Platform with PWA support and local facility mirror capabilities for offline-first operation.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

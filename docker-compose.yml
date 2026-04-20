@@ -1,0 +1,45 @@
+# HealthFlow H365 - Local Facility Node
+# docker-compose up -d
+
+version: '3.8'
+
+services:
+  # The Frontend / Application Layer
+  h365-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_PLATFORM_MODE=local
+      - NEXT_PUBLIC_CLOUD_API_URL=https://h365-national-cloud.gov.na/api
+    restart: always
+    depends_on:
+      - h365-local-db
+
+  # Local Facility Database
+  # This ensures the hospital works even if the cloud is unreachable
+  h365-local-db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=h365_local
+      - POSTGRES_USER=h365_admin
+      - POSTGRES_PASSWORD=secure_local_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # Background Sync Agent
+  # Manages bidirectional data sync between local and cloud
+  h365-sync-agent:
+    image: h365/sync-agent:latest
+    environment:
+      - LOCAL_DB_URL=postgres://h365_admin:secure_local_password@h365-local-db:5432/h365_local
+      - CLOUD_ENDPOINT=https://h365-national-cloud.gov.na/sync
+      - FACILITY_ID=FAC-001 # Unique ID for this hospital
+    restart: always
+
+volumes:
+  postgres_data:
