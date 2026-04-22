@@ -205,7 +205,7 @@ const getBloodPressureStatus = (bp: string, t: (key: string) => string): { statu
 
 export default function MaternityCarePage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [searchNationalId, setSearchNationalId] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<MaternityPatient | null>(null);

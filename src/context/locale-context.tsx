@@ -16,14 +16,27 @@ const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [currentLocale, setCurrentLocaleState] = useState<Locale>(defaultLocale);
 
+  // Initialize from localStorage if available
+  React.useEffect(() => {
+    const savedLocale = localStorage.getItem('h365-locale') as Locale;
+    if (savedLocale && locales.includes(savedLocale)) {
+      setCurrentLocaleState(savedLocale);
+    }
+  }, []);
+
   const setCurrentLocale = (locale: Locale) => {
     if (locales.includes(locale)) {
       setCurrentLocaleState(locale);
+      localStorage.setItem('h365-locale', locale);
     }
   };
 
   const toggleLocale = () => {
-    setCurrentLocaleState((prevLocale) => (prevLocale === 'en' ? 'pt' : 'en'));
+    setCurrentLocaleState((prevLocale) => {
+      const newLocale = prevLocale === 'en' ? 'pt' : 'en';
+      localStorage.setItem('h365-locale', newLocale);
+      return newLocale;
+    });
   };
 
   return (

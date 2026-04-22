@@ -161,3 +161,33 @@ export const MOCK_MATERNITY_PATIENTS = [
     antenatalVisits: [],
   }
 ];
+
+export const MOCK_IMAGING_REPORTS = [
+  { 
+    id: "IMG001", 
+    patientName: "Alice Mwamba", 
+    nationalId: "1029384756", 
+    studyRequested: "Chest X-Ray (PA View)", 
+    requestDate: "2026-04-15", 
+    report: "Lungs are clear. No pleural effusions or pneumothorax. Cardiomediastinal silhouette is within normal limits. Bony structures are intact.",
+    impression: "Normal Chest X-Ray."
+  },
+  { 
+    id: "IMG002", 
+    patientName: "Emmanuel Phiri", 
+    nationalId: "5647382910", 
+    studyRequested: "MRI Brain", 
+    requestDate: "2026-04-18", 
+    report: "No acute intracranial hemorrhage or territorial infarct. Ventricular system and subarachnoid spaces are normal for age. No abnormal enhancement.",
+    impression: "Unremarkable Brain MRI."
+  },
+  {
+    id: "IMG003",
+    patientName: "Grace Tembo",
+    nationalId: "9988776655",
+    studyRequested: "Ultrasound Abdomen",
+    requestDate: "2026-04-19",
+    report: "Liver is normal in size and echotexture. Gallbladder contains no stones. Spleen and pancreas appear normal. Kidneys are within normal size with no hydronephrosis.",
+    impression: "Normal abdominal ultrasound."
+  }
+];

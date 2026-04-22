@@ -16,6 +16,7 @@ import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, The
 import type { TreatmentRecommendationInput, TreatmentRecommendationOutput } from '@/ai/flows/treatment-recommendation';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "@/hooks/use-toast";
+import { MOCK_PATIENTS } from '@/lib/mock-data';
 import {
   Dialog,
   DialogContent,
@@ -86,6 +87,7 @@ export interface ConsultationInitialData extends Partial<FormValues> {
 
 interface ConsultationFormProps {
   getRecommendationAction: (input: TreatmentRecommendationInput) => Promise<TreatmentRecommendationOutput | { error: string }>;
+  getPatientContextAction: (nationalId: string) => Promise<any | null>;
   initialData?: ConsultationInitialData | null;
 }
 
@@ -137,7 +139,7 @@ const getBloodPressureStatus = (bp: string, t: (key: string) => string): { statu
 };
 
 
-export function ConsultationForm({ getRecommendationAction, initialData }: ConsultationFormProps) {
+export function ConsultationForm({ getRecommendationAction, getPatientContextAction, initialData }: ConsultationFormProps) {
   const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
 
@@ -255,20 +257,30 @@ export function ConsultationForm({ getRecommendationAction, initialData }: Consu
     setSelectedLabTests({});
 
     await new Promise(resolve => setTimeout(resolve, 1000)); 
-    if (nationalId === "123456789" || nationalId === "987654321") {
+    const foundPatient = MOCK_PATIENTS.find(p => p.nationalId === nationalId);
+    if (foundPatient) {
       const fetchedPatientData: PatientData = {
-        nationalId: nationalId,
-        fullName: nationalId === "123456789" ? "Demo Patient One" : "Jane Sample Doe",
-        age: nationalId === "123456789" ? 34 : 45,
-        gender: nationalId === "123456789" ? "Male" : "Female",
-        address: "123 Health St, Wellness City",
-        homeClinic: "City General Hospital",
-        photoUrl: "https://placehold.co/120x120.png",
-        allergies: nationalId === "123456789" ? ["Penicillin", "Dust Mites"] : ["None Reported"],
-        chronicConditions: nationalId === "123456789" ? ["Asthma"] : ["Hypertension", "Type 2 Diabetes"],
+        nationalId: foundPatient.nationalId,
+        fullName: foundPatient.fullName,
+        age: foundPatient.age,
+        gender: foundPatient.gender as any,
+        address: `${foundPatient.district}, ${foundPatient.province}`,
+        homeClinic: "District Hospital",
+        photoUrl: foundPatient.photoUrl,
+        allergies: foundPatient.allergies || ["None Reported"],
+        chronicConditions: foundPatient.chronicConditions || ["None Reported"],
       };
       setPatientData(fetchedPatientData);
-      toast({ title: t('consultationForm.toast.search.found'), description: t('consultationForm.toast.search.found.desc', {fullName: fetchedPatientData.fullName}) });
+      
+      // Fetch Clinical Context
+      const context = await getPatientContextAction(nationalId);
+      if (context) {
+        form.setValue("labResultsSummary", context.recentLabs);
+        form.setValue("imagingDataSummary", context.recentImaging);
+        toast({ title: t('consultationForm.toast.search.found'), description: t('consultationRoom.toast.loadingDraft.description', {patientName: fetchedPatientData.fullName}) });
+      } else {
+        toast({ title: t('consultationForm.toast.search.found'), description: t('consultationForm.toast.search.found.desc', {fullName: fetchedPatientData.fullName}) });
+      }
     } else {
       toast({ variant: "destructive", title: t('consultationForm.toast.search.notFound'), description: t('consultationForm.toast.search.notFound.desc') });
       setPatientData(null); 
@@ -311,6 +323,7 @@ ${visitHistoryString || "No recent visit history available."}
         symptoms: comprehensiveSymptoms,
         labResults: data.labResultsSummary || "Not provided",
         imagingData: data.imagingDataSummary || "Not provided",
+        patientId: patientData.nationalId,
       };
       const result = await getRecommendationAction(aiInput);
       if ('error' in result) {

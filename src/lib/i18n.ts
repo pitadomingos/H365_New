@@ -27,6 +27,38 @@ export const translations: Record<Locale, Record<string, any>> = {
     'dashboard.card.draftedConsultations.description': "Resume incomplete patient consultations.",
     'dashboard.card.viewDetails': "View Details",
     'dashboard.card.viewAllDrafts': "View All Drafts",
+    
+    // Navigation
+    'nav.dashboard': "Dashboard",
+    'nav.patientRegistration': "Patient Registration",
+    'nav.visitingPatients': "Visiting Patients",
+    'nav.appointments': "Appointments",
+    'nav.consultationRoom': "Consultation Room",
+    'nav.specializations': "Specializations",
+    'nav.maternityCare': "Maternity Care",
+    'nav.wardManagement': "Ward Management",
+    'nav.laboratory': "Laboratory",
+    'nav.imaging': "Imaging",
+    'nav.drugDispensing': "Drug Dispensing",
+    'nav.emergencyRoom': "Emergency Room",
+    'nav.epidemicControl': "Epidemic Control",
+    'nav.campaigns': "Campaigns",
+    'nav.reporting': "Reporting",
+    'nav.billingFinance': "Billing & Finance",
+    'nav.telemedicine': "Telemedicine",
+    'nav.analyticsBi': "Analytics & BI",
+    'nav.bloodBank': "Blood Bank",
+    'nav.systemActivityLog': "System Activity Log",
+    'nav.systemNodeStatus': "System Node Status",
+    'nav.technicalOverview': "Technical Overview",
+    'nav.backendRoadmap': "Backend Roadmap",
+    'nav.architectureOptions': "Architecture Options",
+    'nav.trainingMaterials': "Training Materials",
+    'nav.systemDocumentation': "System Documentation",
+    'nav.toDoList': "To-Do List",
+    'nav.notifications': "Notifications",
+    'nav.settings': "Settings",
+    'nav.logout': "Logout",
 
     'dashboard.recentActivity.title': "Recent Activity",
     'dashboard.recentActivity.description': "Overview of recent system events and patient interactions.",
@@ -1853,6 +1885,38 @@ export const translations: Record<Locale, Record<string, any>> = {
     'systemStatus.pendingAlert.title': "Crítico: Sincronizações Pendentes",
     'systemStatus.pendingAlert.description': "Tem {count} registos clínicos que existem APENAS neste nó local. Serão sincronizados automaticamente quando a ligação à Nuvem Nacional melhorar.",
 
+    // Navigation (Portuguese)
+    'nav.dashboard': "Painel Principal",
+    'nav.patientRegistration': "Registo de Pacientes",
+    'nav.visitingPatients': "Pacientes em Visita",
+    'nav.appointments': "Agendamentos",
+    'nav.consultationRoom': "Sala de Consulta",
+    'nav.specializations': "Especialidades",
+    'nav.maternityCare': "Cuidados Maternos",
+    'nav.wardManagement': "Gestão de Enfermarias",
+    'nav.laboratory': "Laboratório",
+    'nav.imaging': "Imagiologia",
+    'nav.drugDispensing': "Dispensa de Medicamentos",
+    'nav.emergencyRoom': "Sala de Emergência",
+    'nav.epidemicControl': "Controlo de Epidemias",
+    'nav.campaigns': "Campanhas",
+    'nav.reporting': "Relatórios",
+    'nav.billingFinance': "Faturação e Finanças",
+    'nav.telemedicine': "Telemedicina",
+    'nav.analyticsBi': "Análise e BI",
+    'nav.bloodBank': "Banco de Sangue",
+    'nav.systemActivityLog': "Log de Atividade do Sistema",
+    'nav.systemNodeStatus': "Estado do Nó Local",
+    'nav.technicalOverview': "Visão Geral Técnica",
+    'nav.backendRoadmap': "Roadmap do Backend",
+    'nav.architectureOptions': "Opções de Arquitetura",
+    'nav.trainingMaterials': "Materiais de Treino",
+    'nav.systemDocumentation': "Documentação do Sistema",
+    'nav.toDoList': "Lista de Tarefas",
+    'nav.notifications': "Notificações",
+    'nav.settings': "Definições",
+    'nav.logout': "Terminar Sessão",
+
     // Maternity Details
     'maternity.details.bloodGroup': "Grupo Sanguíneo",
     'maternity.details.bmi': "IMC",
@@ -1892,7 +1956,7 @@ export const getTranslator = (locale: Locale = defaultLocale): ((key: string, pa
     let result = String(translation);
     if (params) {
       Object.keys(params).forEach(paramKey => {
-        result = result.replace(new RegExp(`{${paramKey}}`, 'g'), String(params[paramKey]));
+        result = result.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(params[paramKey]));
       });
     }
     return result;

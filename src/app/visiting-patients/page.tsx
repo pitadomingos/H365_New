@@ -156,7 +156,7 @@ export default function VisitingPatientsPage() {
         setIsWaitingListLoading(false);
         setIsAnalyticsLoading(false);
       }
-    }, [currentLocale, t]); 
+    }, [t]); 
 
     useEffect(() => {
         fetchInitialData();

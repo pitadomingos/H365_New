@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardEdit, ListChecks, Bell, Users, FileClock, Loader2, Star } from "lucide-react";
 import { ConsultationForm, type ConsultationInitialData } from "./consultation-form";
-import { getTreatmentRecommendationAction } from "./actions";
+import { getTreatmentRecommendationAction, getPatientContextAction } from "./actions";
 import Image from "next/image";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, type Locale } from '@/lib/i18n';
@@ -337,6 +337,7 @@ export default function ConsultationRoomPage() {
           </div>
           <ConsultationForm
             getRecommendationAction={getTreatmentRecommendationAction}
+            getPatientContextAction={getPatientContextAction}
             initialData={dataToLoadInForm}
           />
         </div>

@@ -87,16 +87,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <SidebarMenu>
             {NAV_ITEMS.map((item: NavItem) => (
-              <SidebarMenuItem key={item.label}>
+              <SidebarMenuItem key={item.labelKey}>
                 <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  disabled={item.disabled}
-                  className={cn(item.disabled && "cursor-not-allowed opacity-50")}
-                  onClick={() => !item.disabled && router.push(item.href)} // Programmatic navigation
-                  tooltip={item.label} // Tooltip for collapsed state
+                   isActive={pathname === item.href}
+                   disabled={item.disabled}
+                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
+                   onClick={() => !item.disabled && router.push(item.href)} // Programmatic navigation
+                   tooltip={t(item.labelKey)} // Tooltip for collapsed state
                 >
                   <item.icon />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -109,16 +109,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
            <SidebarMenu>
             {BOTTOM_NAV_ITEMS.map((item: NavItem) => (
-              <SidebarMenuItem key={item.label}>
+              <SidebarMenuItem key={item.labelKey}>
                 <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  disabled={item.disabled}
-                  className={cn(item.disabled && "cursor-not-allowed opacity-50")}
-                  onClick={() => !item.disabled && router.push(item.href)} // Programmatic navigation
-                  tooltip={item.label}
+                   isActive={pathname === item.href}
+                   disabled={item.disabled}
+                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
+                   onClick={() => !item.disabled && router.push(item.href)} // Programmatic navigation
+                   tooltip={t(item.labelKey)}
                 >
                   <item.icon />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
