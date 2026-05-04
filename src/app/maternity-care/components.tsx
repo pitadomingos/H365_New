@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import Image from 'next/image';
 import { CalendarIcon, HistoryIcon, Thermometer, Weight, Ruler, Sigma, ActivityIcon as BloodPressureIcon } from "lucide-react";
 
 /**
@@ -72,10 +73,13 @@ export const PatientBioCard = memo(({
     <Card className="shadow-sm border-primary/20 bg-primary/5">
       <CardHeader className="pb-3 text-center">
         <div className="mx-auto w-24 h-24 rounded-full overflow-hidden border-4 border-background shadow-md relative mb-3">
-           <img 
+          <Image 
             src={patient.photoUrl} 
             alt={patient.fullName}
+            width={96}
+            height={96}
             className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
           />
         </div>
         <CardTitle className="text-xl">{patient.fullName}</CardTitle>

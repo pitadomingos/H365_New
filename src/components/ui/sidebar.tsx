@@ -273,11 +273,13 @@ const sidebarMenuButtonVariants = cva(
 
 const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement> & { // No more asChild for NAV_ITEMS
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { 
+    asChild?: boolean;
     isActive?: boolean;
     tooltip?: string;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(({
+  asChild = false,
   isActive = false,
   variant = "default",
   size = "default",
@@ -289,8 +291,10 @@ const SidebarMenuButton = React.forwardRef<
   const { open } = useSidebar();
   const isIconOnlyCollapsed = !open;
 
+  const Comp = asChild ? Slot : "button";
+
   const buttonContent = (
-    <button
+    <Comp
       ref={ref}
       data-active={isActive}
       className={cn(
@@ -300,15 +304,8 @@ const SidebarMenuButton = React.forwardRef<
       )}
       {...props}
     >
-      {React.Children.map(children, (child) => {
-        if (React.isValidElement(child) && child.type === 'span') {
-          return React.cloneElement(child as React.ReactElement<any>, {
-            className: cn(child.props.className, isIconOnlyCollapsed && "hidden"),
-          });
-        }
-        return child;
-      })}
-    </button>
+      {children}
+    </Comp>
   );
 
   if (isIconOnlyCollapsed && tooltip) {

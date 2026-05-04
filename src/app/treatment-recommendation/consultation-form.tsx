@@ -45,6 +45,8 @@ const FormSchema = z.object({
   labResultsSummary: z.string().optional(),
   imagingDataSummary: z.string().optional(),
   doctorComments: z.string().optional(),
+  finalDiagnosis: z.string().min(1, "Final Diagnosis is required for completion."),
+  finalPrescription: z.string().min(1, "Final Prescription is required for completion."),
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
     message: "At least one of symptoms, lab results summary, or imaging data summary must be provided for AI recommendation.",
     path: ["symptoms"],
@@ -141,7 +143,7 @@ const getBloodPressureStatus = (bp: string, t: (key: string) => string): { statu
 
 export function ConsultationForm({ getRecommendationAction, getPatientContextAction, initialData }: ConsultationFormProps) {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [isAiPending, startAiTransition] = useTransition();
   const [recommendation, setRecommendation] = useState<TreatmentRecommendationOutput | null>(null);
@@ -174,6 +176,8 @@ export function ConsultationForm({ getRecommendationAction, getPatientContextAct
       labResultsSummary: initialData?.labResultsSummary || "",
       imagingDataSummary: initialData?.imagingDataSummary || "",
       doctorComments: initialData?.doctorComments || "",
+      finalDiagnosis: initialData?.finalDiagnosis || "",
+      finalPrescription: initialData?.finalPrescription || "",
     },
   });
 
@@ -185,7 +189,7 @@ export function ConsultationForm({ getRecommendationAction, getPatientContextAct
   useEffect(() => {
     if (initialData) {
       form.reset({
-        nationalIdSearch: initialData.nationalIdSearch || patientData?.nationalId || "",
+        nationalIdSearch: initialData.nationalIdSearch || initialData.patientData?.nationalId || "",
         bodyTemperature: initialData.bodyTemperature || "",
         weight: initialData.weight || "",
         height: initialData.height || "",
@@ -194,6 +198,8 @@ export function ConsultationForm({ getRecommendationAction, getPatientContextAct
         labResultsSummary: initialData.labResultsSummary || "",
         imagingDataSummary: initialData.imagingDataSummary || "",
         doctorComments: initialData.doctorComments || "",
+        finalDiagnosis: initialData.finalDiagnosis || "",
+        finalPrescription: initialData.finalPrescription || "",
       });
       setPatientData(initialData.patientData || null);
       setRecommendation(initialData.recommendation || null);
@@ -363,8 +369,8 @@ ${visitHistoryString || "No recent visit history available."}
       aiPrescription: recommendation?.prescription,
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.doctorComments,
-      finalDiagnosis: currentFormData.doctorComments ? `Diagnosis based on notes: ${currentFormData.doctorComments.substring(0,50)}...` : "Diagnosis TBD",
-      prescription: recommendation?.prescription ? `Prescription based on AI: ${recommendation.prescription}` : "Prescription TBD",
+      finalDiagnosis: currentFormData.finalDiagnosis,
+      prescription: currentFormData.finalPrescription,
       outcome: outcome,
     };
 
@@ -410,6 +416,8 @@ ${visitHistoryString || "No recent visit history available."}
       aiPrescription: recommendation?.prescription,
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.doctorComments,
+      finalDiagnosis: currentFormData.finalDiagnosis,
+      finalPrescription: currentFormData.finalPrescription,
       status: "DRAFT"
     };
 
@@ -765,12 +773,36 @@ ${visitHistoryString || "No recent visit history available."}
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Stethoscope className="h-5 w-5" />{t('consultationForm.aiInsights.diagnosis.title')}</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2"><Stethoscope className="h-5 w-5" />{t('consultationForm.aiInsights.diagnosis.title')}</h3>
+                    {recommendation.diagnosis && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => setValue('finalDiagnosis', recommendation.diagnosis)}
+                      >
+                        <Save className="h-3.5 w-3.5 mr-1" /> Use AI Diagnosis
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.diagnosis || t('consultationForm.aiInsights.diagnosis.none')}</p>
                 </div>
                 <Separator />
                 <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Pill className="h-5 w-5" />{t('consultationForm.aiInsights.prescription.title')}</h3>
+                   <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2"><Pill className="h-5 w-5" />{t('consultationForm.aiInsights.prescription.title')}</h3>
+                    {recommendation.prescription && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => setValue('finalPrescription', recommendation.prescription)}
+                      >
+                        <Save className="h-3.5 w-3.5 mr-1" /> Use AI Prescription
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.prescription || t('consultationForm.aiInsights.prescription.none')}</p>
                 </div>
                 <Separator />
@@ -793,6 +825,43 @@ ${visitHistoryString || "No recent visit history available."}
                         className="min-h-[100px]"
                         disabled={isActionDisabled}
                         />
+                </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-primary/20 bg-primary/5">
+                <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg text-primary">
+                      <Edit3 className="h-5 w-5"/> Clinician&apos;s Verified Record
+                    </CardTitle>
+                    <CardDescription>Final diagnosis and prescription for the electronic health record.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="finalDiagnosis" className="font-bold">Final Clinical Diagnosis <span className="text-destructive">*</span></Label>
+                        <Textarea
+                            id="finalDiagnosis"
+                            placeholder="Type the final confirmed diagnosis here..."
+                            {...form.register('finalDiagnosis')}
+                            className="min-h-[100px] bg-background"
+                            disabled={isActionDisabled}
+                        />
+                        {form.formState.errors.finalDiagnosis && (
+                            <p className="text-xs text-destructive">{form.formState.errors.finalDiagnosis.message}</p>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="finalPrescription" className="font-bold">Final Prescription <span className="text-destructive">*</span></Label>
+                        <Textarea
+                            id="finalPrescription"
+                            placeholder="Type the final confirmed prescription here..."
+                            {...form.register('finalPrescription')}
+                            className="min-h-[100px] bg-background"
+                            disabled={isActionDisabled}
+                        />
+                        {form.formState.errors.finalPrescription && (
+                            <p className="text-xs text-destructive">{form.formState.errors.finalPrescription.message}</p>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
 

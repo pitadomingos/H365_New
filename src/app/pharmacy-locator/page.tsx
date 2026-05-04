@@ -74,7 +74,7 @@ const initialRequisitionLogData: RequisitionLogItem[] = [
 
 export default function DrugDispensingPage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoadingPrescriptions, setIsLoadingPrescriptions] = useState(true);

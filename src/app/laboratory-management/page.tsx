@@ -142,7 +142,7 @@ const initialLabRequisitionLogData: LabRequisitionLogItem[] = [
 
 export default function LaboratoryManagementPage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [labRequests, setLabRequests] = useState<LabRequest[]>([]);
   const [isLoadingLabRequests, setIsLoadingLabRequests] = useState(true);

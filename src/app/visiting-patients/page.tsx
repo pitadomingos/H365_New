@@ -9,13 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react";
+import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2, Sparkles, Stethoscope, ClipboardList } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid, Cell } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { VitalsForm } from "@/components/clinical/vitals-form";
+import { AIAssistantPanel } from "@/components/clinical/ai-assistant-panel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -80,7 +83,10 @@ export default function VisitingPatientsPage() {
   const [department, setDepartment] = useState("");
   const [reasonForVisit, setReasonForVisit] = useState("");
   const [assignedDoctor, setAssignedDoctor] = useState("");
+  const [verifiedDiagnosis, setVerifiedDiagnosis] = useState("");
+  const [verifiedPrescription, setVerifiedPrescription] = useState("");
   const [isAddingToWaitingList, setIsAddingToWaitingList] = useState(false);
+  const [vitalsData, setVitalsData] = useState<any>(null);
 
   const [currentDate, setCurrentDate] = useState<string | null>(null);
   const hospitalName = "H365 Central Hospital"; 
@@ -222,6 +228,8 @@ export default function VisitingPatientsPage() {
       department: department,
       reasonForVisit: reasonForVisit,
       assignedDoctor: assignedDoctor || null,
+      diagnosis: verifiedDiagnosis,
+      prescription: verifiedPrescription,
       visitDate: new Date().toISOString()
     };
 
@@ -279,6 +287,9 @@ export default function VisitingPatientsPage() {
       setReasonForVisit("");
       setAssignedDoctor("");
       setPatientNotFound(false);
+      setVitalsData(null);
+      setVerifiedDiagnosis("");
+      setVerifiedPrescription("");
     } catch (error: any) {
         console.error("Error adding to waiting list:", error);
         toast({ variant: "destructive", title: t('visitingPatients.toast.submissionError'), description: error.message || t('visitingPatients.toast.addToListError') });
@@ -472,44 +483,105 @@ export default function VisitingPatientsPage() {
                       <br/>{t('visitingPatients.patientCard.chronicConditions')} {searchedPatient.chronicConditions || t('visitingPatients.patientCard.noneReported')}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="department">{t('visitingPatients.visitDetails.department.label')} <span className="text-destructive">*</span></Label>
-                      <Select value={department} onValueChange={setDepartment} required>
-                        <SelectTrigger id="department">
-                          <SelectValue placeholder={t('visitingPatients.visitDetails.department.placeholder')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={t('visitingPatients.visitDetails.department.outpatient')}>{t('visitingPatients.visitDetails.department.outpatient')}</SelectItem>
-                          <SelectItem value={t('visitingPatients.visitDetails.department.lab')}>{t('visitingPatients.visitDetails.department.lab')}</SelectItem>
-                          <SelectItem value={t('visitingPatients.visitDetails.department.imaging')}>{t('visitingPatients.visitDetails.department.imaging')}</SelectItem>
-                          <SelectItem value={t('visitingPatients.visitDetails.department.pharmacy')}>{t('visitingPatients.visitDetails.department.pharmacy')}</SelectItem>
-                          <SelectItem value={t('visitingPatients.visitDetails.department.specialist')}>{t('visitingPatients.visitDetails.department.specialist')}</SelectItem>
-                          <SelectItem value={t('visitingPatients.visitDetails.department.emergency')}>{t('visitingPatients.visitDetails.department.emergency')}</SelectItem>
-                          <SelectItem value={t('visitingPatients.visitDetails.department.maternity')}>{t('visitingPatients.visitDetails.department.maternity')}</SelectItem>
-                          <SelectItem value={t('visitingPatients.visitDetails.department.dental')}>{t('visitingPatients.visitDetails.department.dental')}</SelectItem>
-                           <SelectItem value={t('visitingPatients.visitDetails.department.other')}>{t('visitingPatients.visitDetails.department.other')}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  <CardContent className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6 items-start">
+                       <div className="space-y-4">
+                         <div>
+                            <Label htmlFor="department">{t('visitingPatients.visitDetails.department.label')} <span className="text-destructive">*</span></Label>
+                            <Select value={department} onValueChange={setDepartment} required>
+                                <SelectTrigger id="department">
+                                <SelectValue placeholder={t('visitingPatients.visitDetails.department.placeholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.outpatient')}>{t('visitingPatients.visitDetails.department.outpatient')}</SelectItem>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.lab')}>{t('visitingPatients.visitDetails.department.lab')}</SelectItem>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.imaging')}>{t('visitingPatients.visitDetails.department.imaging')}</SelectItem>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.pharmacy')}>{t('visitingPatients.visitDetails.department.pharmacy')}</SelectItem>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.specialist')}>{t('visitingPatients.visitDetails.department.specialist')}</SelectItem>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.emergency')}>{t('visitingPatients.visitDetails.department.emergency')}</SelectItem>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.maternity')}>{t('visitingPatients.visitDetails.department.maternity')}</SelectItem>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.dental')}>{t('visitingPatients.visitDetails.department.dental')}</SelectItem>
+                                <SelectItem value={t('visitingPatients.visitDetails.department.other')}>{t('visitingPatients.visitDetails.department.other')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="reasonForVisit">{t('visitingPatients.visitDetails.reason.label')} <span className="text-destructive">*</span></Label>
+                            <Textarea
+                                id="reasonForVisit"
+                                placeholder={t('visitingPatients.visitDetails.reason.placeholder')}
+                                value={reasonForVisit}
+                                onChange={(e) => setReasonForVisit(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="assignedDoctor">{t('visitingPatients.visitDetails.assignedDoctor.label')}</Label>
+                            <Input
+                                id="assignedDoctor"
+                                placeholder={t('visitingPatients.visitDetails.assignedDoctor.placeholder')}
+                                value={assignedDoctor}
+                                onChange={(e) => setAssignedDoctor(e.target.value)}
+                            />
+                        </div>
+                       </div>
+                       
+                       <AIAssistantPanel 
+                         department={department}
+                         patientData={{ ...searchedPatient, currentComplaint: reasonForVisit, vitals: vitalsData }}
+                         context="New outpatient visit intake assessment."
+                         onAcceptSuggestion={(suggestion) => {
+                           setVerifiedDiagnosis(prev => prev ? `${prev}\n\nAI Suggestion:\n${suggestion}` : suggestion);
+                           toast({
+                             title: t('consultationForm.toast.ai.success'),
+                             description: "Suggestion appended to clinician's record."
+                           });
+                         }}
+                       />
                     </div>
-                    <div>
-                      <Label htmlFor="reasonForVisit">{t('visitingPatients.visitDetails.reason.label')} <span className="text-destructive">*</span></Label>
-                      <Textarea
-                        id="reasonForVisit"
-                        placeholder={t('visitingPatients.visitDetails.reason.placeholder')}
-                        value={reasonForVisit}
-                        onChange={(e) => setReasonForVisit(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="assignedDoctor">{t('visitingPatients.visitDetails.assignedDoctor.label')}</Label>
-                      <Input
-                        id="assignedDoctor"
-                        placeholder={t('visitingPatients.visitDetails.assignedDoctor.placeholder')}
-                        value={assignedDoctor}
-                        onChange={(e) => setAssignedDoctor(e.target.value)}
-                      />
+
+                    <Separator />
+                    
+                    <VitalsForm 
+                        title="Outpatient Intake Vitals"
+                        description="Record patient vitals for initial screening."
+                        onVitalsChange={setVitalsData}
+                    />
+
+                    <Separator />
+
+                    <div className="space-y-4 border-2 border-primary/20 p-4 rounded-lg bg-primary/5">
+                      <div className="flex items-center gap-2 text-primary font-semibold">
+                        <Stethoscope className="h-5 w-5" />
+                        <h3>Clinician&apos;s Verified Record</h3>
+                      </div>
+                      
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="verifiedDiagnosis" className="flex items-center gap-2">
+                            <ClipboardList className="h-4 w-4" />
+                            Final Clinical Diagnosis / Assessment
+                          </Label>
+                          <Textarea 
+                            id="verifiedDiagnosis"
+                            placeholder="Type final diagnosis or accept AI suggestions..."
+                            className="min-h-[100px] bg-background"
+                            value={verifiedDiagnosis}
+                            onChange={(e) => setVerifiedDiagnosis(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="verifiedPrescription">Prescription / Orders</Label>
+                          <Textarea 
+                            id="verifiedPrescription"
+                            placeholder="Specify medications, labs, or follow-up instructions..."
+                            className="min-h-[80px] bg-background"
+                            value={verifiedPrescription}
+                            onChange={(e) => setVerifiedPrescription(e.target.value)}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                    <CardFooter>

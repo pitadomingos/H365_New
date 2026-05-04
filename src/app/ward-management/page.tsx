@@ -38,6 +38,7 @@ import { useLocale } from '@/context/locale-context';
 import { getTranslator, defaultLocale } from '@/lib/i18n';
 import { MOCK_WARD_PATIENTS } from '@/lib/mock-data';
 import { useBMI } from '@/hooks/use-bmi';
+import { AIAssistantPanel } from "@/components/clinical/ai-assistant-panel";
 import { WardSummaryCard, BedGrid } from './components';
 
 interface WardSummary {
@@ -132,6 +133,18 @@ interface AdmittedPatientFullDetails {
   recentLabSummary?: string;
   recentImagingSummary?: string;
   visitHistory?: VisitHistoryItem[];
+  handovers?: HandoverRecord[];
+}
+
+interface HandoverRecord {
+  id: string;
+  timestamp: string;
+  fromNurse: string;
+  toNurse: string;
+  situation: string;
+  background: string;
+  assessment: string;
+  recommendation: string;
 }
 
 interface PendingAdmission {
@@ -311,7 +324,7 @@ const formatStayDuration = (admissionDateString: string): string => {
 
 export default function WardManagementPage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [allWardsData, setAllWardsData] = useState<WardSummary[]>([]);
   const [isLoadingAllWards, setIsLoadingAllWards] = useState(true);
@@ -357,6 +370,26 @@ export default function WardManagementPage() {
 
   const [editableVitals, setEditableVitals] = useState<VitalsData>({});
   const [isSavingVitals, setIsSavingVitals] = useState(false);
+  
+  // Handover state
+  const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
+  const [isSubmittingHandover, setIsSubmittingHandover] = useState(false);
+  const [handoverForm, setHandoverForm] = useState({
+    toNurse: "",
+    situation: "",
+    background: "",
+    assessment: "",
+    recommendation: ""
+  });
+
+  const [isEditingPlan, setIsEditingPlan] = useState(false);
+  const [editedTreatmentPlan, setEditedTreatmentPlan] = useState("");
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+
+  const [isEditingDiagnosis, setIsEditingDiagnosis] = useState(false);
+  const [editedDiagnosis, setEditedDiagnosis] = useState("");
+  const [isSavingDiagnosis, setIsSavingDiagnosis] = useState(false);
+
   const { bmi: calculatedBmi, status: bmiDisplay } = useBMI(editableVitals.weightKg, editableVitals.heightCm);
   const [bpDisplay, setBpDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
 
@@ -479,6 +512,12 @@ export default function WardManagementPage() {
             const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
             setCurrentAdmittedPatientFullDetails(fullDetails || null);
             setEditableVitals(fullDetails?.vitals || {});
+            setEditedTreatmentPlan(fullDetails?.treatmentPlan || "");
+            
+            // Find primary diagnosis from ward details
+            const diag = currentWardDetails?.patients.find(p => p.admissionId === selectedPatientForDetails.admissionId)?.primaryDiagnosis || "";
+            setEditedDiagnosis(diag);
+
             if (fullDetails && fullDetails.vitals) {
               setBpDisplay(getBloodPressureStatus(fullDetails.vitals.bloodPressure || ""));
             } else {
@@ -501,12 +540,10 @@ export default function WardManagementPage() {
     } else {
         setCurrentAdmittedPatientFullDetails(null);
         setEditableVitals({});
-        setCalculatedBmi(null);
-        setBmiDisplay(getBmiStatusAndColor(null));
         setBpDisplay(getBloodPressureStatus(""));
         setMedicationScheduleInModal([]);
     }
-  }, [selectedPatientForDetails, t]);
+  }, [selectedPatientForDetails, t, currentWardDetails?.patients]);
 
   useEffect(() => {
     setBpDisplay(getBloodPressureStatus(editableVitals.bloodPressure || ""));
@@ -646,6 +683,49 @@ export default function WardManagementPage() {
          toast({ variant: "destructive", title: t('wardManagement.toast.noteAdd.error'), description: error.message || t('wardManagement.toast.noteAdd.error.desc') });
     } finally {
         setIsAddingNote(false);
+    }
+  };
+
+  const handleSaveTreatmentPlan = async () => {
+    if (!currentAdmittedPatientFullDetails) return;
+    setIsSavingPlan(true);
+    try {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, treatmentPlan: editedTreatmentPlan }) : null);
+        if (mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
+            mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].treatmentPlan = editedTreatmentPlan;
+        }
+        toast({ title: "Treatment Plan Updated", description: "The patient's treatment plan has been successfully updated." });
+        setIsEditingPlan(false);
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Update Error", description: error.message });
+    } finally {
+        setIsSavingPlan(false);
+    }
+  };
+
+  const handleSaveDiagnosis = async () => {
+    if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
+    setIsSavingDiagnosis(true);
+    try {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        setCurrentWardDetails(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                patients: prev.patients.map(p => 
+                    p.admissionId === currentAdmittedPatientFullDetails.admissionId ? { ...p, primaryDiagnosis: editedDiagnosis } : p
+                )
+            };
+        });
+
+        toast({ title: "Primary Diagnosis Updated", description: "The patient's primary diagnosis has been successfully updated." });
+        setIsEditingDiagnosis(false);
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Update Error", description: error.message });
+    } finally {
+        setIsSavingDiagnosis(false);
     }
   };
 
@@ -820,6 +900,38 @@ export default function WardManagementPage() {
         toast({ variant: "destructive", title: t('wardManagement.toast.transfer.error'), description: error.message || t('wardManagement.toast.transfer.error.desc') });
     } finally {
         setIsProcessingTransfer(false);
+    }
+  };
+
+  const handleHandoverSubmit = async () => {
+    if (!currentAdmittedPatientFullDetails || !handoverForm.toNurse || !handoverForm.situation) {
+      toast({ variant: "destructive", title: "Incomplete Handover", description: "Target nurse and situation are mandatory." });
+      return;
+    }
+    setIsSubmittingHandover(true);
+    try {
+      const newHandover: HandoverRecord = {
+        id: `HO-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        fromNurse: "Nurse J. Doe (Current)",
+        ...handoverForm
+      };
+      
+      console.log("Submitting Handover (SBAR):", newHandover);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setCurrentAdmittedPatientFullDetails(prev => prev ? ({
+        ...prev,
+        handovers: [newHandover, ...(prev.handovers || [])]
+      }) : null);
+      
+      toast({ title: "Handover Completed", description: `Clinical SBAR handed over to ${handoverForm.toNurse}` });
+      setIsHandoverModalOpen(false);
+      setHandoverForm({ toNurse: "", situation: "", background: "", assessment: "", recommendation: "" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Handover Failed", description: "Could not save handover record." });
+    } finally {
+      setIsSubmittingHandover(false);
     }
   };
 
@@ -1216,6 +1328,18 @@ export default function WardManagementPage() {
                             {t('wardManagement.patientCare.vitals.saveButton')}
                         </Button>
                     </div>
+
+                    <AIAssistantPanel 
+                        department={currentWardDetails?.name || "Inpatient Ward"}
+                        patientData={currentAdmittedPatientFullDetails}
+                        context="Inpatient status analysis and treatment optimization support."
+                        onAcceptSuggestion={(suggestion) => {
+                            setEditedDiagnosis(suggestion);
+                            setIsEditingDiagnosis(true);
+                            toast({ title: "AI Suggestion Accepted", description: "Suggestion loaded into diagnosis field. Please review and save." });
+                        }}
+                    />
+
                     <Separator />
                     
                     <div className="grid md:grid-cols-2 gap-6">
@@ -1231,8 +1355,165 @@ export default function WardManagementPage() {
                     <Separator />
 
                     <div>
-                        <h4 className="text-md font-semibold mb-2 flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.treatmentPlan.title')}</h4>
-                        <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md whitespace-pre-wrap">{currentAdmittedPatientFullDetails.treatmentPlan}</p>
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-md font-semibold flex items-center"><Stethoscope className="mr-2 h-4 w-4 text-primary" /> Current Primary Diagnosis</h4>
+                            {!isEditingDiagnosis ? (
+                                <Button variant="ghost" size="sm" onClick={() => setIsEditingDiagnosis(true)}><Edit className="h-3 w-3 mr-1" /> Edit</Button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setIsEditingDiagnosis(false)} disabled={isSavingDiagnosis}>Cancel</Button>
+                                    <Button size="sm" onClick={handleSaveDiagnosis} disabled={isSavingDiagnosis || !editedDiagnosis.trim()}>
+                                        {isSavingDiagnosis ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />} Save
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                        {isEditingDiagnosis ? (
+                            <Textarea 
+                                value={editedDiagnosis} 
+                                onChange={(e) => setEditedDiagnosis(e.target.value)} 
+                                placeholder="Enter updated diagnosis..."
+                                className="text-sm bg-background border-primary/30"
+                                rows={2}
+                            />
+                        ) : (
+                            <p className="text-sm font-medium text-primary bg-primary/5 p-3 rounded-md border border-primary/10">
+                                {currentWardDetails?.patients.find(p => p.admissionId === currentAdmittedPatientFullDetails.admissionId)?.primaryDiagnosis || "No diagnosis recorded"}
+                            </p>
+                        )}
+                    </div>
+                    <Separator />
+
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-md font-semibold flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.treatmentPlan.title')}</h4>
+                            {!isEditingPlan ? (
+                                <Button variant="ghost" size="sm" onClick={() => setIsEditingPlan(true)}><Edit className="h-3 w-3 mr-1" /> Edit</Button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setIsEditingPlan(false)} disabled={isSavingPlan}>Cancel</Button>
+                                    <Button size="sm" onClick={handleSaveTreatmentPlan} disabled={isSavingPlan || !editedTreatmentPlan.trim()}>
+                                        {isSavingPlan ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />} Save
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                        {isEditingPlan ? (
+                            <Textarea 
+                                value={editedTreatmentPlan} 
+                                onChange={(e) => setEditedTreatmentPlan(e.target.value)} 
+                                placeholder="Update treatment plan..."
+                                className="text-sm bg-background"
+                                rows={4}
+                            />
+                        ) : (
+                            <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md whitespace-pre-wrap">{currentAdmittedPatientFullDetails.treatmentPlan}</p>
+                        )}
+                    </div>
+                    <Separator />
+
+                    {/* SBAR Handover Section */}
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-md font-semibold flex items-center"><ArrowRightLeft className="mr-2 h-4 w-4 text-primary" /> Clinical Handover (SBAR)</h4>
+                            <Dialog open={isHandoverModalOpen} onOpenChange={setIsHandoverModalOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" onClick={() => setIsHandoverModalOpen(true)}>
+                                        <PlusCircle className="mr-2 h-3 w-3" /> Record Handover
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-2xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Standardized Clinical Handover (SBAR)</DialogTitle>
+                                        <DialogDescription>
+                                            Use the SBAR framework to ensure a comprehensive transfer of patient care responsibilities.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-1">
+                                              <Label htmlFor="fromNurse">From Nurse</Label>
+                                              <Input id="fromNurse" value="Nurse J. Doe (Current)" disabled />
+                                          </div>
+                                          <div className="space-y-1">
+                                              <Label htmlFor="toNurse">Handover To <span className="text-destructive">*</span></Label>
+                                              <Input 
+                                                id="toNurse" 
+                                                placeholder="Receiving Nurse Name" 
+                                                value={handoverForm.toNurse}
+                                                onChange={(e) => setHandoverForm(prev => ({...prev, toNurse: e.target.value}))}
+                                              />
+                                          </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-primary font-bold">S - Situation <span className="text-destructive">*</span></Label>
+                                            <Textarea 
+                                              placeholder="Briefly state the patient's current status and reason for handover." 
+                                              rows={2}
+                                              value={handoverForm.situation}
+                                              onChange={(e) => setHandoverForm(prev => ({...prev, situation: e.target.value}))}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-primary font-bold">B - Background</Label>
+                                            <Textarea 
+                                              placeholder="Relevant medical history, ongoing treatments, and recent significant events." 
+                                              rows={3}
+                                              value={handoverForm.background}
+                                              onChange={(e) => setHandoverForm(prev => ({...prev, background: e.target.value}))}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-primary font-bold">A - Assessment</Label>
+                                            <Textarea 
+                                              placeholder="Your clinical assessment based on vitals, observations, and lab results." 
+                                              rows={3}
+                                              value={handoverForm.assessment}
+                                              onChange={(e) => setHandoverForm(prev => ({...prev, assessment: e.target.value}))}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-primary font-bold">R - Recommendation</Label>
+                                            <Textarea 
+                                              placeholder="What needs to happen next? Specific tasks for the upcoming shift." 
+                                              rows={3}
+                                              value={handoverForm.recommendation}
+                                              onChange={(e) => setHandoverForm(prev => ({...prev, recommendation: e.target.value}))}
+                                            />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                                        <Button onClick={handleHandoverSubmit} disabled={isSubmittingHandover || !handoverForm.toNurse || !handoverForm.situation}>
+                                            {isSubmittingHandover ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                                            Save Handover
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                          {currentAdmittedPatientFullDetails.handovers && currentAdmittedPatientFullDetails.handovers.length > 0 ? (
+                            currentAdmittedPatientFullDetails.handovers.map(ho => (
+                              <div key={ho.id} className="p-3 border rounded-md bg-accent/5 space-y-2 text-xs">
+                                <div className="flex justify-between items-center border-b pb-1 mb-1">
+                                  <span className="font-bold">{ho.fromNurse} ➔ {ho.toNurse}</span>
+                                  <span className="text-muted-foreground">{new Date(ho.timestamp).toLocaleString()}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-1">
+                                  <p><strong>S:</strong> {ho.situation}</p>
+                                  {ho.background && <p><strong>B:</strong> {ho.background}</p>}
+                                  {ho.assessment && <p><strong>A:</strong> {ho.assessment}</p>}
+                                  {ho.recommendation && <p><strong>R:</strong> {ho.recommendation}</p>}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-muted-foreground text-center py-4 bg-muted/20 rounded-md">
+                                No previous handover records for this admission.
+                            </p>
+                          )}
+                        </div>
                     </div>
                     <Separator />
 

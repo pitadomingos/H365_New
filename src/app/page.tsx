@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock, Stethoscope } from "lucide-react";
+import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock, Stethoscope, RefreshCw, ShieldCheck, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, type Locale, defaultLocale } from '@/lib/i18n';
@@ -12,6 +12,9 @@ import { PieChart, Pie, Cell, Legend as RechartsLegend, Tooltip as RechartsToolt
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { MOCK_RECENT_ACTIVITY, MOCK_DRAFTS } from '@/lib/mock-data';
 import { DashboardModuleBtn, DashboardActivityItem } from '@/components/dashboard-components';
+import { getAIQueue, syncQueue, type AIQueueItem } from '@/lib/clinical-ai-queue';
+import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
 
 interface SummaryCardData {
   id: string;
@@ -220,7 +223,60 @@ export default function DashboardPage() {
                 </CardContent>
                 </Card>
             )})}
-             {/* Drafted Consultations Card */}
+              {/* Clinical AI Audit Queue Card */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow bg-primary/5 border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">AI Clinical Audit Queue</CardTitle>
+                  <RefreshCw className="h-5 w-5 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-end justify-between mb-4">
+                    <div>
+                      <div className="text-2xl font-bold">{getAIQueue().filter(i => i.status === 'pending').length}</div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Pending Syncs</p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] bg-background">
+                      {typeof navigator !== 'undefined' && navigator.onLine ? 'Broadband Active' : 'L-LAN Mode'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-2 mb-4">
+                    <div className="w-full bg-muted h-1 rounded-full overflow-hidden">
+                       <div 
+                         className="bg-primary h-full transition-all duration-500" 
+                         style={{ 
+                           width: `${(getAIQueue().filter(i => i.status === 'completed').length / (getAIQueue().length || 1)) * 100}%` 
+                         }} 
+                       />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground flex justify-between">
+                      <span>{getAIQueue().filter(i => i.status === 'completed').length} Audited</span>
+                      <span>{getAIQueue().length} Total</span>
+                    </p>
+                  </div>
+
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="w-full h-8 text-xs gap-2"
+                    disabled={typeof navigator !== 'undefined' && (!navigator.onLine || getAIQueue().filter(i => i.status === 'pending').length === 0)}
+                    onClick={async () => {
+                      toast({ title: "Clinical AI Sync Started", description: "Processing deferred quality audits..." });
+                      try {
+                        await syncQueue();
+                        toast({ title: "Sync Complete", description: "AI Clinical Audits successfully processed." });
+                      } catch (err: any) {
+                        toast({ variant: "destructive", title: "Sync Failed", description: err.message });
+                      }
+                    }}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Process Pending Audits
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Drafted Consultations Card */}
              <Card className="shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">{t('dashboard.card.draftedConsultations.title')}</CardTitle>

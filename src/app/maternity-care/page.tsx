@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower, Loader2, CalendarIcon, Save, UserPlus, Info, Thermometer, Weight, Ruler, Sigma, Activity, ActivityIcon as BloodPressureIcon } from "lucide-react";
+import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower, Loader2, CalendarIcon, Save, UserPlus, Info, Thermometer, Weight, Ruler, Sigma, Activity, ActivityIcon as BloodPressureIcon, Sparkles } from "lucide-react";
+import { AIAssistantPanel } from "@/components/clinical/ai-assistant-panel";
 import {
   Table,
   TableBody,
@@ -53,6 +54,8 @@ interface AntenatalVisit {
   fhrBpm: string; 
   fundalHeightCm: string;
   notes: string;
+  diagnosis?: string;
+  prescription?: string;
   nextAppointment?: string;
   bodyTemperature?: string;
   heightCm?: string;
@@ -135,6 +138,8 @@ interface NewVisitFormState {
   fhrBpm: string;
   fundalHeightCm: string;
   notes: string;
+  diagnosis: string;
+  prescription: string;
   nextAppointmentDate?: Date;
   bodyTemperature?: string;
   heightCm?: string;
@@ -215,7 +220,7 @@ export default function MaternityCarePage() {
   const [isNewVisitModalOpen, setIsNewVisitModalOpen] = useState(false);
   const [isLoggingVisit, setIsLoggingVisit] = useState(false);
   const [newVisitForm, setNewVisitForm] = useState<NewVisitFormState>({
-    gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", bodyTemperature: "", heightCm: ""
+    gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", prescription: "", bodyTemperature: "", heightCm: ""
   });
   const [newVisitBmi, setNewVisitBmi] = useState<string | null>(null);
   const [newVisitBmiDisplay, setNewVisitBmiDisplay] = useState<{ status: string; colorClass: string; textColorClass: string; } | null>(null);
@@ -387,6 +392,8 @@ export default function MaternityCarePage() {
     const savedVisit: AntenatalVisit = { 
         id: `AV${Date.now()}`,
         ...payload,
+        diagnosis: newVisitForm.diagnosis,
+        prescription: newVisitForm.prescription,
         bmiStatus: payload.bmiStatus || "N/A", // Ensure these have default values
         bpStatus: payload.bpStatus || "N/A",   // Ensure these have default values
     };
@@ -397,7 +404,7 @@ export default function MaternityCarePage() {
 
     toast({ title: t('maternity.toast.newVisit.logged'), description: t('maternity.toast.newVisit.logged.desc', {date: savedVisit.date, patientName: selectedPatient.fullName})});
     setIsNewVisitModalOpen(false);
-    setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); 
+    setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", prescription: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); 
     setNewVisitBmi(null);
     setNewVisitBmiDisplay(null);
     setNewVisitBpDisplay(null);
@@ -670,14 +677,16 @@ export default function MaternityCarePage() {
                     {selectedPatient.chronicConditions.length > 0 ? selectedPatient.chronicConditions.join(', ') : <span className="text-muted-foreground">{t('maternity.patientOverview.chronicConditions.none')}</span>}
                   </div>
                   <Separator />
-                   <div>
-                     <h4 className="font-medium flex items-center gap-1"><ShieldAlert className="h-4 w-4 text-destructive" /> {t('maternity.patientOverview.riskFactors.title')}</h4>
-                    {selectedPatient.riskFactors.length > 0 ? (
-                        <ul className="list-disc list-inside text-destructive">
-                            {selectedPatient.riskFactors.map(risk => <li key={risk}>{risk}</li>)}
-                        </ul>
-                    ): <span className="text-muted-foreground">{t('maternity.patientOverview.riskFactors.none')}</span>}
-                  </div>
+
+                  <AIAssistantPanel 
+                    department="Maternity"
+                    patientData={selectedPatient}
+                    context="Antenatal risk assessment and obstetric clinical support."
+                    onAcceptSuggestion={(suggestion) => {
+                      setNewVisitForm(prev => ({ ...prev, diagnosis: suggestion }));
+                      toast({ title: "AI Diagnosis Accepted", description: "Suggestion has been added to the new visit record." });
+                    }}
+                  />
                 </CardContent>
                  <CardFooter className="flex-col items-start gap-2">
                     <Dialog open={isScheduleNextVisitModalOpen} onOpenChange={setIsScheduleNextVisitModalOpen}>
@@ -766,7 +775,7 @@ export default function MaternityCarePage() {
                   )}
                 </CardContent>
                 <CardFooter>
-                    <Dialog open={isNewVisitModalOpen} onOpenChange={(open) => { if(!open) { setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); setNewVisitBmi(null); setNewVisitBmiDisplay(null); setNewVisitBpDisplay(null); } setIsNewVisitModalOpen(open);}}>
+                    <Dialog open={isNewVisitModalOpen} onOpenChange={(open) => { if(!open) { setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", prescription: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); setNewVisitBmi(null); setNewVisitBmiDisplay(null); setNewVisitBpDisplay(null); } setIsNewVisitModalOpen(open);}}>
                         <DialogTrigger asChild>
                             <Button disabled={!selectedPatient || isLoggingVisit}>
                                 {isLoggingVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CalendarPlus className="mr-2 h-4 w-4" />}
@@ -853,6 +862,14 @@ export default function MaternityCarePage() {
                                     <div className="space-y-2">
                                         <Label htmlFor="notes">{t('maternity.newVisitModal.notes.label')}</Label>
                                         <Textarea id="notes" name="notes" value={newVisitForm.notes} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.notes.placeholder')} disabled={isLoggingVisit}/>
+                                    </div>
+                                    <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                                        <Label htmlFor="diagnosis" className="font-bold text-primary">Clinician&apos;s Diagnosis <span className="text-destructive">*</span></Label>
+                                        <Textarea id="diagnosis" name="diagnosis" value={newVisitForm.diagnosis} onChange={handleNewVisitFormChange} placeholder="Enter formal clinical diagnosis..." disabled={isLoggingVisit} className="bg-background"/>
+                                    </div>
+                                    <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                                        <Label htmlFor="prescription" className="font-bold text-primary">Clinical Prescription <span className="text-destructive">*</span></Label>
+                                        <Textarea id="prescription" name="prescription" value={newVisitForm.prescription} onChange={handleNewVisitFormChange} placeholder="Enter formal prescription or treatment plan..." disabled={isLoggingVisit} className="bg-background"/>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="nextAppointmentDate">{t('maternity.newVisitModal.nextAppointment.label')}</Label>

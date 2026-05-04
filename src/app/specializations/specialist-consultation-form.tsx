@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, Briefcase, FlaskConical, RadioTower, Save, ActivityIcon as BloodPressureIcon } from "lucide-react";
+import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, Briefcase, FlaskConical, RadioTower, Save, ActivityIcon as BloodPressureIcon, ClipboardList } from "lucide-react";
 import type { TreatmentRecommendationInput, TreatmentRecommendationOutput } from '@/ai/flows/treatment-recommendation';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "@/hooks/use-toast";
@@ -138,7 +138,7 @@ interface SpecialistConsultationFormProps {
 
 export function SpecialistConsultationForm({ getRecommendationAction, initialData }: SpecialistConsultationFormProps) {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [isAiPending, startAiTransition] = useTransition();
   const [recommendation, setRecommendation] = useState<TreatmentRecommendationOutput | null>(null);
@@ -151,6 +151,8 @@ export function SpecialistConsultationForm({ getRecommendationAction, initialDat
   const [bpDisplay, setBpDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
   
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
+  const [verifiedDiagnosis, setVerifiedDiagnosis] = useState("");
+  const [verifiedPrescription, setVerifiedPrescription] = useState("");
   
   const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
   const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
@@ -363,8 +365,8 @@ ${visitHistoryString || "No recent visit history available."}
       aiPrescription: recommendation?.prescription,
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.specialistComments, 
-      finalDiagnosis: currentFormData.specialistComments ? `Diagnosis based on specialist notes: ${currentFormData.specialistComments.substring(0,50)}...` : "Diagnosis TBD",
-      prescription: recommendation?.prescription ? `Prescription based on AI: ${recommendation.prescription}` : "Prescription TBD",
+      finalDiagnosis: verifiedDiagnosis,
+      prescription: verifiedPrescription,
       outcome: outcome,
     };
 
@@ -388,6 +390,8 @@ ${visitHistoryString || "No recent visit history available."}
     setPatientData(null);
     setRecommendation(null);
     setError(null);
+    setVerifiedDiagnosis("");
+    setVerifiedPrescription("");
     setBmi(null);
     setBmiDisplay(getBmiStatusAndColor(null, t));
     setBpDisplay(getBloodPressureStatus("", t));
@@ -806,12 +810,44 @@ ${visitHistoryString || "No recent visit history available."}
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Stethoscope className="h-5 w-5" />{t('consultationForm.aiInsights.diagnosis.title')}</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2"><Stethoscope className="h-5 w-5" />{t('consultationForm.aiInsights.diagnosis.title')}</h3>
+                    {recommendation.diagnosis && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs border-primary/30 h-7"
+                        onClick={() => {
+                          setVerifiedDiagnosis(prev => prev ? `${prev}\n\nAI Suggestion:\n${recommendation.diagnosis}` : recommendation.diagnosis);
+                          toast({ title: t('consultationForm.toast.ai.success'), description: "Clinical assessment suggestion appended." });
+                        }}
+                      >
+                        <ShieldAlert className="h-3 w-3 mr-1" />
+                        Accept Assessment
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.diagnosis || t('consultationForm.aiInsights.diagnosis.none')}</p>
                 </div>
                 <Separator />
                 <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Pill className="h-5 w-5" />{t('consultationForm.aiInsights.prescription.title')}</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2"><Pill className="h-5 w-5" />{t('consultationForm.aiInsights.prescription.title')}</h3>
+                    {recommendation.prescription && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs border-primary/30 h-7"
+                        onClick={() => {
+                          setVerifiedPrescription(prev => prev ? `${prev}\n\nAI Suggestion:\n${recommendation.prescription}` : recommendation.prescription);
+                          toast({ title: t('consultationForm.toast.ai.success'), description: "Prescription suggestion appended." });
+                        }}
+                      >
+                        <Pill className="h-3 w-3 mr-1" />
+                        Accept Orders
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.prescription || t('consultationForm.aiInsights.prescription.none')}</p>
                 </div>
                 <Separator />
@@ -820,6 +856,47 @@ ${visitHistoryString || "No recent visit history available."}
                   <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.recommendations || t('consultationForm.aiInsights.recommendations.none')}</p>
                 </div>
               </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-2 border-primary/20 bg-primary/5">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                      <Stethoscope className="mr-1.5 h-6 w-6"/>
+                      Clinician&apos;s Verified Clinical Record
+                    </CardTitle>
+                    <CardDescription>Formalize the diagnosis and treatment plan based on clinical judgment and AI support.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="verifiedDiagnosis" className="flex items-center gap-2">
+                        <ClipboardList className="h-4 w-4" />
+                        Final Clinical Diagnosis / Assessment
+                      </Label>
+                      <Textarea
+                          id="verifiedDiagnosis"
+                          placeholder="Final assessment and formal diagnosis..."
+                          value={verifiedDiagnosis}
+                          onChange={(e) => setVerifiedDiagnosis(e.target.value)}
+                          className="min-h-[120px] bg-background"
+                          disabled={isActionDisabled}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="verifiedPrescription" className="flex items-center gap-2">
+                        <Pill className="h-4 w-4" />
+                        Prescription & Detailed Orders
+                      </Label>
+                      <Textarea
+                          id="verifiedPrescription"
+                          placeholder="Medications, dosages, frequency, and follow-up orders..."
+                          value={verifiedPrescription}
+                          onChange={(e) => setVerifiedPrescription(e.target.value)}
+                          className="min-h-[100px] bg-background"
+                          disabled={isActionDisabled}
+                      />
+                    </div>
+                </CardContent>
             </Card>
 
             <Card className="shadow-sm">
@@ -831,7 +908,7 @@ ${visitHistoryString || "No recent visit history available."}
                         id="specialistComments"
                         placeholder={t('consultationForm.specialistNotes.placeholder')}
                         {...form.register('specialistComments')}
-                        className="min-h-[100px]"
+                        className="min-h-[80px]"
                         disabled={isActionDisabled}
                         />
                 </CardContent>

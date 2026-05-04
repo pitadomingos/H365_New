@@ -1,16 +1,18 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity } from 'lucide-react';
 
 export type NavItem = {
   href: string;
   labelKey: string;
   icon: LucideIcon;
   disabled?: boolean;
+  forceNewTab?: boolean;
 };
 
 export const NAV_ITEMS: NavItem[] = [
   { href: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { href: '/public-health-dashboard', labelKey: 'nav.publicDashboard', icon: Activity, forceNewTab: true },
   { href: '/patient-registration', labelKey: 'nav.patientRegistration', icon: UsersRound },
   { href: '/visiting-patients', labelKey: 'nav.visitingPatients', icon: Users },
   { href: '/appointments', labelKey: 'nav.appointments', icon: CalendarDays },
