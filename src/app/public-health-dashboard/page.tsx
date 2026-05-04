@@ -89,6 +89,11 @@ export default function PublicHealthDashboard() {
   const [currentSlide, setCurrentSlide] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(true);
   const [progress, setProgress] = React.useState(0);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const slides = [
     { id: 'national', title: t('publicDashboard.slideshow.national'), type: 'metrics' },
@@ -530,7 +535,7 @@ export default function PublicHealthDashboard() {
             <Separator orientation="vertical" className="h-4" />
             <span className="text-[10px] flex items-center gap-1">
                <Clock className="h-3 w-3" />
-               Last Sync: {new Date().toLocaleTimeString()}
+               Last Sync: {isMounted ? new Date().toLocaleTimeString() : "--:--:--"}
             </span>
          </div>
          <div className="flex items-center gap-4">
