@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Network, Server, Share2, CheckCircle2, Info } from "lucide-react";
+import { Network, Server, Share2, CheckCircle2, Info, Zap } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { MicroservicesDiagram } from "@/components/diagrams/microservices-diagram";
 import { MonolithicDiagram } from "@/components/diagrams/monolithic-diagram";
@@ -161,6 +161,38 @@ export default function ArchitectureOptionsPage() {
                 <li>{t('architectureOptions.hybrid.cons.item2')}</li>
               </ul>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm border-rose-100 bg-rose-50/10">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2 text-rose-700">
+            <Zap className="h-6 w-6" /> Edge Computing (Micro-Node)
+          </CardTitle>
+          <CardDescription>Highest resilience for rural and ultra-remote facilities.</CardDescription>
+        </CardHeader>
+        <CardContent className="prose dark:prose-invert max-w-none">
+          <p>
+            The <strong>Micro-Node</strong> architecture deploys a lightweight, hardened server appliance (e.g., Raspberry Pi 5 or Industrial NUC) within the physical hospital facility. This node acts as an &quot;Edge&quot; gateway.
+          </p>
+          <div className="bg-white p-4 rounded-lg border shadow-inner mb-4">
+             <h5 className="mt-0 text-sm font-bold uppercase tracking-widest text-slate-500">How it works</h5>
+             <ol className="text-sm space-y-1">
+               <li>Local workstations connect directly to the on-site Micro-Node.</li>
+               <li>Data is stored locally in real-time, ensuring <strong>Zero Latency</strong> regardless of external internet status.</li>
+               <li>Micro-Node performs asynchronous delta-sync with the National Cloud whenever connectivity is detected.</li>
+             </ol>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4 not-prose">
+             <div className="p-3 bg-green-50 rounded border border-green-100">
+                <p className="text-[10px] font-black uppercase text-green-700 mb-1">Primary Benefit</p>
+                <p className="text-xs font-medium">Full clinical operations (Consultation, Pharmacy, Lab) continue during total national network outages or satellite failures.</p>
+             </div>
+             <div className="p-3 bg-amber-50 rounded border border-amber-100">
+                <p className="text-[10px] font-black uppercase text-amber-700 mb-1">Deployment Risk</p>
+                <p className="text-xs font-medium">Requires physical hardware maintenance and local power backup (Solar/UPS) to sustain the node.</p>
+             </div>
           </div>
         </CardContent>
       </Card>

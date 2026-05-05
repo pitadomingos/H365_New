@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation"; // useRouter for progr
 import { Stethoscope, Menu } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, BOTTOM_NAV_ITEMS, type NavItem } from "@/lib/constants";
+import { NAV_GROUPS, BOTTOM_NAV_ITEMS, type NavItem } from "@/lib/constants";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -105,30 +105,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         >
           <SidebarMenu>
-            {NAV_ITEMS.map((item: NavItem) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <SidebarMenuItem key={item.labelKey}>
-                  <SidebarMenuButton
-                     asChild
-                     isActive={isActive}
-                     tooltip={t(item.labelKey)}
-                     className={cn(item.disabled && "cursor-not-allowed opacity-50")}
-                  >
-                    <Link 
-                      href={item.disabled ? "#" : item.href} 
-                      className="flex items-center w-full gap-2"
-                      target={item.forceNewTab ? "_blank" : undefined}
-                      rel={item.forceNewTab ? "noopener noreferrer" : undefined}
-                    >
-                      <Icon className={cn("shrink-0", isActive && "text-primary")} />
-                      <span className={cn(!sidebarOpen && "hidden")}>{t(item.labelKey)}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
+            {NAV_GROUPS.map((group) => (
+              <React.Fragment key={group.titleKey}>
+                {sidebarOpen && (
+                  <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mt-4 first:mt-0">
+                    {t(group.titleKey)}
+                  </div>
+                )}
+                {group.items.map((item: NavItem) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  return (
+                    <SidebarMenuItem key={item.labelKey}>
+                      <SidebarMenuButton
+                         asChild
+                         isActive={isActive}
+                         tooltip={t(item.labelKey)}
+                         className={cn(item.disabled && "cursor-not-allowed opacity-50")}
+                      >
+                        <Link 
+                          href={item.disabled ? "#" : item.href} 
+                          className="flex items-center w-full gap-2"
+                          target={item.forceNewTab ? "_blank" : undefined}
+                          rel={item.forceNewTab ? "noopener noreferrer" : undefined}
+                        >
+                          <Icon className={cn("shrink-0", isActive && "text-primary")} />
+                          <span className={cn(!sidebarOpen && "hidden")}>{t(item.labelKey)}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </React.Fragment>
+            ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter 

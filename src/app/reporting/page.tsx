@@ -97,10 +97,10 @@ export default function ReportingPage() {
             <div className="p-2 bg-indigo-600/10 rounded-xl">
               <BarChartBig className="h-8 w-8 text-indigo-600 shadow-sm" />
             </div>
-            {t('reporting.pageTitle')}
+            {t('nav.reporting')}
           </h1>
           <p className="text-muted-foreground text-xs font-medium uppercase tracking-widest pl-1">
-            {t('reporting.overview.description')}
+            {t('reporting.summary.desc')}
           </p>
         </div>
         <div className="flex items-center gap-3">

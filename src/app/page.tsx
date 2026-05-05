@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock, Stethoscope, RefreshCw, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock, Stethoscope, RefreshCw, ShieldCheck, AlertTriangle, Smartphone } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, type Locale, defaultLocale } from '@/lib/i18n';
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Drafted Consultations Card */}
+               {/* Drafted Consultations Card */}
              <Card className="shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">{t('dashboard.card.draftedConsultations.title')}</CardTitle>
@@ -303,6 +303,31 @@ export default function DashboardPage() {
                   <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
                     <Link href="/treatment-recommendation">{t('dashboard.card.viewAllDrafts')}</Link>
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* Patient Portal Link Card */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow bg-blue-900 text-white border-none group">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Patient Facing Module</CardTitle>
+                  <Smartphone className="h-5 w-5 text-blue-300 group-hover:scale-110 transition-transform" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                   <div className="space-y-1">
+                      <div className="text-2xl font-bold">Mobile App</div>
+                      <p className="text-[10px] text-blue-200 uppercase font-bold">Citizens & Patients Only</p>
+                   </div>
+                   <p className="text-[11px] text-blue-100/80 leading-snug">
+                     National ID based access for medical records, meds, and appointments.
+                   </p>
+                   <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="w-full h-8 text-[11px] font-bold bg-white text-blue-900 border-none hover:bg-blue-50"
+                    asChild
+                   >
+                     <Link href="/patient-portal/login">Launch Patient Experience</Link>
+                   </Button>
                 </CardContent>
               </Card>
             </div>

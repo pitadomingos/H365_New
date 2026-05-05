@@ -11,12 +11,14 @@ import {
   CheckCircle2,
   Settings,
   Activity,
-  HardDrive
+  HardDrive,
+  ArrowRight
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import { LocalDB } from "@/lib/db";
 import { motion } from "motion/react";
 import { useLocale } from '@/context/locale-context';
@@ -167,6 +169,48 @@ export default function SystemStatusPage() {
             >
               {isSyncing ? t('systemStatus.reconciliation.syncingButton') : t('systemStatus.reconciliation.forceButton')}
             </Button>
+          </CardFooter>
+        </Card>
+
+        {/* Module-Specific Sync Health */}
+        <Card className="col-span-1">
+          <CardHeader>
+             <CardTitle className="flex items-center gap-2">
+               <Activity className="h-5 w-5 text-indigo-500" /> {t('systemStatus.moduleHealth.title')}
+             </CardTitle>
+             <CardDescription>
+               {t('systemStatus.moduleHealth.desc')}
+             </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <div className="grid grid-cols-2 gap-3">
+                {[
+                  { name: "Patient Records", status: "synced", count: 0 },
+                  { name: "Lab Results", status: "pending", count: 12 },
+                  { name: "Imaging Files", status: "stale", count: 3 },
+                  { name: "Inventory Logs", status: "synced", count: 0 },
+                ].map((m, i) => (
+                  <div key={i} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold">{m.name}</span>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary" className={cn(
+                        "text-[10px] h-4 px-1.5",
+                        m.status === "synced" ? "bg-green-100 text-green-700 border-none" :
+                        m.status === "pending" ? "bg-blue-100 text-blue-700 border-none" :
+                        "bg-red-100 text-red-700 border-none"
+                      )}>
+                        {t(`systemStatus.moduleHealth.${m.status}`)}
+                      </Badge>
+                      {m.count > 0 && <span className="text-[10px] font-bold text-muted-foreground">{m.count}</span>}
+                    </div>
+                  </div>
+                ))}
+             </div>
+          </CardContent>
+          <CardFooter className="border-t pt-4">
+             <Button variant="ghost" className="w-full text-xs gap-2">
+               View Full Sync Audit <ArrowRight className="h-3 w-3" />
+             </Button>
           </CardFooter>
         </Card>
 

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info, Languages } from "lucide-react";
+import { Info, Languages, ShieldAlert, Globe } from "lucide-react";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 import { FrontendArchitectureDiagram } from "@/components/diagrams/frontend-architecture-diagram";
@@ -162,6 +162,32 @@ export default function TechnicalOverviewPage() {
               <h4 className="font-semibold text-lg">{t('techOverview.section3.subsectionReporting.title')}</h4>
               <ul className="list-none p-0">
                 {renderListItem('techOverview.section3.subsectionReporting.itemFeatures.title', 'techOverview.section3.subsectionReporting.itemFeatures.desc')}
+              </ul>
+            </section>
+            <section className="bg-primary/5 p-4 rounded-lg border border-primary/10">
+              <h4 className="font-semibold text-lg text-primary flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5" /> Clinical Safety &amp; AI Governance
+              </h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                The H365 platform implements a &quot;Physician-in-the-Loop&quot; architecture. AI-driven diagnostic and treatment suggestions are presented as assistive insights, requiring explicit clinical validation and attribution in the audit log.
+              </p>
+              <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">
+                <li>Non-storing AI inference for patient privacy.</li>
+                <li>Full audit trail of all accepted/rejected AI suggestions.</li>
+                <li>Clinically validated triage algorithms (ESI-based).</li>
+              </ul>
+            </section>
+            <section className="bg-indigo-50 dark:bg-indigo-950/20 p-4 rounded-lg border border-indigo-100">
+              <h4 className="font-semibold text-lg text-indigo-700 flex items-center gap-2">
+                <Globe className="h-5 w-5" /> National Interoperability (OpenHIE)
+              </h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                Alignment with the WHO Digital Health Guidelines and the National Digital Health Strategy of Mozambique.
+              </p>
+              <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">
+                <li><strong>DHIS2 Integration:</strong> Automated aggregate reporting of public health indicators.</li>
+                <li><strong>OpenHIE Architecture:</strong> Standards-based exchange via FHIR and HL7.</li>
+                <li><strong>Master Patient Index (MPI):</strong> Unified patient identification across national facilities.</li>
               </ul>
             </section>
           </CardContent>

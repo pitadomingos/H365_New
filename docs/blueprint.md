@@ -5,6 +5,8 @@
 - Patient Registration: Online Patient Registration Form. Accessible only on the hospital reception. With a waiting list visible on the doctors consultation form. On the same results from the lab will also send notification
 - Appointment Scheduling: Appointment scheduling.
 - Notifications and Reminders: Notifications and reminders of upcoming appointments.
+- Chronic Patient Adherence: Automated medication adherence monitoring (spec. HIV/TB) using two-way SMS with persistent local tracking and escalation for defaulters.
+- Offline-First & LAN Synchronization: Local-first architecture ensuring high clinical safety. All data is saved to the local machine's persistent storage (surviving restarts/refreshes) and synced to the LAN server in the background.
 - Pharmacy Locator: Location of Pharmacy
 - Treatment Recommendation: Based on lab results and imaging determine treatment plans by providing the correct set of standard operation procedures using a AI tool. Symptoms are also send to Ai and response should bring Diagnosis, prescription and recommendation. The doctor can add to a comment text box.
 

@@ -103,10 +103,10 @@ export default function BillingPage() {
   if (!isMounted) return null;
 
   const quickStats = [
-    { label: "Daily Revenue", value: "321,450 MT", trend: "+12.4%", status: "up", icon: DollarSign, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { label: "Accounts Receivable", value: "1.2M MT", trend: "-5.2%", status: "down", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "Insurance Claims", value: "1,440K MT", trend: "+2.1%", status: "up", icon: ShieldCheck, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Mobile Transactions", value: "482K MT", trend: "+18%", status: "up", icon: Smartphone, color: "text-teal-600", bg: "bg-teal-50" },
+    { label: t('billing.stats.dailyRevenue'), value: "321,450 MT", trend: "+12.4%", status: "up", icon: DollarSign, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { label: t('billing.stats.receivables'), value: "1.2M MT", trend: "-5.2%", status: "down", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: t('billing.stats.claims'), value: "1,440K MT", trend: "+2.1%", status: "up", icon: ShieldCheck, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: t('billing.stats.mobile'), value: "482K MT", trend: "+18%", status: "up", icon: Smartphone, color: "text-teal-600", bg: "bg-teal-50" },
   ];
 
   return (

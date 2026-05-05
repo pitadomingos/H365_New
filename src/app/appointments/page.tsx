@@ -5,8 +5,9 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Bell, CalendarCheck2, PlusCircle, Video, Loader2 } from "lucide-react";
+import { Bell, CalendarCheck2, PlusCircle, Video, Loader2, Users2, CheckCircle2, XCircle, Smartphone, Send, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { LocalDB } from "@/lib/db";
 import {
   Table,
   TableBody,
@@ -24,9 +25,10 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useLocale } from '@/context/locale-context';
@@ -75,6 +77,15 @@ export default function AppointmentsPage() {
   const [doctors, setDoctors] = React.useState<Doctor[]>([]);
   const [isLoadingDoctors, setIsLoadingDoctors] = React.useState(true);
 
+  const [referrals, setReferrals] = React.useState<any[]>([]);
+  const [isLoadingReferrals, setIsLoadingReferrals] = React.useState(true);
+  const [isConfirmingReferral, setIsConfirmingReferral] = React.useState(false);
+  const [selectedReferral, setSelectedReferral] = React.useState<any | null>(null);
+  
+  const [confirmationDate, setConfirmationDate] = React.useState("");
+  const [confirmationTime, setConfirmationTime] = React.useState("");
+  const [smsSentTo, setSmsSentTo] = React.useState<string | null>(null);
+
   const [isSchedulingDialogOpen, setIsSchedulingDialogOpen] = React.useState(false);
   const [newPatientName, setNewPatientName] = React.useState("");
   const [newSelectedDoctorId, setNewSelectedDoctorId] = React.useState("");
@@ -86,14 +97,9 @@ export default function AppointmentsPage() {
   React.useEffect(() => {
     const fetchAppointments = async () => {
       setIsLoadingAppointments(true);
-      const currentT = getTranslator(currentLocale); // Get t for this effect scope
+      const currentT = getTranslator(currentLocale);
       try {
-        // console.log("Fetching appointments with /api/v1/appointments...");
-        // const response = await fetch('/api/v1/appointments'); 
-        // if (!response.ok) throw new Error(currentT('appointments.toast.loadAppointmentsError'));
-        // const data = await response.json();
-        // setAppointments(data);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
         const fetchedAppointments: Appointment[] = [
           { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
           { id: "APT002", patientName: "Bob The Builder", doctorName: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
@@ -114,11 +120,6 @@ export default function AppointmentsPage() {
       setIsLoadingNotifications(true);
       const currentT = getTranslator(currentLocale); 
       try {
-        // console.log("Fetching notifications from /api/v1/notifications?context=appointments...");
-        // const response = await fetch('/api/v1/notifications?context=appointments');
-        // if (!response.ok) throw new Error(currentT('appointments.toast.loadNotificationsError'));
-        // const data = await response.json();
-        // setNotifications(data);
         await new Promise(resolve => setTimeout(resolve, 800)); 
         const fetchedNotifications: NotificationItem[] = [
           { id: 1, message: currentT('appointments.notifications.mock.message1'), time: "2 hours ago", read: false },
@@ -137,13 +138,8 @@ export default function AppointmentsPage() {
   React.useEffect(() => {
     const fetchDoctors = async () => {
         setIsLoadingDoctors(true);
-        const currentT = getTranslator(currentLocale); // Get t for this effect scope
+        const currentT = getTranslator(currentLocale);
         try {
-            // console.log("Fetching doctors from /api/v1/doctors...");
-            // const response = await fetch('/api/v1/doctors');
-            // if (!response.ok) throw new Error(currentT('appointments.toast.loadDoctorsError'));
-            // const data = await response.json();
-            // setDoctors(data);
             await new Promise(resolve => setTimeout(resolve, 600)); 
             setDoctors(initialMockDoctors);
         } catch (error) {
@@ -155,6 +151,69 @@ export default function AppointmentsPage() {
     };
     fetchDoctors();
   }, [currentLocale]); 
+
+  React.useEffect(() => {
+    const fetchReferrals = async () => {
+      setIsLoadingReferrals(true);
+      try {
+        const data = await LocalDB.get<any[]>("specialist_referrals", []);
+        setReferrals(data);
+      } catch (error) {
+        console.error("Error fetching referrals:", error);
+      } finally {
+        setIsLoadingReferrals(false);
+      }
+    };
+    fetchReferrals();
+  }, []);
+
+  const handleConfirmReferral = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedReferral || !confirmationDate || !confirmationTime) return;
+    
+    setIsConfirmingReferral(true);
+    
+    try {
+      const updatedReferral = {
+        ...selectedReferral,
+        status: "CONFIRMED",
+        confirmedDate: confirmationDate,
+        confirmedTime: confirmationTime,
+      };
+
+      const existingReferrals = await LocalDB.get<any[]>("specialist_referrals", []);
+      const newReferrals = existingReferrals.map(r => r.id === selectedReferral.id ? updatedReferral : r);
+      await LocalDB.save("specialist_referrals", newReferrals);
+      setReferrals(newReferrals);
+
+      const newApt: Appointment = {
+        id: `APT-REF-${selectedReferral.id}`,
+        patientName: selectedReferral.patientName,
+        doctorName: `Specialist at ${selectedReferral.facility}`,
+        date: confirmationDate,
+        time: confirmationTime,
+        type: `Specialist (${selectedReferral.specialty})`,
+        status: "Confirmed"
+      };
+      setAppointments(prev => [newApt, ...prev]);
+
+      setSmsSentTo(selectedReferral.patientName);
+      
+      toast({
+        title: "Referral Confirmed",
+        description: `SMS sent to ${selectedReferral.patientName}. Details: ${selectedReferral.specialty} at ${selectedReferral.facility} on ${confirmationDate} at ${confirmationTime}.`
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      setSmsSentTo(null);
+      setSelectedReferral(null);
+
+    } catch (error) {
+      console.error("Confirmation error:", error);
+    } finally {
+      setIsConfirmingReferral(false);
+    }
+  };
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,27 +227,7 @@ export default function AppointmentsPage() {
     }
     setIsScheduling(true);
 
-    const payload = {
-        patientName: newPatientName,
-        doctorId: newSelectedDoctorId,
-        date: newAppointmentDate, 
-        time: newAppointmentTime, 
-        type: newAppointmentType,
-    };
-
     try {
-        // console.log("Scheduling new appointment with payload (to /api/v1/appointments):", payload);
-        // const response = await fetch('/api/v1/appointments', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(payload),
-        // });
-        // if (!response.ok) {
-        //     const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
-        //     throw new Error(errorData.error || `API error: ${response.statusText}`);
-        // }
-        // const newApt: Appointment = await response.json();
-        
         await new Promise(resolve => setTimeout(resolve, 1500)); 
         const doctor = doctors.find(d => d.id === newSelectedDoctorId);
         const appointmentDateObj = new Date(newAppointmentDate + 'T' + newAppointmentTime);
@@ -234,10 +273,9 @@ export default function AppointmentsPage() {
     ? selectedCalendarDate.toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) 
     : t('appointments.allDates');
 
-
   return (
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <CalendarCheck2 className="h-8 w-8" /> {t('appointments.pageTitle')}
           </h1>
@@ -311,7 +349,115 @@ export default function AppointmentsPage() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
+      </div>
+
+      <div className="flex flex-col gap-6">
+        <Card className="shadow-sm border-blue-200 bg-blue-50/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl flex items-center gap-2 text-blue-800">
+              <Users2 className="h-6 w-6" /> Specialist Referrals Pending Confirmation
+            </CardTitle>
+            <CardDescription>Referrals sent from General Consultation awaiting specialist approval.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingReferrals ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              </div>
+            ) : referrals.filter(r => r.status === "PENDING_CONFIRMATION").length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Patient</TableHead>
+                    <TableHead>Target Specialty</TableHead>
+                    <TableHead>Target Facility</TableHead>
+                    <TableHead>Date Sent</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {referrals.filter(r => r.status === "PENDING_CONFIRMATION").map((ref) => (
+                    <TableRow key={ref.id} className="bg-white/40">
+                      <TableCell className="font-bold">{ref.patientName}</TableCell>
+                      <TableCell><Badge variant="outline">{ref.specialty}</Badge></TableCell>
+                      <TableCell>{ref.facility}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{new Date(ref.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setSelectedReferral(ref)}>
+                              <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm & Schedule
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                              <form onSubmit={handleConfirmReferral}>
+                                <DialogHeader>
+                                  <DialogTitle>Confirm Referral: {ref.patientName}</DialogTitle>
+                                  <DialogDescription>
+                                    Setting the consultation date and time will trigger an automatic SMS to the patient.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label>Appointment Date</Label>
+                                      <Input type="date" required value={confirmationDate} onChange={e => setConfirmationDate(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Appointment Time</Label>
+                                      <Input type="time" required value={confirmationTime} onChange={e => setConfirmationTime(e.target.value)} />
+                                    </div>
+                                  </div>
+                                  <Alert className="bg-green-50 border-green-200">
+                                    <Smartphone className="h-4 w-4 text-green-600" />
+                                    <AlertTitle className="text-green-800 font-semibold">SMS Payload Preview</AlertTitle>
+                                    <AlertDescription className="text-green-700 text-xs">
+                                      Hi {ref.patientName}, your referral to {ref.specialty} at {ref.facility} is confirmed for {confirmationDate || '---'} at {confirmationTime || '---'}. Please reply YES to confirm or NO to reschedule.
+                                    </AlertDescription>
+                                  </Alert>
+                                </div>
+                                <DialogFooter>
+                                  <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                                  <Button type="submit" disabled={isConfirmingReferral || !confirmationDate || !confirmationTime}>
+                                    {isConfirmingReferral ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                    Confirm & Send SMS
+                                  </Button>
+                                </DialogFooter>
+                              </form>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground italic border border-dashed rounded-lg">
+                No pending specialist referrals at this time.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {smsSentTo && (
+          <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5">
+            <Card className="shadow-2xl border-green-500 bg-black text-white w-80">
+              <CardHeader className="pb-2 border-b border-white/10">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-xs font-mono flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" /> SMS SENT
+                  </CardTitle>
+                  <Badge className="bg-green-500 text-black text-[8px] h-4">DELIVERED</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="p-3 bg-white/10 rounded-lg text-[11px] leading-snug">
+                  Hi {smsSentTo}, your referral to {selectedReferral?.specialty} at {selectedReferral?.facility} is confirmed for {confirmationDate} at {confirmationTime}. Please reply YES to confirm or NO to reschedule.
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 shadow-sm">
@@ -344,7 +490,7 @@ export default function AppointmentsPage() {
                         <TableCell>{apt.time}</TableCell>
                         <TableCell className="flex items-center gap-1">
                           {apt.type === "Telemedicine" && <Video className="h-4 w-4 text-primary" />}
-                           {t(`appointments.scheduleModal.type.${apt.type.toLowerCase().replace('-', '')}` as any, apt.type)}
+                           {apt.type}
                         </TableCell>
                         <TableCell className="text-right">
                           <Badge variant={
@@ -416,8 +562,6 @@ export default function AppointmentsPage() {
           </div>
         </div>
       </div>
+    </div>
   );
 }
-    
-
-      

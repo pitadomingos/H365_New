@@ -90,10 +90,10 @@ export default function AnalyticsBIPage() {
   if (!isMounted) return null;
 
   const kpis = [
-    { label: "Active Patient Load", value: "8,420", trend: "+5.2%", status: "up", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Critical Resource Usage", value: "92%", trend: "+2.1%", status: "up", icon: Activity, color: "text-red-600", bg: "bg-red-50" },
-    { label: "Avg. Disposition Time", value: "42 min", trend: "-8%", status: "down", icon: Clock, color: "text-teal-600", bg: "bg-teal-50" },
-    { label: "Public Health Safety Score", value: "94.8", trend: "+0.4", status: "up", icon: ShieldAlert, color: "text-purple-600", bg: "bg-purple-50" }
+    { label: t('analyticsBi.stats.activeLoad'), value: "8,420", trend: "+5.2%", status: "up", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: t('analyticsBi.stats.resourceUsage'), value: "92%", trend: "+2.1%", status: "up", icon: Activity, color: "text-red-600", bg: "bg-red-50" },
+    { label: t('analyticsBi.stats.avgDisposition'), value: "42 min", trend: "-8%", status: "down", icon: Clock, color: "text-teal-600", bg: "bg-teal-50" },
+    { label: t('analyticsBi.stats.safetyScore'), value: "94.8", trend: "+0.4", status: "up", icon: ShieldAlert, color: "text-purple-600", bg: "bg-purple-50" }
   ];
 
   return (

@@ -4,40 +4,19 @@ import React, { useState, useEffect } from "react";
 import { Cloud, CloudOff, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { useOffline } from "@/context/offline-context";
 
 export function ConnectivityIndicator() {
-  const [isOnline, setIsOnline] = useState<boolean>(true);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const { isOnline, isSyncing } = useOffline();
   const [showStatus, setShowStatus] = useState<boolean>(false);
 
   useEffect(() => {
-    // Initial check
-    setIsOnline(navigator.onLine);
-
-    const handleOnline = () => {
-      setIsOnline(true);
-      setShowStatus(true);
-      // Simulate sync
-      setIsSyncing(true);
-      setTimeout(() => {
-        setIsSyncing(false);
-        setTimeout(() => setShowStatus(false), 3000);
-      }, 2000);
-    };
-
-    const handleOffline = () => {
-      setIsOnline(false);
-      setShowStatus(true);
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+    setShowStatus(true);
+    const timer = setTimeout(() => {
+      if (isOnline && !isSyncing) setShowStatus(false);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [isOnline, isSyncing]);
 
   return (
     <AnimatePresence>

@@ -12,11 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, FlaskConical, RadioTower, Save, ActivityIcon as BloodPressureIcon } from "lucide-react";
+import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, FlaskConical, RadioTower, Save, Smartphone, MapPin, ActivityIcon as BloodPressureIcon } from "lucide-react";
 import type { TreatmentRecommendationInput, TreatmentRecommendationOutput } from '@/ai/flows/treatment-recommendation';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "@/hooks/use-toast";
 import { MOCK_PATIENTS } from '@/lib/mock-data';
+import { LocalDB } from '@/lib/db';
 import {
   Dialog,
   DialogContent,
@@ -156,6 +157,9 @@ export function ConsultationForm({ getRecommendationAction, getPatientContextAct
   const [bpDisplay, setBpDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
 
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+  const [selectedSpecialty, setSelectedSpecialty] = useState("");
+  const [selectedFacility, setSelectedFacility] = useState("");
   
   const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
   const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
@@ -347,6 +351,12 @@ ${visitHistoryString || "No recent visit history available."}
         toast({ variant: "destructive", title: t('consultationForm.toast.error'), description: t('consultationForm.toast.outcome.noPatient') });
         return;
     }
+
+    if (outcome === "Refer to Specialist") {
+      setIsReferralModalOpen(true);
+      return;
+    }
+
     setIsSubmittingOutcome(true);
     
     const currentFormData = form.getValues();
@@ -389,6 +399,43 @@ ${visitHistoryString || "No recent visit history available."}
     setSelectedLabTests({});
     setIsOutcomeModalOpen(false);
     setIsSubmittingOutcome(false);
+  };
+
+  const handleCreateReferral = async () => {
+    if (!patientData || !selectedSpecialty || !selectedFacility) {
+      toast({ variant: "destructive", title: "Incomplete Referral", description: "Please select both a specialty and a facility." });
+      return;
+    }
+    
+    setIsSubmittingOutcome(true);
+    
+    const referralData = {
+      id: `REF-${Math.random().toString(36).substr(2, 9)}`,
+      patientId: patientData.nationalId,
+      patientName: patientData.fullName,
+      specialty: selectedSpecialty,
+      facility: selectedFacility,
+      referredBy: "Dr. Current User",
+      date: new Date().toISOString(),
+      status: "PENDING_CONFIRMATION", // Specialist needs to confirm
+    };
+
+    // Save to LocalDB (Simulating back-end persistence)
+    const existingReferrals = await LocalDB.get<any[]>("specialist_referrals", []);
+    await LocalDB.save("specialist_referrals", [...existingReferrals, referralData]);
+
+    console.log("[Referral] Created:", referralData);
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    toast({ 
+      title: "Referral Created", 
+      description: `Patient ${patientData.fullName} has been referred to ${selectedSpecialty} at ${selectedFacility}. Waiting for confirmation.` 
+    });
+
+    // Cleanup and close
+    setIsReferralModalOpen(false);
+    setIsOutcomeModalOpen(false);
+    handleOutcome("Referral Sent"); // Finalize the consultation record
   };
   
   const handleSaveProgress = async () => {
@@ -900,6 +947,65 @@ ${visitHistoryString || "No recent visit history available."}
                          </DialogClose>
                     </div>
                     </DialogContent>
+                </Dialog>
+
+                {/* Specialist Referral Dialog */}
+                <Dialog open={isReferralModalOpen} onOpenChange={setIsReferralModalOpen}>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Users2 className="h-5 w-5 text-primary" /> Specialist Referral
+                      </DialogTitle>
+                      <DialogDescription>
+                        Direct {patientData?.fullName} to a specialist facility.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="specialty">Target Specialty</Label>
+                        <Select onValueChange={setSelectedSpecialty} value={selectedSpecialty}>
+                          <SelectTrigger id="specialty">
+                            <SelectValue placeholder="Select Specialty" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Cardiology">Cardiology</SelectItem>
+                            <SelectItem value="Orthopedics">Orthopedics</SelectItem>
+                            <SelectItem value="Oncology">Oncology</SelectItem>
+                            <SelectItem value="Pediatrics">Pediatrics</SelectItem>
+                            <SelectItem value="Neurology">Neurology</SelectItem>
+                            <SelectItem value="Internal Medicine">Internal Medicine</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="facility">Target Facility</Label>
+                        <Select onValueChange={setSelectedFacility} value={selectedFacility}>
+                          <SelectTrigger id="facility">
+                            <SelectValue placeholder="Select Facility" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Central Hospital (Maputo)">Central Hospital (Maputo)</SelectItem>
+                            <SelectItem value="Specialist Center B">Specialist Center B</SelectItem>
+                            <SelectItem value="Provincial Health Hub">Provincial Health Hub</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Alert className="bg-primary/5 border-primary/20">
+                        <Smartphone className="h-4 w-4" />
+                        <AlertTitle className="text-xs font-semibold">Automatic SMS Trigger</AlertTitle>
+                        <AlertDescription className="text-xs">
+                          Upon specialist confirmation, the patient will receive a scheduling SMS.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsReferralModalOpen(false)}>Cancel</Button>
+                      <Button onClick={handleCreateReferral} disabled={!selectedSpecialty || !selectedFacility}>
+                        {isSubmittingOutcome ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Send Referral
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
                 </Dialog>
             </div>
           </div>

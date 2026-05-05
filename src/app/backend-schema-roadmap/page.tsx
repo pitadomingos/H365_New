@@ -55,7 +55,62 @@ export default function BackendSchemaRoadmapPage() {
 
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl">3. Phased Development Roadmap</CardTitle>
+          <CardTitle className="text-xl">3. Data Modeling & Interoperability (Blueprint)</CardTitle>
+          <CardDescription>Logical representation of core entities for multi-tenant national scale.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            H365 uses a &quot;Blueprint&quot; approach to define data shapes before physical implementation. This ensures consistency across the MySQL backend and any future microservices.
+          </p>
+          <CodeBlock lang="json">{
+`{
+  "entities": {
+    "Patient": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "nationalId": { "type": "string", "description": "Unique National identifier" },
+        "fullName": { "type": "string" },
+        "facilityId": { "type": "string", "description": "Home facility ID" }
+      },
+      "required": ["nationalId", "fullName"]
+    },
+    "ClinicalEncounter": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientId": { "type": "string" },
+        "visitType": { "enum": ["OPD", "ER", "Maternity", "Ward"] },
+        "observations": { "type": "array", "items": { "$ref": "#/entities/Observation" } }
+      }
+    },
+    "FinancialClaim": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "encounterId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "enum": ["Draft", "Submitted", "Paid", "Rejected"] }
+      }
+    }
+  }
+}`
+}
+          </CodeBlock>
+          <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+            <h4 className="text-sm font-bold flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <BookOpenCheck className="h-4 w-4" /> OpenHIE Interoperability
+            </h4>
+            <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
+              All backend endpoints must support FHIR-compliant responses for clinical data exchange. The Patient Registry acts as a Master Patient Index (MPI) node.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-xl">4. Phased Development Roadmap</CardTitle>
           <CardDescription>A high-level overview of development phases. API details are in `docs/api_endpoints.md`.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -153,7 +208,7 @@ export default function BackendSchemaRoadmapPage() {
 
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl">4. Data Considerations for Dynamic Lists &amp; History</CardTitle>
+          <CardTitle className="text-xl">5. Data Considerations for Dynamic Lists &amp; History</CardTitle>
         </CardHeader>
         <CardContent className="prose dark:prose-invert max-w-none">
             <p className="text-sm text-muted-foreground">
@@ -181,7 +236,7 @@ export default function BackendSchemaRoadmapPage() {
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-xl flex items-center gap-2">
-            <FolderTree className="h-6 w-6" /> 5. Proposed Backend Folder Structure (Node.js/Express)
+            <FolderTree className="h-6 w-6" /> 6. Proposed Backend Folder Structure (Node.js/Express)
           </CardTitle>
           <CardDescription>A modular structure for organizing backend code.</CardDescription>
         </CardHeader>
@@ -267,7 +322,7 @@ export default function BackendSchemaRoadmapPage() {
 
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl">6. Key Backend Considerations</CardTitle>
+          <CardTitle className="text-xl">7. Key Backend Considerations</CardTitle>
         </CardHeader>
         <CardContent className="prose dark:prose-invert max-w-none">
            <ul className="list-disc list-inside text-sm pl-4 space-y-1">

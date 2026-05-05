@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -10,36 +10,72 @@ export type NavItem = {
   forceNewTab?: boolean;
 };
 
-export const NAV_ITEMS: NavItem[] = [
-  { href: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-  { href: '/public-health-dashboard', labelKey: 'nav.publicDashboard', icon: Activity, forceNewTab: true },
-  { href: '/patient-registration', labelKey: 'nav.patientRegistration', icon: UsersRound },
-  { href: '/visiting-patients', labelKey: 'nav.visitingPatients', icon: Users },
-  { href: '/appointments', labelKey: 'nav.appointments', icon: CalendarDays },
-  { href: '/treatment-recommendation', labelKey: 'nav.consultationRoom', icon: ClipboardEdit },
-  { href: '/specializations', labelKey: 'nav.specializations', icon: Star },
-  { href: '/maternity-care', labelKey: 'nav.maternityCare', icon: Baby },
-  { href: '/ward-management', labelKey: 'nav.wardManagement', icon: BedDouble },
-  { href: '/laboratory-management', labelKey: 'nav.laboratory', icon: Microscope },
-  { href: '/imaging-management', labelKey: 'nav.imaging', icon: MonitorPlay },
-  { href: '/pharmacy-locator', labelKey: 'nav.drugDispensing', icon: Pill },
-  { href: '/emergency-room', labelKey: 'nav.emergencyRoom', icon: Siren },
-  { href: '/epidemic-control', labelKey: 'nav.epidemicControl', icon: Biohazard },
-  { href: '/campaigns', labelKey: 'nav.campaigns', icon: Megaphone },
-  { href: '/reporting', labelKey: 'nav.reporting', icon: BarChartBig },
-  { href: '/billing', labelKey: 'nav.billingFinance', icon: CreditCard },
-  { href: '/telemedicine', labelKey: 'nav.telemedicine', icon: Video },
-  { href: '/analytics-bi', labelKey: 'nav.analyticsBi', icon: BrainCircuit },
-  { href: '/blood-bank', labelKey: 'nav.bloodBank', icon: Droplets },
-  { href: '/system-activity-log', labelKey: 'nav.systemActivityLog', icon: ListCollapse }, 
-  { href: '/system-status', labelKey: 'nav.systemNodeStatus', icon: Network },
-  { href: '/technical-overview', labelKey: 'nav.technicalOverview', icon: Info },
-  { href: '/backend-schema-roadmap', labelKey: 'nav.backendRoadmap', icon: Database },
-  { href: '/architecture-options', labelKey: 'nav.architectureOptions', icon: Network },
-  { href: '/training-materials', labelKey: 'nav.trainingMaterials', icon: BookOpenCheck },
-  { href: '/system-documentation', labelKey: 'nav.systemDocumentation', icon: FileText },
-  { href: '/todo-list', labelKey: 'nav.toDoList', icon: ListChecks },
+export type NavGroup = {
+  titleKey: string;
+  items: NavItem[];
+};
+
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    titleKey: 'nav.group.clinical',
+    items: [
+      { href: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+      { href: '/appointments', labelKey: 'nav.appointments', icon: CalendarDays },
+      { href: '/visiting-patients', labelKey: 'nav.visitingPatients', icon: Users },
+      { href: '/treatment-recommendation', labelKey: 'nav.consultationRoom', icon: ClipboardEdit },
+      { href: '/specializations', labelKey: 'nav.specializations', icon: Star },
+      { href: '/maternity-care', labelKey: 'nav.maternityCare', icon: Baby },
+      { href: '/ward-management', labelKey: 'nav.wardManagement', icon: BedDouble },
+    ]
+  },
+  {
+    titleKey: 'nav.group.ancillary',
+    items: [
+      { href: '/laboratory-management', labelKey: 'nav.laboratory', icon: Microscope },
+      { href: '/imaging-management', labelKey: 'nav.imaging', icon: MonitorPlay },
+      { href: '/pharmacy-locator', labelKey: 'nav.drugDispensing', icon: Pill },
+      { href: '/blood-bank', labelKey: 'nav.bloodBank', icon: Droplets },
+      { href: '/emergency-room', labelKey: 'nav.emergencyRoom', icon: Siren },
+      { href: '/telemedicine', labelKey: 'nav.telemedicine', icon: Video },
+    ]
+  },
+  {
+    titleKey: 'nav.group.publicHealth',
+    items: [
+      { href: '/public-health-dashboard', labelKey: 'nav.publicDashboard', icon: Activity, forceNewTab: true },
+      { href: '/epidemic-control', labelKey: 'nav.epidemicControl', icon: Biohazard },
+      { href: '/public-health-messaging', labelKey: 'nav.publicHealthMessaging', icon: Megaphone },
+      { href: '/campaigns', labelKey: 'nav.campaigns', icon: Megaphone },
+      { href: '/analytics-bi', labelKey: 'nav.analyticsBi', icon: BrainCircuit },
+    ]
+  },
+  {
+    titleKey: 'nav.group.admin',
+    items: [
+      { href: '/patient-registration', labelKey: 'nav.patientRegistration', icon: UsersRound },
+      { href: '/reporting', labelKey: 'nav.reporting', icon: BarChartBig },
+      { href: '/billing', labelKey: 'nav.billingFinance', icon: CreditCard },
+      { href: '/inventory-management', labelKey: 'nav.inventory', icon: Package },
+      { href: '/mpi-reconciliation', labelKey: 'nav.mpi', icon: Fingerprint },
+      { href: '/biomedical-engineering', labelKey: 'nav.biomedical', icon: Settings },
+    ]
+  },
+  {
+    titleKey: 'nav.group.technical',
+    items: [
+      { href: '/system-activity-log', labelKey: 'nav.systemActivityLog', icon: ListCollapse }, 
+      { href: '/system-status', labelKey: 'nav.systemNodeStatus', icon: Network },
+      { href: '/technical-overview', labelKey: 'nav.technicalOverview', icon: Info },
+      { href: '/backend-schema-roadmap', labelKey: 'nav.backendRoadmap', icon: Database },
+      { href: '/architecture-options', labelKey: 'nav.architectureOptions', icon: Network },
+      { href: '/training-materials', labelKey: 'nav.trainingMaterials', icon: BookOpenCheck },
+      { href: '/system-documentation', labelKey: 'nav.systemDocumentation', icon: FileText },
+      { href: '/todo-list', labelKey: 'nav.toDoList', icon: ListChecks },
+    ]
+  }
 ];
+
+export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap(g => g.items);
 
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
     { href: '#', labelKey: 'nav.notifications', icon: Bell, disabled: true }, 

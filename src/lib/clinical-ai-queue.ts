@@ -10,6 +10,7 @@ export interface AIQueueItem {
   prompt: string;
   context: any;
   status: 'pending' | 'syncing' | 'completed' | 'failed';
+  locale: string;
   result?: string;
   createdAt: string;
   syncedAt?: string;
@@ -67,6 +68,7 @@ export const syncQueue = async (onProgress?: (id: string, result: string | null,
         Task: Analyze the provided record for clinical safety, missing flags, or suggested optimizations.
         Patient Data: ${JSON.stringify(item.context || {})}
         Instructions: Provide a concise audit summary. Focus on safety and evidence-based recommendations.
+        IMPORTANT: Your response MUST be in the following language: ${item.locale === 'pt' ? 'Portuguese' : 'English'}.
       `;
 
       const response = await ai.models.generateContent({

@@ -117,9 +117,9 @@ export default function CampaignsPage() {
   });
 
   const stats = [
-    { label: "Active Campaigns", value: "2", icon: Megaphone, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Total Population Target", value: "4.2M", icon: Users, color: "text-teal-600", bg: "bg-teal-50" },
-    { label: "Avg. Goal Achievement", value: "74%", icon: Target, color: "text-purple-600", bg: "bg-purple-50" },
+    { label: t('campaigns.active.title'), value: "2", icon: Megaphone, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: t('campaigns.stats.reach'), value: "4.2M", icon: Users, color: "text-teal-600", bg: "bg-teal-50" },
+    { label: t('campaigns.stats.target'), value: "74%", icon: Target, color: "text-purple-600", bg: "bg-purple-50" },
     { label: "Field Staff Active", value: "1,420", icon: Building2, color: "text-amber-600", bg: "bg-amber-50" }
   ];
 

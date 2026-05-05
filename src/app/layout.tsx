@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from "@/components/ui/toaster";
 import { LocaleProvider } from '@/context/locale-context';
 import { UserProvider } from '@/context/user-context';
+import { OfflineProvider } from '@/context/offline-context';
 import { AppShell } from '@/components/layout/app-shell';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
@@ -44,12 +45,13 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <LocaleProvider>
           <UserProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
+            <OfflineProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
               {/* SidebarProvider now has defaultOpen={true} */}
               <SidebarProvider defaultOpen={true}> 
                 <ConnectivityIndicator />
@@ -69,9 +71,10 @@ export default function RootLayout({
               </SidebarProvider>
               <Toaster />
             </ThemeProvider>
-          </UserProvider>
-        </LocaleProvider>
-      </body>
-    </html>
-  );
+          </OfflineProvider>
+        </UserProvider>
+      </LocaleProvider>
+    </body>
+  </html>
+);
 }
