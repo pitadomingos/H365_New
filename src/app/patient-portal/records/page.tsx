@@ -22,7 +22,10 @@ import { Button } from '@/components/ui/button';
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 
+import { useToast } from '@/hooks/use-toast';
+
 export default function PatientRecordsPage() {
+  const { toast } = useToast();
   const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,14 +43,28 @@ export default function PatientRecordsPage() {
     { id: 3, test: 'Glucose (Fasting)', date: '2025-06-10', status: 'Normal', results: '92 mg/dL' },
   ];
 
+  const filteredVisits = visitHistory.filter(v => 
+    v.dept.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    v.reason.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredLabs = labResults.filter(l => 
+    l.test.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="p-4 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
           {t('patientPortal.records.title')}
         </h2>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-           <Filter className="h-5 w-5 text-slate-500" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-9 w-9 text-slate-500"
+          onClick={() => toast({ title: "Filters", description: "Advanced filtering will be available after the next L-LAN sync." })}
+        >
+           <Filter className="h-5 w-5" />
         </Button>
       </div>
 
@@ -76,8 +93,12 @@ export default function PatientRecordsPage() {
 
         <TabsContent value="visits" className="mt-4 animate-in fade-in slide-in-from-right-4 duration-300">
            <div className="space-y-3">
-             {visitHistory.map((visit) => (
-               <Card key={visit.id} className="shadow-sm border-slate-100 hover:border-primary/20 transition-all group active:scale-[0.98]">
+             {filteredVisits.map((visit) => (
+               <Card 
+                 key={visit.id} 
+                 className="shadow-sm border-slate-100 hover:border-primary/20 transition-all group active:scale-[0.98] cursor-pointer"
+                 onClick={() => toast({ title: "Visit Summary", description: `Consultation with ${visit.doctor || 'Provider'} at ${visit.facility}. Record ID: ${visit.id}` })}
+               >
                  <CardContent className="p-4 flex items-center gap-4">
                     <div className="h-10 w-10 rounded-full bg-primary/5 text-primary flex items-center justify-center shrink-0">
                        <Calendar className="h-5 w-5" />
@@ -101,7 +122,7 @@ export default function PatientRecordsPage() {
 
         <TabsContent value="labs" className="mt-4 animate-in fade-in slide-in-from-right-4 duration-300">
            <div className="space-y-3">
-             {labResults.map((lab) => (
+             {filteredLabs.map((lab) => (
                <Card key={lab.id} className="shadow-sm border-slate-100 overflow-hidden">
                  <div className={cn("h-1 w-full", lab.status === 'Elevated' ? "bg-orange-500" : "bg-green-500")} />
                  <CardContent className="p-4 space-y-3">
@@ -120,7 +141,12 @@ export default function PatientRecordsPage() {
                     <div className="p-2 rounded bg-slate-50 text-[11px] font-mono whitespace-pre-wrap text-slate-600 border border-slate-100">
                        {lab.results}
                     </div>
-                    <Button variant="ghost" size="sm" className="w-full text-[10px] uppercase font-bold text-primary h-8 hover:bg-primary/5">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full text-[10px] uppercase font-bold text-primary h-8 hover:bg-primary/5"
+                      onClick={() => toast({ title: "Downloading Report", description: `Lab_${lab.id}_Results.pdf is being prepared.` })}
+                    >
                         <Download className="h-3 w-3 mr-1.5" /> Full Lab Report
                     </Button>
                  </CardContent>

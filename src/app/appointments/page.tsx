@@ -556,7 +556,13 @@ export default function AppointmentsPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">{t('appointments.notifications.empty')}</p>
                 )}
-                <Button variant="outline" className="w-full mt-4" disabled>{t('appointments.notifications.viewAllButton')}</Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4" 
+                  onClick={() => toast({ title: "Notifications", description: "All notifications have been marked as read." })}
+                >
+                  {t('appointments.notifications.viewAllButton')}
+                </Button>
               </CardContent>
             </Card>
           </div>

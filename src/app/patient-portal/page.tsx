@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Dna, 
   Droplet, 
@@ -14,7 +15,13 @@ import {
   History,
   TrendingUp,
   Download,
-  Info
+  Info,
+  Apple,
+  Stethoscope,
+  Heart,
+  ShieldCheck as ShieldIcon,
+  CheckCircle2,
+  FileText
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,18 +29,30 @@ import { Button } from '@/components/ui/button';
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 export default function PatientDashboard() {
+  const router = useRouter();
+  const { toast } = useToast();
   const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
   const [patientName, setPatientName] = useState('Augusto Mendes');
+  const [patientPhoto, setPatientPhoto] = useState('https://picsum.photos/seed/patient/200');
   const [nid, setNid] = useState('8832-1102-44');
 
   useEffect(() => {
-    const storedName = localStorage.getItem('patient_name');
-    const storedNid = localStorage.getItem('patient_nid');
-    if (storedName) setPatientName(storedName);
-    if (storedNid) setNid(storedNid);
+    const storedProfile = localStorage.getItem('patient_profile');
+    if (storedProfile) {
+      const profile = JSON.parse(storedProfile);
+      setPatientName(profile.name);
+      setPatientPhoto(profile.photoUrl);
+      setNid(profile.nid);
+    } else {
+      const storedName = localStorage.getItem('patient_name');
+      const storedNid = localStorage.getItem('patient_nid');
+      if (storedName) setPatientName(storedName);
+      if (storedNid) setNid(storedNid);
+    }
   }, []);
 
   return (
@@ -50,7 +69,7 @@ export default function PatientDashboard() {
         </div>
         <div className="h-12 w-12 rounded-full border-2 border-primary/20 p-0.5 overflow-hidden">
            <Image 
-             src="https://picsum.photos/seed/patient/200" 
+             src={patientPhoto} 
              alt="User" 
              width={48} 
              height={48} 
@@ -131,6 +150,78 @@ export default function PatientDashboard() {
         </div>
       </div>
 
+      {/* Clinical Recommendations & Nutrition */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 ml-1">
+          {t('patientPortal.dashboard.recommendations')}
+        </h3>
+        
+        <div className="space-y-3">
+          {/* Nutrition Guidance */}
+          <Card className="shadow-sm border-slate-100 overflow-hidden border-l-4 border-l-green-500">
+            <CardContent className="p-4 flex gap-4">
+               <div className="h-10 w-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center shrink-0 border border-green-100">
+                  <Apple className="h-5 w-5" />
+               </div>
+               <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">{t('patientPortal.dashboard.nutrition')}</p>
+                    <Badge variant="outline" className="text-[9px] h-4 px-1 bg-green-50 text-green-700 border-green-200">ACTIVE</Badge>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800">Low Sodium Diet Plan</p>
+                  <p className="text-xs text-slate-500 leading-snug">
+                    Increase intake of potassium-rich foods (bananas, potatoes) to support your blood pressure management. Limit processed salts.
+                  </p>
+               </div>
+            </CardContent>
+          </Card>
+
+          {/* HIV/TB or Chronic Status */}
+          <Card className="shadow-sm border-slate-100 overflow-hidden border-l-4 border-l-blue-500">
+            <CardContent className="p-4 flex gap-4">
+               <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                  <Stethoscope className="h-5 w-5" />
+               </div>
+               <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">{t('patientPortal.dashboard.treatmentPlan')}</p>
+                    <Badge variant="outline" className="text-[9px] h-4 px-1 bg-blue-50 text-blue-700 border-blue-200">STABLE</Badge>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800">HIV Management (ART)</p>
+                  <div className="flex items-center gap-2 mt-1">
+                     <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 w-[95%]" />
+                     </div>
+                     <span className="text-[10px] font-bold text-slate-400">95% Compliance</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Viral load at last check (Mar 20) was undetected. Next CD4 count scheduled for June 5.
+                  </p>
+               </div>
+            </CardContent>
+          </Card>
+
+          {/* TB Monitoring */}
+          <Card className="shadow-sm border-slate-100 overflow-hidden border-l-4 border-l-orange-500">
+            <CardContent className="p-4 flex gap-4">
+               <div className="h-10 w-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 border border-orange-100">
+                  <Activity className="h-5 w-5" />
+               </div>
+               <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">TB Screening & Prevention</p>
+                    <Badge variant="outline" className="text-[9px] h-4 px-1 bg-orange-50 text-orange-700 border-orange-200">PENDING</Badge>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800">Sputum Test Required</p>
+                  <p className="text-xs text-slate-500 leading-snug">
+                    Please visit the lab for your scheduled TB screening. Early detection is critical for your treatment plan.
+                  </p>
+               </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Last Visit */}
       <Card className="shadow-sm border-slate-100 overflow-hidden group">
         <CardHeader className="bg-slate-50/50 py-3 pb-2 flex flex-row items-center justify-between space-y-0">
@@ -150,7 +241,12 @@ export default function PatientDashboard() {
                  <MapPin className="h-3 w-3" /> Central General Hospital
                </p>
              </div>
-             <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
+             <Button 
+               variant="ghost" 
+               size="icon" 
+               className="h-8 w-8 text-primary hover:bg-primary/10"
+               onClick={() => router.push('/patient-portal/records')}
+             >
                 <ExternalLink className="h-4 w-4" />
              </Button>
           </div>
@@ -209,7 +305,23 @@ export default function PatientDashboard() {
          <p className="text-xs text-slate-600 leading-relaxed">
             Every entry in your health hub is verified by a clinical provider. For emergencies, please call the National Medical Helpline (117) or visit your nearest ER.
          </p>
-         <Button variant="outline" className="w-full h-9 border-primary/20 text-primary text-xs font-bold hover:bg-primary/5">
+         <Button 
+            variant="outline" 
+            className="w-full h-9 border-primary/20 text-primary text-xs font-bold hover:bg-primary/5"
+            onClick={() => {
+              toast({
+                title: "Generating Health Report",
+                description: "Your secure clinical summary is being compiled. Please wait...",
+              });
+              setTimeout(() => {
+                toast({
+                  title: "Ready for Download",
+                  description: "Health_Report_2026.pdf is ready.",
+                  icon: <FileText className="h-5 w-5 text-blue-500" />
+                });
+              }, 2000);
+            }}
+          >
             <Download className="h-3.5 w-3.5 mr-2" /> Download Health Report (PDF)
          </Button>
       </div>
