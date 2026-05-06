@@ -70,12 +70,7 @@ export default function PatientMedicationsPage() {
              <Bell className="h-3 w-3 text-primary" /> 2 reminders active for today
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="h-10 w-10 border-slate-200"
-          onClick={() => toast({ title: "Prescription History", description: "Loading your full medication logs from 2024-2026..." })}
-        >
+        <Button variant="outline" size="icon" className="h-10 w-10 border-slate-200">
            <History className="h-5 w-5 text-slate-500" />
         </Button>
       </div>
@@ -156,11 +151,7 @@ export default function PatientMedicationsPage() {
                 <p className="text-sm font-bold">Need a prescription refill?</p>
                 <p className="text-xs text-slate-300">Request a renewal from your primary doctor without visiting the clinic.</p>
              </div>
-             <Button 
-               variant="secondary" 
-               className="w-full bg-white text-slate-900 font-bold h-10 hover:bg-slate-100"
-               onClick={() => toast({ title: "Refill Requested", description: "Request sent to Dr. Santos. You'll be notified of approval." })}
-             >
+             <Button variant="secondary" className="w-full bg-white text-slate-900 font-bold h-10 hover:bg-slate-100">
                 Start Refill Request
              </Button>
           </CardContent>

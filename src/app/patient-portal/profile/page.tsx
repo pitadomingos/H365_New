@@ -283,16 +283,11 @@ export default function PatientProfilePage() {
                  <QrCode className="h-6 w-6 text-primary" />
               </div>
               <div className="space-y-0.5">
-                 <p className="text-sm font-bold text-slate-800">Digital Health Card</p>
-                 <p className="text-[10px] text-slate-500">Present this QR code for identification</p>
+                 <p className="text-sm font-bold text-slate-800">{t('patientPortal.idCard.title')}</p>
+                 <p className="text-[10px] text-slate-500">{t('patientPortal.idCard.scanDesc')}</p>
               </div>
            </div>
-           <Button 
-             size="icon" 
-             variant="ghost" 
-             className="text-primary hover:bg-white"
-             onClick={() => toast({ title: "Sharing Digital ID", description: "Secured Health ID link ready to share via NHIS Network." })}
-           >
+           <Button size="icon" variant="ghost" className="text-primary hover:bg-white">
               <Share2 className="h-4 w-4" />
            </Button>
         </CardContent>
@@ -327,27 +322,21 @@ export default function PatientProfilePage() {
 
          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Privacy & Support</h3>
          <Card className="border-slate-100 shadow-sm divide-y">
-            <button 
-              className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-              onClick={() => router.push('/technical-documentation')}
-            >
+            <button className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                <div className="flex items-center gap-3">
                   <Lock className="h-5 w-5 text-slate-400" />
                   <span className="text-sm font-medium text-slate-700">Privacy Policy</span>
                </div>
                <ExternalLink className="h-4 w-4 text-slate-300" />
             </button>
-            <button 
-              className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors" 
-              onClick={() => router.push('/technical-documentation')}
-            >
+            <button className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors" onClick={() => router.push('/technical-documentation')}>
                <div className="flex items-center gap-3">
-                  <Smartphone className="h-5 w-5 text-slate-400" />
+                  <Settings className="h-5 w-5 text-slate-400" />
                   <span className="text-sm font-medium text-slate-700">System Information</span>
                </div>
-               <ExternalLink className="h-4 w-4 text-slate-300" />
+               <ChevronRight className="h-4 w-4 text-slate-300" />
             </button>
-          </Card>
+         </Card>
 
          <Button 
            variant="outline" 

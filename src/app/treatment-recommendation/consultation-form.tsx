@@ -1071,13 +1071,7 @@ ${visitHistoryString || "No recent visit history available."}
               )}
             </CardContent>
             <CardFooter>
-                <Button 
-                  variant="link" 
-                  className="p-0 h-auto text-xs" 
-                  onClick={() => toast({ title: "Clinical Archive", description: "Accessing full patient history from regional data hub..." })}
-                >
-                  {t('consultationForm.visitHistory.viewFull')}
-                </Button>
+                <Button variant="link" className="p-0 h-auto text-xs" disabled>{t('consultationForm.visitHistory.viewFull')}</Button>
             </CardFooter>
           </Card>
         </div>

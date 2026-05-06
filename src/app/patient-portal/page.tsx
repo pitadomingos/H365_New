@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { 
   Dna, 
   Droplet, 
@@ -19,9 +18,7 @@ import {
   Apple,
   Stethoscope,
   Heart,
-  ShieldCheck as ShieldIcon,
-  CheckCircle2,
-  FileText
+  ShieldCheck as ShieldIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,11 +26,8 @@ import { Button } from '@/components/ui/button';
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 
 export default function PatientDashboard() {
-  const router = useRouter();
-  const { toast } = useToast();
   const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
   const [patientName, setPatientName] = useState('Augusto Mendes');
@@ -241,12 +235,7 @@ export default function PatientDashboard() {
                  <MapPin className="h-3 w-3" /> Central General Hospital
                </p>
              </div>
-             <Button 
-               variant="ghost" 
-               size="icon" 
-               className="h-8 w-8 text-primary hover:bg-primary/10"
-               onClick={() => router.push('/patient-portal/records')}
-             >
+             <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
                 <ExternalLink className="h-4 w-4" />
              </Button>
           </div>
@@ -305,23 +294,7 @@ export default function PatientDashboard() {
          <p className="text-xs text-slate-600 leading-relaxed">
             Every entry in your health hub is verified by a clinical provider. For emergencies, please call the National Medical Helpline (117) or visit your nearest ER.
          </p>
-         <Button 
-            variant="outline" 
-            className="w-full h-9 border-primary/20 text-primary text-xs font-bold hover:bg-primary/5"
-            onClick={() => {
-              toast({
-                title: "Generating Health Report",
-                description: "Your secure clinical summary is being compiled. Please wait...",
-              });
-              setTimeout(() => {
-                toast({
-                  title: "Ready for Download",
-                  description: "Health_Report_2026.pdf is ready.",
-                  icon: <FileText className="h-5 w-5 text-blue-500" />
-                });
-              }, 2000);
-            }}
-          >
+         <Button variant="outline" className="w-full h-9 border-primary/20 text-primary text-xs font-bold hover:bg-primary/5">
             <Download className="h-3.5 w-3.5 mr-2" /> Download Health Report (PDF)
          </Button>
       </div>
