@@ -66,10 +66,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/system-activity-log', labelKey: 'nav.systemActivityLog', icon: ListCollapse }, 
       { href: '/system-status', labelKey: 'nav.systemNodeStatus', icon: Network },
       { href: '/technical-overview', labelKey: 'nav.technicalOverview', icon: Info },
+      { href: '/docs', labelKey: 'nav.systemDocumentation', icon: BookOpenCheck },
       { href: '/backend-schema-roadmap', labelKey: 'nav.backendRoadmap', icon: Database },
       { href: '/architecture-options', labelKey: 'nav.architectureOptions', icon: Network },
       { href: '/training-materials', labelKey: 'nav.trainingMaterials', icon: BookOpenCheck },
-      { href: '/system-documentation', labelKey: 'nav.systemDocumentation', icon: FileText },
       { href: '/todo-list', labelKey: 'nav.toDoList', icon: ListChecks },
     ]
   }

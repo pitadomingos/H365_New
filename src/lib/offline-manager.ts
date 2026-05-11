@@ -53,11 +53,31 @@ export class OfflineManager {
     console.log(`[OfflineManager] Syncing ${queue.length} items to LAN server...`);
 
     try {
-      // In a real app, this would be an API call to the LAN server
-      // For this SaaS prototype, we simulate a batch push
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // The LAN server URL would typically be configured per facility
+      // For this SaaS prototype, we default to the backend service address
+      const LAN_SERVER_URL = process.env.NEXT_PUBLIC_LAN_SERVER_URL || ''; 
       
-      console.log("[OfflineManager] Finalising sync. Clearing local queue.");
+      const response = await fetch(`${LAN_SERVER_URL}/api/sync/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workstationId: typeof window !== 'undefined' ? window.localStorage.getItem('h365_ws_id') : 'WS-UNKNOWN',
+          facilityId: 'FAC-DEMO',
+          batch: queue
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`LAN server responded with ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("[OfflineManager] Sync successful:", result.message);
+      
+      // Only clear the items that were successfully processed if we had item-level results
+      // For simplicity in this PR, we clear the whole queue if the batch was accepted
       await LocalDB.clearQueue();
     } catch (error) {
       console.error("[OfflineManager] Sync failed. Will retry when connection stabilizes.", error);

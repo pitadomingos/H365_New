@@ -31,13 +31,22 @@ export default function PatientDashboard() {
   const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
   const [patientName, setPatientName] = useState('Augusto Mendes');
+  const [patientPhoto, setPatientPhoto] = useState('https://picsum.photos/seed/patient/200');
   const [nid, setNid] = useState('8832-1102-44');
 
   useEffect(() => {
-    const storedName = localStorage.getItem('patient_name');
-    const storedNid = localStorage.getItem('patient_nid');
-    if (storedName) setPatientName(storedName);
-    if (storedNid) setNid(storedNid);
+    const storedProfile = localStorage.getItem('patient_profile');
+    if (storedProfile) {
+      const profile = JSON.parse(storedProfile);
+      setPatientName(profile.name);
+      setPatientPhoto(profile.photoUrl);
+      setNid(profile.nid);
+    } else {
+      const storedName = localStorage.getItem('patient_name');
+      const storedNid = localStorage.getItem('patient_nid');
+      if (storedName) setPatientName(storedName);
+      if (storedNid) setNid(storedNid);
+    }
   }, []);
 
   return (
@@ -54,7 +63,7 @@ export default function PatientDashboard() {
         </div>
         <div className="h-12 w-12 rounded-full border-2 border-primary/20 p-0.5 overflow-hidden">
            <Image 
-             src="https://picsum.photos/seed/patient/200" 
+             src={patientPhoto} 
              alt="User" 
              width={48} 
              height={48} 
@@ -181,6 +190,25 @@ export default function PatientDashboard() {
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
                     Viral load at last check (Mar 20) was undetected. Next CD4 count scheduled for June 5.
+                  </p>
+               </div>
+            </CardContent>
+          </Card>
+
+          {/* TB Monitoring */}
+          <Card className="shadow-sm border-slate-100 overflow-hidden border-l-4 border-l-orange-500">
+            <CardContent className="p-4 flex gap-4">
+               <div className="h-10 w-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 border border-orange-100">
+                  <Activity className="h-5 w-5" />
+               </div>
+               <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">TB Screening & Prevention</p>
+                    <Badge variant="outline" className="text-[9px] h-4 px-1 bg-orange-50 text-orange-700 border-orange-200">PENDING</Badge>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800">Sputum Test Required</p>
+                  <p className="text-xs text-slate-500 leading-snug">
+                    Please visit the lab for your scheduled TB screening. Early detection is critical for your treatment plan.
                   </p>
                </div>
             </CardContent>
