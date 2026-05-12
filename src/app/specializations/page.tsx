@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 interface MockListItem {
   id: string;
   patientName: string;
+  nationalId: string;
   referringDoctor?: string; 
   reason?: string; 
   specialty?: string; 
@@ -106,15 +107,26 @@ export default function SpecializationsPage() {
   const [isLoadingSpecialistNotifications, setIsLoadingSpecialistNotifications] = useState(true);
   const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
   const [isLoadingDraftedConsultations, setIsLoadingDraftedConsultations] = useState(true);
-  const [dataToLoadInForm, setDataToLoadInForm] = useState<ConsultationInitialData | null>(null);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  const [manualSearchId, setManualSearchId] = useState<string | null>(null);
+
+  const dataToLoadInForm = React.useMemo(() => {
+    if (manualSearchId) {
+        return { nationalIdSearch: manualSearchId };
+    }
+    if (selectedDraftId && MOCK_SPECIALIST_FULL_DRAFT_DETAILS[selectedDraftId]) {
+      return MOCK_SPECIALIST_FULL_DRAFT_DETAILS[selectedDraftId];
+    }
+    return null;
+  }, [selectedDraftId, manualSearchId]);
 
 
   useEffect(() => {
     setIsLoadingReferrals(true);
     setTimeout(() => {
       const mockReferralListData: MockListItem[] = [
-        { id: "REF001", patientName: "Walter White", gender: "Male", referringDoctor: "Dr. Primary", reason: "Lung Cancer Assessment", timeReferred: "09:00 AM", specialty: "Oncology", photoUrl: "https://placehold.co/32x32.png" },
-        { id: "REF002", patientName: "Skyler White", gender: "Female", referringDoctor: "Dr. GP", reason: "New Onset Seizures", timeReferred: "09:30 AM", specialty: "Neurology", photoUrl: "https://placehold.co/32x32.png" },
+        { id: "REF001", patientName: "Walter White", nationalId: "123456789", gender: "Male", referringDoctor: "Dr. Primary", reason: "Lung Cancer Assessment", timeReferred: "09:00 AM", specialty: "Oncology", photoUrl: "https://placehold.co/32x32.png" },
+        { id: "REF002", patientName: "Skyler White", nationalId: "987654321", gender: "Female", referringDoctor: "Dr. GP", reason: "New Onset Seizures", timeReferred: "09:30 AM", specialty: "Neurology", photoUrl: "https://placehold.co/32x32.png" },
       ];
       setReferralList(mockReferralListData);
       setIsLoadingReferrals(false);
@@ -133,8 +145,8 @@ export default function SpecializationsPage() {
     setIsLoadingDraftedConsultations(true);
     setTimeout(() => {
       const mockDraftedData: DraftedConsultationItem[] = [
-        { id: "DRAFT_SPEC001", patientName: "Walter White", gender: "Male", reasonForDraft: "Awaiting Lung Function Tests", lastSavedTime: "Yesterday 02:10 PM", photoUrl: "https://placehold.co/32x32.png", specialty: "Oncology" },
-        { id: "DRAFT_SPEC002", patientName: "Skyler White", gender: "Female", reasonForDraft: "Pending EEG results", lastSavedTime: "Today 10:00 AM", photoUrl: "https://placehold.co/32x32.png", specialty: "Neurology" },
+        { id: "DRAFT_SPEC001", patientName: "Walter White", nationalId: "SPEC_DRF001_NID", gender: "Male", reasonForDraft: "Awaiting Lung Function Tests", lastSavedTime: "Yesterday 02:10 PM", photoUrl: "https://placehold.co/32x32.png", specialty: "Oncology" },
+        { id: "DRAFT_SPEC002", patientName: "Skyler White", nationalId: "SPEC_DRF002_NID", gender: "Female", reasonForDraft: "Pending EEG results", lastSavedTime: "Today 10:00 AM", photoUrl: "https://placehold.co/32x32.png", specialty: "Neurology" },
       ];
       setDraftedConsultations(mockDraftedData);
       setIsLoadingDraftedConsultations(false);
@@ -144,11 +156,21 @@ export default function SpecializationsPage() {
   const handleResumeConsultation = (draftId: string) => {
     const draftDetails = MOCK_SPECIALIST_FULL_DRAFT_DETAILS[draftId];
     if (draftDetails) {
-      setDataToLoadInForm(draftDetails);
+      setManualSearchId(null);
+      setSelectedDraftId(draftId);
       toast({title: t('consultationRoom.toast.loadingDraft.title'), description: t('consultationRoom.toast.loadingDraft.description', { patientName: draftDetails.patientData?.fullName || "patient" })});
     } else {
       toast({variant: "destructive", title: t('consultationForm.toast.error'), description: t('consultationRoom.toast.loadingDraft.error')});
     }
+  };
+
+  const handleSelectPatient = (nationalId: string) => {
+    setSelectedDraftId(null);
+    setManualSearchId(null);
+    setTimeout(() => {
+        setManualSearchId(nationalId);
+        toast({ title: t('consultationForm.toast.search.found'), description: `Selected patient with ID: ${nationalId}` });
+    }, 10);
   };
 
 
@@ -172,7 +194,11 @@ export default function SpecializationsPage() {
               ) : referralList.length > 0 ? (
                 <ul className="space-y-3">
                   {referralList.map((patient) => (
-                    <li key={patient.id} className="p-2.5 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-center gap-3">
+                    <li 
+                      key={patient.id} 
+                      className="p-2.5 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-center gap-3 cursor-pointer transition-all hover:border-primary/50 group"
+                      onClick={() => handleSelectPatient(patient.nationalId)}
+                    >
                       <Image
                           src={patient.photoUrl}
                           alt={patient.patientName}
@@ -182,7 +208,7 @@ export default function SpecializationsPage() {
                           data-ai-hint={getAvatarHint(patient.gender)}
                       />
                       <div className="flex-1">
-                        <p className="font-semibold text-sm">{patient.patientName}</p>
+                        <p className="font-semibold text-sm group-hover:text-primary transition-colors">{patient.patientName}</p>
                         <p className="text-xs text-muted-foreground">{t('specializations.referralList.to')}: {patient.specialty}</p>
                         <p className="text-xs text-muted-foreground">{t('specializations.referralList.from')}: {patient.referringDoctor} | {patient.reason}</p>
                       </div>

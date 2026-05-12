@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 interface MockListItem {
   id: string;
   patientName: string;
+  nationalId: string;
   timeAdded?: string;
   location?: string;
   status?: string;
@@ -72,9 +73,10 @@ interface WaitingListInternalProps {
   t: (key: string, params?: Record<string, string | number>) => string;
   waitingList: MockListItem[];
   isLoading: boolean;
+  onSelectPatient: (nationalId: string) => void;
 }
 
-function WaitingListInternal({ t, waitingList, isLoading }: WaitingListInternalProps) {
+function WaitingListInternal({ t, waitingList, isLoading, onSelectPatient }: WaitingListInternalProps) {
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-3">
@@ -92,7 +94,11 @@ function WaitingListInternal({ t, waitingList, isLoading }: WaitingListInternalP
         ) : waitingList.length > 0 ? (
           <ul className="space-y-3">
             {waitingList.map((patient) => (
-              <li key={patient.id} className="p-2.5 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-center gap-3">
+              <li 
+                key={patient.id} 
+                className="p-2.5 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-center gap-3 cursor-pointer transition-all hover:border-primary/50 group"
+                onClick={() => onSelectPatient(patient.nationalId)}
+              >
                 <Image
                   src={patient.photoUrl}
                   alt={patient.patientName}
@@ -102,7 +108,7 @@ function WaitingListInternal({ t, waitingList, isLoading }: WaitingListInternalP
                   data-ai-hint={getAvatarHint(patient.gender)}
                 />
                 <div className="flex-1">
-                  <p className="font-semibold text-sm">{patient.patientName}</p>
+                  <p className="font-semibold text-sm group-hover:text-primary transition-colors">{patient.patientName}</p>
                   <p className="text-xs text-muted-foreground">{patient.location} - {patient.status}</p>
                   <p className="text-xs text-muted-foreground">{t('appointments.upcoming.table.time')}: {patient.timeAdded}</p>
                 </div>
@@ -244,14 +250,18 @@ export default function ConsultationRoomPage() {
   const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
   const [isLoadingDraftedConsultations, setIsLoadingDraftedConsultations] = useState(true);
 
-  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null); // New state to hold the selected draft ID
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null); 
+  const [manualSearchId, setManualSearchId] = useState<string | null>(null);
 
   const dataToLoadInForm = useMemo(() => {
+    if (manualSearchId) {
+        return { nationalIdSearch: manualSearchId };
+    }
     if (selectedDraftId && MOCK_FULL_DRAFT_DETAILS[selectedDraftId]) {
       return MOCK_FULL_DRAFT_DETAILS[selectedDraftId];
     }
     return null;
-  }, [selectedDraftId]); // dataToLoadInForm now only changes when selectedDraftId changes
+  }, [selectedDraftId, manualSearchId]); 
 
   useEffect(() => {
     const fetchWaitingListData = async () => {
@@ -262,6 +272,7 @@ export default function ConsultationRoomPage() {
       setWaitingList(MOCK_PATIENTS.map(p => ({
         id: p.id,
         patientName: p.fullName,
+        nationalId: p.nationalId,
         gender: p.gender,
         timeAdded: p.timeAdded || "08:00 AM",
         location: p.location || "Outpatient",
@@ -312,6 +323,7 @@ export default function ConsultationRoomPage() {
   const handleResumeConsultation = (draftId: string) => {
     const draftDetails = MOCK_FULL_DRAFT_DETAILS[draftId];
     if (draftDetails) {
+      setManualSearchId(null);
       setSelectedDraftId(draftId); // Update selectedDraftId instead of dataToLoadInForm directly
       toast({ title: t('consultationRoom.toast.loadingDraft.title'), description: t('consultationRoom.toast.loadingDraft.description', { patientName: draftDetails.patientData?.fullName || "patient" }) });
     } else {
@@ -319,11 +331,21 @@ export default function ConsultationRoomPage() {
     }
   };
 
+  const handleSelectPatient = (nationalId: string) => {
+    setSelectedDraftId(null);
+    // Use a small trick to ensure the memo updates if the same ID is clicked again
+    setManualSearchId(null);
+    setTimeout(() => {
+        setManualSearchId(nationalId);
+        toast({ title: t('consultationForm.toast.search.found'), description: `Selected patient with ID: ${nationalId}` });
+    }, 10);
+  };
+
   return (
       <div className="grid lg:grid-cols-[300px_1fr] xl:grid-cols-[350px_1fr] gap-6 h-full items-start">
         {/* Left Panel */}
         <div className="lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))] flex flex-col gap-6 max-h-[calc(100vh_-_theme(spacing.16)_-_theme(spacing.12)_-_theme(spacing.2))] overflow-y-auto">
-          <WaitingListInternal t={t} waitingList={waitingList} isLoading={isLoadingWaitingList} />
+          <WaitingListInternal t={t} waitingList={waitingList} isLoading={isLoadingWaitingList} onSelectPatient={handleSelectPatient} />
           <LabNotificationsInternal t={t} labNotifications={labNotificationsState} isLoading={isLoadingLabNotifications} />
           <IncompleteConsultationsInternal t={t} draftedConsultations={draftedConsultations} isLoading={isLoadingDraftedConsultations} onResume={handleResumeConsultation} />
         </div>

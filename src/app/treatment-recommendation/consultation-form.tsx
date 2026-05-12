@@ -209,7 +209,14 @@ export function ConsultationForm({ getRecommendationAction, getPatientContextAct
       setRecommendation(initialData.recommendation || null);
       setError(null); 
     }
-}, [initialData, form]);
+  }, [initialData, form]);
+
+  useEffect(() => {
+    // Auto-trigger search if nationalIdSearch is provided from parent and we don't have patient data yet
+    if (initialData?.nationalIdSearch && !patientData && !isSearching) {
+        handlePatientSearch();
+    }
+  }, [initialData?.nationalIdSearch, patientData, isSearching]);
 
 
   useEffect(() => {
