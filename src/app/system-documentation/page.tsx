@@ -95,6 +95,40 @@ export default function SystemDocumentationPage() {
             </div>
 
             <div className="pt-4 border-t">
+              <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
+                <Server className="h-5 w-5 text-primary" /> Facility Installation & Containerization
+              </h3>
+              <div className="bg-muted/30 p-4 rounded-xl border space-y-4">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary" /> Required Libraries & Infrastructure
+                  </h4>
+                  <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 ml-2">
+                    <li><strong>Docker Engine (v24.0+):</strong> For isolated container execution.</li>
+                    <li><strong>Docker Compose (v2.0+):</strong> For multi-container orchestration (App + Local DB).</li>
+                    <li><strong>Node.js (v20.x):</strong> Required for initial build and local dependency management.</li>
+                    <li><strong>PostgreSQL (v15+):</strong> Local persistent storage for offline resilience.</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold flex items-center gap-2">
+                    <Database className="h-4 w-4 text-primary" /> Creation of the Container
+                  </h4>
+                  <div className="bg-slate-950 text-slate-200 p-3 rounded-lg font-mono text-[10px] space-y-1 overflow-x-auto">
+                    <p className="text-slate-500"># Step 1: Build the production container</p>
+                    <p>docker build -t h365-facility-node .</p>
+                    <p className="text-slate-500 mt-2"># Step 2: Launch the full facility stack</p>
+                    <p>docker-compose up -d</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This process packages the Next.js standalone server, ensuring the facility node can run with minimal resources.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" /> {t('sysdocs.docs.title')} (Work in Progress)
               </h3>
