@@ -38,6 +38,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        '@opentelemetry/exporter-jaeger': false,
+        '@opentelemetry/otlp-grpc-exporter-base': false,
+        '@opentelemetry/otlp-proto-exporter-base': false,
+        '@opentelemetry/otlp-transformer': false,
+      };
+    }
+    return config;
+  },
 };
 
 export default withSerwist(nextConfig);
