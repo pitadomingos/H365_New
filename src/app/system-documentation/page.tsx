@@ -1,5 +1,3 @@
-"use client";
-
 import React from 'react';
 import Link from 'next/link';
 import { getDocsList } from '@/lib/docs';
@@ -16,12 +14,8 @@ import {
   Server
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { useLocale } from "@/context/locale-context";
-import { getTranslator } from "@/lib/i18n";
 
 export default function SystemDocumentationPage() {
-  const { locale } = useLocale();
-  const t = getTranslator(locale);
   const docs = getDocsList();
 
   const getIcon = (slug: string) => {
