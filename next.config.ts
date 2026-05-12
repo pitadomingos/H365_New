@@ -42,6 +42,7 @@ const nextConfig: NextConfig = {
     if (isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
+        '@opentelemetry/exporter-jaeger': false,
         '@opentelemetry/otlp-grpc-exporter-base': false,
         '@opentelemetry/otlp-proto-exporter-base': false,
         '@opentelemetry/otlp-transformer': false,
@@ -50,9 +51,11 @@ const nextConfig: NextConfig = {
       };
     }
     
-    // Suppress protobufjs warnings that clutter the terminal during OTLP usage
-    if (!config.ignoreWarnings) config.ignoreWarnings = [];
-    config.ignoreWarnings.push(/@protobufjs\/inquire/);
+    // Silence 'Critical dependency: the request of a dependency is an expression'
+    config.module.rules.push({
+      test: /node_modules\/@protobufjs\/inquire\/index\.js$/,
+      parser: { exprContextCritical: false },
+    });
 
     return config;
   },
