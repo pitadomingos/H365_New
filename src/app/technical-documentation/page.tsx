@@ -10,7 +10,9 @@ import {
   ArrowLeft, 
   Server,
   Cloud,
-  Info
+  Info,
+  BookOpen,
+  ArrowRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,19 +20,9 @@ import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  ShieldCheck, 
-  Wifi, 
-  WifiOff, 
-  BrainCircuit, 
-  Lock, 
-  ArrowLeft, 
-  Server,
-  Cloud,
-  Info,
-  BookOpen,
-  ArrowRight
-} from 'lucide-react';
+import Image from 'next/image';
+
+export default function TechnicalDocumentationPage() {
   const router = useRouter();
   const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
