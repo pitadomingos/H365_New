@@ -1,147 +1,128 @@
-
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, CheckCircle2, Loader2, Database, ShieldCheck, Globe } from "lucide-react";
+import React from 'react';
+import Link from 'next/link';
+import { getDocsList } from '@/lib/docs';
+import { 
+  Book, 
+  FileText, 
+  ChevronRight, 
+  Settings, 
+  ShieldCheck, 
+  Network, 
+  Zap,
+  Globe,
+  Database,
+  Server
+} from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { useLocale } from "@/context/locale-context";
 import { getTranslator } from "@/lib/i18n";
 
 export default function SystemDocumentationPage() {
   const { locale } = useLocale();
   const t = getTranslator(locale);
+  const docs = getDocsList();
+
+  const getIcon = (slug: string) => {
+    if (slug.includes('security')) return <ShieldCheck className="w-5 h-5 text-red-500" />;
+    if (slug.includes('interoperability')) return <Network className="w-5 h-5 text-blue-500" />;
+    if (slug.includes('architecture') || slug.includes('blueprint') || slug.includes('deployment')) return <Settings className="w-5 h-5 text-slate-500" />;
+    if (slug.includes('offline')) return <Zap className="w-5 h-5 text-amber-500" />;
+    if (slug.includes('api')) return <Globe className="w-5 h-5 text-teal-500" />;
+    if (slug.includes('installation') || slug.includes('container')) return <Server className="h-5 w-5 text-primary" />;
+    return <FileText className="w-5 h-5 text-slate-400" />;
+  };
 
   return (
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <FileText className="h-8 w-8 text-primary" /> {t('nav.systemDocumentation')}
-          </h1>
+    <div className="flex flex-col gap-8 max-w-5xl mx-auto py-4">
+      <header className="space-y-2">
+        <div className="flex items-center gap-2 text-teal-600 mb-2">
+          <Book className="w-6 h-6" />
+          <span className="font-bold tracking-widest uppercase text-xs">Documentation Center</span>
         </div>
+        <h1 className="text-4xl font-black tracking-tight text-slate-900">Technical Documentation</h1>
+        <p className="text-slate-500 max-w-2xl text-sm">
+          Comprehensive guides and architectural deep-dives for the HealthFlow Public Hospital Digital SaaS Platform.
+        </p>
+      </header>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="shadow-sm border-l-4 border-l-green-500">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-green-500" /> Clinical Safety
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">Assistive AI logic with 100% human-in-the-loop validation for all prescriptions and diagnoses.</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm border-l-4 border-l-blue-500">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Globe className="h-4 w-4 text-blue-500" /> Interoperability
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">Aligned with OpenHIE standards for national data exchange and DHIS2 reporting.</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm border-l-4 border-l-amber-500">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Database className="h-4 w-4 text-amber-500" /> Local Resilience
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">Edge computing nodes ensure facility-level operation during national network outages.</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle>{t('sysdocs.capabilities.title')}</CardTitle>
-            <CardDescription>{t('sysdocs.capabilities.desc')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                'sysdocs.item.vitals',
-                'sysdocs.item.ai',
-                'sysdocs.item.offline',
-                'sysdocs.item.multitenant',
-                'sysdocs.item.blood',
-                'sysdocs.item.epidemiology',
-                'sysdocs.item.imaging'
-              ].map((key) => (
-                <div key={key} className="p-3 border rounded-lg bg-muted/20 flex items-start gap-3">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                  <p className="text-xs font-medium">{t(key)}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {docs.map((doc) => (
+          <Link key={doc.slug} href={`/docs/${doc.slug}`}>
+            <Card className="hover:border-teal-500 hover:shadow-md transition-all cursor-pointer group h-full border-border bg-card">
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                <div className="p-2 bg-muted rounded-lg group-hover:bg-teal-50 dark:group-hover:bg-teal-900/30 transition-colors">
+                  {getIcon(doc.slug)}
                 </div>
-              ))}
-            </div>
-
-            <div className="pt-4 border-t">
-              <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
-                <FileText className="h-5 w-5 text-primary" /> {t('sysdocs.docs.title')}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <a href="/technical-overview" className="block p-4 border rounded-xl hover:bg-muted/50 transition-colors group">
-                  <h4 className="font-bold text-sm group-hover:text-primary transition-colors">{t('sysdocs.docs.overview')}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">Platform architecture, tech stack, and design guidelines.</p>
-                </a>
-                <a href="/backend-schema-roadmap" className="block p-4 border rounded-xl hover:bg-muted/50 transition-colors group">
-                  <h4 className="font-bold text-sm group-hover:text-primary transition-colors">{t('sysdocs.docs.backend')}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">MySQL schema, API phases, and data governance strategy.</p>
-                </a>
-                <a href="/architecture-options" className="block p-4 border rounded-xl hover:bg-muted/50 transition-colors group">
-                  <h4 className="font-bold text-sm group-hover:text-primary transition-colors">{t('sysdocs.docs.deployment')}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">Monolith vs Microservices and Edge Node deployment.</p>
-                </a>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t">
-              <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
-                <Server className="h-5 w-5 text-primary" /> Facility Installation & Containerization
-              </h3>
-              <div className="bg-muted/30 p-4 rounded-xl border space-y-4">
-                <div className="space-y-2">
-                  <h4 className="text-sm font-bold flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" /> Required Libraries & Infrastructure
-                  </h4>
-                  <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 ml-2">
-                    <li><strong>Docker Engine (v24.0+):</strong> For isolated container execution.</li>
-                    <li><strong>Docker Compose (v2.0+):</strong> For multi-container orchestration (App + Local DB).</li>
-                    <li><strong>Node.js (v20.x):</strong> Required for initial build and local dependency management.</li>
-                    <li><strong>PostgreSQL (v15+):</strong> Local persistent storage for offline resilience.</li>
-                  </ul>
-                </div>
-
-                <div className="space-y-2">
-                  <h4 className="text-sm font-bold flex items-center gap-2">
-                    <Database className="h-4 w-4 text-primary" /> Creation of the Container
-                  </h4>
-                  <div className="bg-slate-950 text-slate-200 p-3 rounded-lg font-mono text-[10px] space-y-1 overflow-x-auto">
-                    <p className="text-slate-500"># Step 1: Build the production container</p>
-                    <p>docker build -t h365-facility-node .</p>
-                    <p className="text-slate-500 mt-2"># Step 2: Launch the full facility stack</p>
-                    <p>docker-compose up -d</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    This process packages the Next.js standalone server, ensuring the facility node can run with minimal resources.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
-                <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" /> {t('sysdocs.docs.title')} (Work in Progress)
-              </h3>
-              <ul className="list-disc list-inside text-muted-foreground space-y-1 mt-3 text-sm px-2">
-                <li>Full Clinical SOPs (Standard Operating Procedures).</li>
-                <li>National Data Aggregation & Epidemic Response Flow.</li>
-                <li>Biomedical Equipment Integration (HL7/DICOM).</li>
-                <li>Public-sector Secure Procurement & Rollout Strategy.</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-teal-50 transition-colors" />
+              </CardHeader>
+              <CardContent>
+                <CardTitle className="text-lg font-bold group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors uppercase tracking-tight">
+                  {doc.title}
+                </CardTitle>
+                <CardDescription className="mt-1 text-xs">
+                  Technical specifications and deployment guidelines for {doc.slug.replace(/_/g, ' ')}.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
       </div>
+
+      <div className="pt-8 border-t border-border">
+        <h3 className="font-bold text-xl flex items-center gap-2 mb-6 text-foreground">
+          <Server className="h-6 w-6 text-primary" /> Facility Installation & Containerization
+        </h3>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-muted/30 p-6 rounded-2xl border border-border space-y-4">
+            <h4 className="text-sm font-bold flex items-center gap-2 text-foreground">
+              <Settings className="h-4 w-4 text-primary" /> Required Infrastructure
+            </h4>
+            <ul className="space-y-3">
+              {[
+                { label: "Docker Engine", version: "v24.0+", desc: "Isolated container execution" },
+                { label: "Docker Compose", version: "v2.0+", desc: "Multi-container orchestration" },
+                { label: "Node.js", version: "v20.x", desc: "Build & dependency management" },
+                { label: "PostgreSQL", version: "v15+", desc: "Local persistent storage" }
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-foreground">{item.label} <span className="text-[10px] text-muted-foreground ml-1">{item.version}</span></p>
+                    <p className="text-[10px] text-muted-foreground leading-tight">{item.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-slate-950 dark:bg-black p-6 rounded-2xl border border-slate-800 space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <Database className="h-3 w-3" /> Deployment Commands
+            </h4>
+            <div className="space-y-4 font-mono text-[11px]">
+              <div className="space-y-1">
+                <p className="text-slate-500 italic"># 1. Build the production container</p>
+                <p className="text-teal-400">docker build -t h365-facility-node .</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-slate-500 italic"># 2. Launch the full facility stack</p>
+                <p className="text-teal-400">docker-compose up -d</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 leading-relaxed border-t border-slate-800 pt-4 italic">
+              Packages the Next.js standalone server for minimal footprint and maximum local stability.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <footer className="pt-8 border-t border-border italic text-muted-foreground text-[10px] text-center uppercase tracking-widest font-medium">
+        Authored by Ministry of Health Digital Transformation Office & Clinical Informatics Team
+      </footer>
+    </div>
   );
 }
-      
