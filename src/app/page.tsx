@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock, Stethoscope, RefreshCw, ShieldCheck, AlertTriangle, Smartphone } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from '@/context/locale-context';
+import { useUser } from '@/context/user-context';
 import { getTranslator, type Locale, defaultLocale } from '@/lib/i18n';
 import { PieChart, Pie, Cell, Legend as RechartsLegend, Tooltip as RechartsTooltip, ResponsiveContainer, Bar, BarChart as RechartsBarChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
@@ -64,6 +65,7 @@ const ICONS_MAP: { [key: string]: React.ElementType } = {
 
 export default function DashboardPage() {
   const { currentLocale } = useLocale();
+  const { user } = useUser();
   const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [summaryCardsData, setSummaryCardsData] = useState<SummaryCardData[]>([]);
@@ -84,23 +86,53 @@ export default function DashboardPage() {
   const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
   const [isLoadingDraftedConsultations, setIsLoadingDraftedConsultations] = useState(true);
 
+  const [facilityPerformance, setFacilityPerformance] = useState<any[]>([]);
+  const [isLoadingPerformance, setIsLoadingPerformance] = useState(true);
+
+  const isManagementView = user?.role !== 'FACILITY_ADMIN';
+
 
   useEffect(() => {
     setIsLoadingSummary(true);
     setTimeout(() => {
-      const fetchedSummary: SummaryCardData[] = [
-        { id: "sc1", titleKey: "dashboard.card.totalPatients.title", value: "156", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
-        { id: "sc2", titleKey: "dashboard.card.appointments.title", value: "12", iconName: "CalendarCheck", color: "text-sky-500", descriptionKey: "dashboard.card.appointments.description", link: "/appointments" },
-        { id: "sc3", titleKey: "dashboard.card.wardOccupancy.title", value: "75%", iconName: "BedDouble", color: "text-indigo-500", descriptionKey: "dashboard.card.wardOccupancy.description", link: "/ward-management" },
-        { id: "sc4", titleKey: "dashboard.card.erStatus.title", value: "12 Active", iconName: "Siren", color: "text-red-500", descriptionKey: "dashboard.card.erStatus.description", link: "/emergency-room" },
-        { id: "sc5", titleKey: "dashboard.card.newPatients.title", value: "5", iconName: "Users", color: "text-emerald-500", descriptionKey: "dashboard.card.newPatients.description", link: "/patient-registration" },
-        { id: "sc6", titleKey: "dashboard.card.topDiagnostics.title", value: "Hypertension,Type 2 Diabetes,Influenza,Malaria,Pneumonia", iconName: "Stethoscope", color: "text-orange-500", descriptionKey: "dashboard.card.topDiagnostics.description", link: "#" },
-        { id: "sc7", titleKey: "dashboard.card.prescribedDrug.title", value: "Paracetamol,Amoxicillin,Ibuprofen,Omeprazole,Salbutamol", iconName: "PillIcon", color: "text-purple-500", descriptionKey: "dashboard.card.prescribedDrug.description", link: "#" },
-      ];
+      let fetchedSummary: SummaryCardData[] = [];
+      
+      const role = user?.role || 'NATIONAL_ADMIN';
+
+      if (role === 'NATIONAL_ADMIN' || role === 'PROVINCIAL_ADMIN' || role === 'DISTRICT_ADMIN') {
+        // Management KPIs (Decision Support)
+        fetchedSummary = [
+          { id: "sc1", titleKey: "Avg. Patient Load / Facility", value: "842", iconName: "Users", color: "text-blue-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
+          { id: "sc2", titleKey: "Regional Bed Occupancy", value: "72%", iconName: "BedDouble", color: "text-indigo-500", descriptionKey: "Weighted average across units", link: "#" },
+          { id: "sc3", titleKey: "Resource Health Index", value: "88/100", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "Staffing & Supply availability", link: "#" },
+          { id: "sc4", titleKey: "Epidemiological Alerts", value: "3 Active", iconName: "Siren", color: "text-red-500", descriptionKey: "Clusters requiring intervention", link: "/epidemic-control" },
+        ];
+      } else {
+        // Facility Operational KPIs (Immediate Ops)
+        fetchedSummary = [
+          { id: "sc1", titleKey: "Current Patient Queue", value: "42", iconName: "Users", color: "text-orange-500", descriptionKey: "Patients waiting for triage", link: "/patient-registration" },
+          { id: "sc2", titleKey: "Ward Bed Availability", value: "8 Free", iconName: "BedDouble", color: "text-green-500", descriptionKey: "Real-time bed tracking", link: "/ward-management" },
+          { id: "sc3", titleKey: "Today's Appointments", value: "12", iconName: "CalendarCheck", color: "text-sky-500", descriptionKey: "dashboard.card.appointments.description", link: "/appointments" },
+          { id: "sc4", titleKey: "Critical Supply Alerts", value: "2 Low", iconName: "PillIcon", color: "text-red-500", descriptionKey: "Oxygen & Essential Meds", link: "/drug-dispensing" },
+        ];
+      }
+
       setSummaryCardsData(fetchedSummary);
       setIsLoadingSummary(false);
     }, 1000);
-  }, []); // Runs once on mount
+  }, [user]);
+
+  useEffect(() => {
+    if (isManagementView) {
+      setIsLoadingPerformance(true);
+      // Directly using imported mock data if needed, but let's assume it's available in context or similar
+      const { MOCK_FACILITY_PERFORMANCE } = require('@/lib/mock-data');
+      setTimeout(() => {
+        setFacilityPerformance(MOCK_FACILITY_PERFORMANCE);
+        setIsLoadingPerformance(false);
+      }, 1300);
+    }
+  }, [isManagementView]);
 
   useEffect(() => {
     setIsLoadingQuickActions(true);
@@ -181,13 +213,21 @@ export default function DashboardPage() {
   return (
       <div className="flex flex-col gap-6">
         <div className="mb-2">
-          <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.welcomeMessage')}</h1>
-          <p className="text-muted-foreground">{t('dashboard.tagline')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {t('dashboard.welcomeMessage')} {user?.role === 'NATIONAL_ADMIN' ? '(National)' : user?.jurisdiction.facility || user?.jurisdiction.district || user?.jurisdiction.province || ''}
+          </h1>
+          <p className="text-muted-foreground">
+            {user?.role === 'NATIONAL_ADMIN' && "Consolidated nationwide healthcare metrics and surveillance."}
+            {user?.role === 'PROVINCIAL_ADMIN' && `Provincial healthcare overview for ${user.jurisdiction.province}.`}
+            {user?.role === 'DISTRICT_ADMIN' && `District healthcare performance for ${user.jurisdiction.district}.`}
+            {user?.role === 'FACILITY_ADMIN' && `Operational dashboard for ${user.jurisdiction.facility}.`}
+            {!user && t('dashboard.tagline')}
+          </p>
         </div>
 
         {isLoadingSummary ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Array.from({length: 8}).map((_, index) => (
+                {Array.from({length: 4}).map((_, index) => (
                     <Card key={`skl-sum-${index}`} className="shadow-sm">
                         <CardHeader className="pb-2"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></CardHeader>
                         <CardContent><div className="h-5 w-3/4 bg-muted rounded animate-pulse"/><div className="h-3 w-1/2 bg-muted rounded mt-1 animate-pulse"/></CardContent>
@@ -198,23 +238,17 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {summaryCardsData.map((item) => {
                 const Icon = ICONS_MAP[item.iconName];
-                const isMultiListItemCard = item.id === "sc6" || item.id === "sc7";
+                const isTranslated = item.titleKey.includes('.');
 
                 return (
                 <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t(item.titleKey)}</CardTitle>
+                    <CardTitle className="text-sm font-medium">{isTranslated ? t(item.titleKey) : item.titleKey}</CardTitle>
                     {Icon && <Icon className={`h-5 w-5 ${item.color}`} />}
                 </CardHeader>
                 <CardContent>
-                    {isMultiListItemCard && typeof item.value === 'string' ? (
-                       <ul className="text-sm font-semibold list-decimal list-inside space-y-0.5">
-                          {(item.value as string).split(',').slice(0,5).map((entry, idx) => <li key={idx} className="text-xs">{entry.trim()}</li>)}
-                        </ul>
-                    ) : (
-                      <div className="text-2xl font-bold">{Array.isArray(item.value) ? item.value.join(', ') : item.value}</div>
-                    )}
-                    <p className="text-xs text-muted-foreground pt-1">{t(item.descriptionKey)}</p>
+                    <div className="text-2xl font-bold">{Array.isArray(item.value) ? item.value.join(', ') : item.value}</div>
+                    <p className="text-xs text-muted-foreground pt-1">{isTranslated ? t(item.descriptionKey) : item.descriptionKey}</p>
                     {item.link && item.link !== "#" && (
                     <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
                         <Link href={item.link}>{t('dashboard.card.viewDetails')}</Link>
@@ -223,118 +257,12 @@ export default function DashboardPage() {
                 </CardContent>
                 </Card>
             )})}
-              {/* Clinical AI Audit Queue Card */}
-              <Card className="shadow-sm hover:shadow-md transition-shadow bg-primary/5 border-primary/20">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">AI Clinical Audit Queue</CardTitle>
-                  <RefreshCw className="h-5 w-5 text-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-end justify-between mb-4">
-                    <div>
-                      <div className="text-2xl font-bold">{getAIQueue().filter(i => i.status === 'pending').length}</div>
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Pending Syncs</p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] bg-background">
-                      {typeof navigator !== 'undefined' && navigator.onLine ? 'Broadband Active' : 'L-LAN Mode'}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2 mb-4">
-                    <div className="w-full bg-muted h-1 rounded-full overflow-hidden">
-                       <div 
-                         className="bg-primary h-full transition-all duration-500" 
-                         style={{ 
-                           width: `${(getAIQueue().filter(i => i.status === 'completed').length / (getAIQueue().length || 1)) * 100}%` 
-                         }} 
-                       />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground flex justify-between">
-                      <span>{getAIQueue().filter(i => i.status === 'completed').length} Audited</span>
-                      <span>{getAIQueue().length} Total</span>
-                    </p>
-                  </div>
-
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="w-full h-8 text-xs gap-2"
-                    disabled={typeof navigator !== 'undefined' && (!navigator.onLine || getAIQueue().filter(i => i.status === 'pending').length === 0)}
-                    onClick={async () => {
-                      toast({ title: "Clinical AI Sync Started", description: "Processing deferred quality audits..." });
-                      try {
-                        await syncQueue();
-                        toast({ title: "Sync Complete", description: "AI Clinical Audits successfully processed." });
-                      } catch (err: any) {
-                        toast({ variant: "destructive", title: "Sync Failed", description: err.message });
-                      }
-                    }}
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Process Pending Audits
-                  </Button>
-                </CardContent>
-              </Card>
-
-               {/* Drafted Consultations Card */}
-             <Card className="shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{t('dashboard.card.draftedConsultations.title')}</CardTitle>
-                  <FileClock className="h-5 w-5 text-blue-500" />
-                </CardHeader>
-                <CardContent>
-                  {isLoadingDraftedConsultations ? (
-                     <div className="flex items-center justify-center py-3">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
-                        <span className="text-xs text-muted-foreground">{t('dashboard.loading')}</span>
-                    </div>
-                  ) : draftedConsultations.length > 0 ? (
-                    <ul className="space-y-1.5 text-xs max-h-[100px] overflow-y-auto">
-                      {draftedConsultations.slice(0,3).map(draft => (
-                        <li key={draft.id}>
-                          <p className="font-medium truncate">{draft.patientName}</p>
-                          <p className="text-muted-foreground truncate text-[11px]">{draft.specialtyOrReason} - {draft.lastSavedTime}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-2">{t('dashboard.drafts.empty')}</p>
-                  )}
-                  <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
-                    <Link href="/treatment-recommendation">{t('dashboard.card.viewAllDrafts')}</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Patient Portal Link Card */}
-              <Card className="shadow-sm hover:shadow-md transition-shadow bg-blue-900 text-white border-none group">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Patient Facing Module</CardTitle>
-                  <Smartphone className="h-5 w-5 text-blue-300 group-hover:scale-110 transition-transform" />
-                </CardHeader>
-                <CardContent className="space-y-3">
-                   <div className="space-y-1">
-                      <div className="text-2xl font-bold">Mobile App</div>
-                      <p className="text-[10px] text-blue-200 uppercase font-bold">Citizens & Patients Only</p>
-                   </div>
-                   <p className="text-[11px] text-blue-100/80 leading-snug">
-                     National ID based access for medical records, meds, and appointments.
-                   </p>
-                   <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    className="w-full h-8 text-[11px] font-bold bg-white text-blue-900 border-none hover:bg-blue-50"
-                    asChild
-                   >
-                     <Link href="/patient-portal/login">Launch Patient Experience</Link>
-                   </Button>
-                </CardContent>
-              </Card>
             </div>
         )}
 
 
         <div className="grid gap-6 md:grid-cols-2">
+          {/* Recent Activity (Management & Ops) */}
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>{t('dashboard.recentActivity.title')}</CardTitle>
@@ -366,81 +294,249 @@ export default function DashboardPage() {
                 </Button>
             </CardContent>
           </Card>
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>{t('dashboard.quickActions.title')}</CardTitle>
-              <CardDescription>{t('dashboard.quickActions.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {isLoadingQuickActions ? (
-                Array.from({length: 6}).map((_, index) => (
-                    <div key={`skl-qa-${index}`} className="h-14 bg-muted rounded-lg animate-pulse" />
-                ))
-              ) : (
-                quickActionsData.map((action) => {
-                    const Icon = ICONS_MAP[action.iconName];
-                    return(
-                      <DashboardModuleBtn
-                        key={action.href}
-                        href={action.href}
-                        title={t(action.labelKey)}
-                        icon={Icon}
-                        isActive={action.href === "/treatment-recommendation"}
-                        t={t}
-                      />
-                )})
-              )}
-            </CardContent>
-          </Card>
+
+          {/* Quick Actions (Facility Only) or Higher-Level Overview */}
+          {user?.role === 'FACILITY_ADMIN' ? (
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>{t('dashboard.quickActions.title')}</CardTitle>
+                <CardDescription>{t('dashboard.quickActions.description')}</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {isLoadingQuickActions ? (
+                  Array.from({length: 6}).map((_, index) => (
+                      <div key={`skl-qa-${index}`} className="h-14 bg-muted rounded-lg animate-pulse" />
+                  ))
+                ) : (
+                  quickActionsData.map((action) => {
+                      const Icon = ICONS_MAP[action.iconName];
+                      return(
+                        <DashboardModuleBtn
+                          key={action.href}
+                          href={action.href}
+                          title={t(action.labelKey)}
+                          icon={Icon}
+                          isActive={action.href === "/treatment-recommendation"}
+                          t={t}
+                        />
+                  )})
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            /* Management Action Center */
+            <Card className="shadow-sm border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="text-primary flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" /> Decision Support Center
+                </CardTitle>
+                <CardDescription>Strategic actions and resource distribution tools.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                 <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 text-xs">
+                       <TrendingUp className="h-5 w-5" /> Analyze Trends
+                    </Button>
+                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 text-xs">
+                       <Users className="h-5 w-5" /> Reallocate Staff
+                    </Button>
+                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 text-xs">
+                       <Microscope className="h-5 w-5" /> Regional Lab Stats
+                    </Button>
+                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 text-xs" asChild>
+                       <Link href="/epidemic-control">
+                         <Siren className="h-5 w-5" /> Manage Outbreaks
+                       </Link>
+                    </Button>
+                 </div>
+                 <div className="p-3 bg-white rounded-lg border border-primary/10">
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Management Briefing (AI)</p>
+                    <p className="text-xs italic leading-snug">
+                      &quot;Bed occupancy in the South District has spiked by 15% due to seasonal influenza. Recommend shifting oxygen reserves from Central General to District Hospital A.&quot;
+                    </p>
+                 </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            <Card className="shadow-sm">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <PieChartIcon className="h-6 w-6 text-primary" /> {t('dashboard.charts.entryPoints.title')}
-                    </CardTitle>
-                    <CardDescription>{t('dashboard.charts.entryPoints.description')}</CardDescription>
+        {/* Management Strategic Overview (District+) */}
+        {isManagementView && (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+             {/* Recurring Infections */}
+             <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <HeartPulse className="h-4 w-4 text-orange-500" /> Recurring Infections
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px] flex items-center justify-center">
-                    {isLoadingEntryPoints ? (
-                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    ) : (
-                        <ChartContainer config={chartConfig} className="w-full max-w-md aspect-square">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart accessibilityLayer>
-                                <RechartsTooltip content={<ChartTooltipContent nameKey="name" />} />
-                                <Pie
-                                    data={patientEntryPointsData}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius={80}
-                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                                >
-                                    {patientEntryPointsData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                                <RechartsLegend content={({ payload }) => {
-                                    return (
-                                    <div className="flex items-center justify-center gap-3 mt-4">
-                                        {payload?.map((entry: any, index: number) => ( // Added index for key
-                                        <div key={`item-${entry.value}-${index}`} className="flex items-center space-x-1"> {/* Added index to key */}
-                                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                            <span className="text-xs text-muted-foreground">{entry.payload.name}</span>
-                                        </div>
-                                        ))}
-                                    </div>
-                                    )
-                                }} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                    )}
+                <CardContent>
+                  <ul className="space-y-3">
+                    {require('@/lib/mock-data').MOCK_RECURRING_INFECTIONS.map((inf: any) => (
+                      <li key={inf.name} className="flex items-center justify-between">
+                         <div className="space-y-0.5">
+                            <p className="text-xs font-bold">{inf.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{inf.facilities.join(', ')}</p>
+                         </div>
+                         <div className="text-right">
+                            <p className="text-sm font-bold">{inf.cases} cases</p>
+                            <Badge variant="outline" className={`text-[9px] h-4 px-1 ${inf.trend === 'up' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                               {inf.trend.toUpperCase()}
+                            </Badge>
+                         </div>
+                      </li>
+                    ))}
+                  </ul>
                 </CardContent>
-            </Card>
+             </Card>
+
+             {/* Active Campaigns */}
+             <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <CalendarCheck className="h-4 w-4 text-primary" /> Health Campaigns
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                   {require('@/lib/mock-data').MOCK_CAMPAIGNS.map((camp: any) => (
+                     <div key={camp.name} className="space-y-1">
+                        <div className="flex justify-between text-[11px]">
+                           <span className="font-bold">{camp.name}</span>
+                           <span className="text-muted-foreground">{camp.progress}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                           <div className="h-full bg-primary" style={{ width: `${camp.progress}%` }} />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">Reach: {camp.reach} targets</p>
+                     </div>
+                   ))}
+                </CardContent>
+             </Card>
+
+             {/* Epidemic Alerts & Facility Stocks */}
+             <div className="space-y-6">
+                <Card className="shadow-sm border-red-100 bg-red-50/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2 text-red-600">
+                      <AlertTriangle className="h-4 w-4" /> Epidemic Surveillance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {require('@/lib/mock-data').MOCK_EPIDEMIC_ALERTS.map((alert: any) => (
+                        <li key={alert.id} className="p-2 bg-white rounded border border-red-100">
+                           <div className="flex justify-between items-start mb-1">
+                              <p className="text-xs font-bold text-red-700">{alert.disease}</p>
+                              <Badge className="bg-red-600 text-[9px] h-4">{alert.risk}</Badge>
+                           </div>
+                           <p className="text-[10px] text-slate-600">{alert.location} • {alert.action}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border-orange-100 bg-orange-50/30">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2 text-orange-600">
+                      <PillIcon className="h-4 w-4" /> Critical Stock Alerts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {require('@/lib/mock-data').MOCK_FACILITY_STOCKS.filter((s:any) => s.status === 'Critical').map((stock: any) => (
+                        <div key={stock.facility} className="text-[10px]">
+                           <p className="font-bold text-slate-800">{stock.facility}</p>
+                           <p className="text-orange-700 truncate">Needs: {stock.lowItems.join(', ')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+             </div>
+          </div>
+        )}
+
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {isManagementView ? (
+              /* Management View: Facility Comparison Chart */
+              <Card className="shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-6 w-6 text-primary" /> Facility Performance Comparison
+                  </CardTitle>
+                  <CardDescription>Comparing patient load and occupancy % across units.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                  {isLoadingPerformance ? (
+                    <div className="flex items-center justify-center h-full">
+                       <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <ChartContainer config={chartConfig} className="w-full h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsBarChart data={facilityPerformance}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="name" fontSize={10} />
+                          <YAxis fontSize={10} />
+                          <RechartsTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="patients" name="Patient Count" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="occupancy" name="Occupancy %" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                        </RechartsBarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              /* Ops View: Entry Points */
+              <Card className="shadow-sm">
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                          <PieChartIcon className="h-6 w-6 text-primary" /> {t('dashboard.charts.entryPoints.title')}
+                      </CardTitle>
+                      <CardDescription>{t('dashboard.charts.entryPoints.description')}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[300px] flex items-center justify-center">
+                      {isLoadingEntryPoints ? (
+                          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                      ) : (
+                          <ChartContainer config={chartConfig} className="w-full max-w-md aspect-square">
+                              <ResponsiveContainer width="100%" height="100%">
+                                  <PieChart accessibilityLayer>
+                                  <RechartsTooltip content={<ChartTooltipContent nameKey="name" />} />
+                                  <Pie
+                                      data={patientEntryPointsData}
+                                      dataKey="value"
+                                      nameKey="name"
+                                      cx="50%"
+                                      cy="50%"
+                                      outerRadius={80}
+                                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                  >
+                                      {patientEntryPointsData.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                                      ))}
+                                  </Pie>
+                                  <RechartsLegend content={({ payload }) => {
+                                      return (
+                                      <div className="flex items-center justify-center gap-3 mt-4">
+                                          {payload?.map((entry: any, index: number) => (
+                                          <div key={`item-${entry.value}-${index}`} className="flex items-center space-x-1">
+                                              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                              <span className="text-xs text-muted-foreground">{entry.payload.name}</span>
+                                          </div>
+                                          ))}
+                                      </div>
+                                      )
+                                  }} />
+                                  </PieChart>
+                              </ResponsiveContainer>
+                          </ChartContainer>
+                      )}
+                  </CardContent>
+              </Card>
+            )}
              <Card className="shadow-sm">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">

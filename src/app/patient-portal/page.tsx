@@ -30,24 +30,20 @@ import Image from 'next/image';
 export default function PatientDashboard() {
   const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
-  const [patientName, setPatientName] = useState('Augusto Mendes');
-  const [patientPhoto, setPatientPhoto] = useState('https://picsum.photos/seed/patient/200');
-  const [nid, setNid] = useState('8832-1102-44');
+  const [patient, setPatient] = useState<any>(null);
 
   useEffect(() => {
     const storedProfile = localStorage.getItem('patient_profile');
     if (storedProfile) {
-      const profile = JSON.parse(storedProfile);
-      setPatientName(profile.name);
-      setPatientPhoto(profile.photoUrl);
-      setNid(profile.nid);
-    } else {
-      const storedName = localStorage.getItem('patient_name');
-      const storedNid = localStorage.getItem('patient_nid');
-      if (storedName) setPatientName(storedName);
-      if (storedNid) setNid(storedNid);
+      setPatient(JSON.parse(storedProfile));
     }
   }, []);
+
+  if (!patient) return null;
+
+  const patientName = patient.fullName;
+  const patientPhoto = patient.photoUrl || 'https://picsum.photos/seed/patient/200';
+  const nid = patient.nationalId;
 
   return (
     <div className="p-4 space-y-6">

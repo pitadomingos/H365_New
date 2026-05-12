@@ -42,12 +42,18 @@ const nextConfig: NextConfig = {
     if (isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
-        '@opentelemetry/exporter-jaeger': false,
         '@opentelemetry/otlp-grpc-exporter-base': false,
         '@opentelemetry/otlp-proto-exporter-base': false,
         '@opentelemetry/otlp-transformer': false,
+        '@opentelemetry/exporter-metrics-otlp-http': false,
+        '@opentelemetry/exporter-trace-otlp-http': false,
       };
     }
+    
+    // Suppress protobufjs warnings that clutter the terminal during OTLP usage
+    if (!config.ignoreWarnings) config.ignoreWarnings = [];
+    config.ignoreWarnings.push(/@protobufjs\/inquire/);
+
     return config;
   },
 };

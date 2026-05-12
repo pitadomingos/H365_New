@@ -191,3 +191,43 @@ export const MOCK_IMAGING_REPORTS = [
     impression: "Normal abdominal ultrasound."
   }
 ];
+
+export const MOCK_FACILITY_PERFORMANCE = [
+  { name: "Central General", patients: 1240, occupancy: 92, qualityScore: 95, color: "hsl(var(--chart-1))" },
+  { name: "District Hospital A", patients: 850, occupancy: 75, qualityScore: 88, color: "hsl(var(--chart-2))" },
+  { name: "St. Mary Clinic", patients: 420, occupancy: 60, qualityScore: 91, color: "hsl(var(--chart-3))" },
+  { name: "Rural Health Unit B", patients: 150, occupancy: 40, qualityScore: 75, color: "hsl(var(--chart-4))" },
+  { name: "Main Maternity Center", patients: 680, occupancy: 85, qualityScore: 98, color: "hsl(var(--chart-5))" },
+];
+
+export const MOCK_REGIONAL_RESOURCES = [
+  { region: "North District", doctors: 45, ambulances: 8, oxygenStock: 85 },
+  { region: "South District", doctors: 32, ambulances: 5, oxygenStock: 40 },
+  { region: "East District", doctors: 28, ambulances: 3, oxygenStock: 65 },
+  { region: "West District", doctors: 50, ambulances: 12, oxygenStock: 95 },
+];
+
+export const MOCK_RECURRING_INFECTIONS = [
+  { name: "Malaria", cases: 450, trend: "up", facilities: ["District Hospital A", "St. Mary Clinic"] },
+  { name: "Cholera", cases: 12, trend: "down", facilities: ["Central General"] },
+  { name: "COVID-19", cases: 85, trend: "stable", facilities: ["North Clinic", "District Hospital A"] },
+  { name: "Tuberculosis", cases: 120, trend: "up", facilities: ["Central General", "West Health Post"] },
+];
+
+export const MOCK_CAMPAIGNS = [
+  { name: "National Vaccination Day", progress: 75, status: "Active", reach: "850k" },
+  { name: "Malaria Prevention Week", progress: 100, status: "Completed", reach: "1.2M" },
+  { name: "Maternal Health Drive", progress: 45, status: "Active", reach: "300k" },
+];
+
+export const MOCK_EPIDEMIC_ALERTS = [
+  { id: "e1", disease: "Measles", location: "South District", risk: "High", action: "Emergency Vaccinations" },
+  { id: "e2", disease: "Dengue", location: "East District", risk: "Medium", action: "Mosquito Fogging" },
+];
+
+export const MOCK_FACILITY_STOCKS = [
+  { facility: "Central General", status: "Critical", lowItems: ["Paracetamol", "Oxygen Tanks"] },
+  { facility: "District Hospital A", status: "Low", lowItems: ["Amoxicillin"] },
+  { facility: "Rural Clinic B", status: "Normal", lowItems: [] },
+  { facility: "St. Mary Clinic", status: "Critical", lowItems: ["Gloves", "Syringes", "ART Meds"] },
+];

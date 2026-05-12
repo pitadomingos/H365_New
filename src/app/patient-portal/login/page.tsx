@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
+import { MOCK_PATIENTS } from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,8 +29,8 @@ export default function PatientLoginPage() {
     if (!nid || nid.length < 5) {
       toast({
         variant: "destructive",
-        title: t('patientPortal.error.invalidId'),
-        description: "National ID must be at least 5 digits for this demo."
+        title: "Invalid ID",
+        description: "Please enter a valid National ID."
       });
       return;
     }
@@ -39,15 +40,28 @@ export default function PatientLoginPage() {
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      // Store session (mock)
-      localStorage.setItem('patient_nid', nid);
-      localStorage.setItem('patient_name', 'Augusto Mendes'); // Mock patient name
       
-      router.push('/patient-portal');
-      toast({
-        title: "Welcome to H365 Portal",
-        description: "You have successfully logged in."
-      });
+      // Search in MOCK_PATIENTS
+      const patient = MOCK_PATIENTS.find(p => p.nationalId === nid);
+      
+      if (patient) {
+        // Store session (mock)
+        localStorage.setItem('patient_nid', nid);
+        localStorage.setItem('patient_name', patient.fullName);
+        localStorage.setItem('patient_profile', JSON.stringify(patient));
+        
+        router.push('/patient-portal');
+        toast({
+          title: "Welcome to H365 Portal",
+          description: `Hello, ${patient.fullName}. You have successfully logged in.`
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "No clinical record found for this National ID in our central database."
+        });
+      }
     }, 1500);
   };
 
@@ -101,11 +115,24 @@ export default function PatientLoginPage() {
               </Button>
             </form>
 
-            <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex gap-3 text-[11px] text-blue-700 leading-relaxed">
-               <Info className="h-4 w-4 shrink-0 mt-0.5" />
-               <p>
-                 {t('patientPortal.login.footer')}
-               </p>
+            <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex flex-col gap-2 text-[11px] text-blue-700 leading-relaxed">
+               <div className="flex gap-3">
+                 <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                 <p>
+                   {t('patientPortal.login.footer')}
+                 </p>
+               </div>
+               <div className="mt-2 pt-2 border-t border-blue-100">
+                  <p className="font-bold uppercase tracking-wider mb-1">{t('patientPortal.login.demoCredentials')}:</p>
+                  <ul className="grid grid-cols-1 gap-1 font-mono">
+                    {MOCK_PATIENTS.slice(0, 3).map(p => (
+                      <li key={p.id} className="flex justify-between">
+                        <span>{p.fullName.split(' ')[0]}:</span>
+                        <span className="font-bold">{p.nationalId}</span>
+                      </li>
+                    ))}
+                  </ul>
+               </div>
             </div>
           </CardContent>
           <CardFooter className="bg-slate-50/80 border-t flex flex-col pt-4">

@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint, Smartphone } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -71,6 +71,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/architecture-options', labelKey: 'nav.architectureOptions', icon: Network },
       { href: '/training-materials', labelKey: 'nav.trainingMaterials', icon: BookOpenCheck },
       { href: '/todo-list', labelKey: 'nav.toDoList', icon: ListChecks },
+    ]
+  },
+  {
+    titleKey: 'nav.group.mobile',
+    items: [
+      { href: '/patient-portal/login', labelKey: 'nav.patientPortal', icon: Smartphone },
     ]
   }
 ];
