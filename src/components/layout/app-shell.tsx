@@ -3,6 +3,7 @@
 
 import * as React from "react";
 import Link from "next/link"; // Still needed for H365 logo link
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation"; // useRouter for programmatic navigation
 import { Stethoscope, Menu } from "lucide-react";
 
@@ -82,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 !sidebarOpen && "justify-center"
               )}
             >
-              <Stethoscope className="h-7 w-7 text-primary shrink-0" />
+              <Image src="/logo.png" alt="H365 Logo" width={28} height={28} className="shrink-0 object-contain" />
               <h1 className={cn(
                 "text-xl font-semibold whitespace-nowrap",
                 !sidebarOpen && "hidden" // Hide text when collapsed
@@ -224,9 +225,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                    {user?.role === 'FACILITY_ADMIN' && <CheckCircle2 className="h-3 w-3 text-primary" />}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled>{t('nav.settings')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/settings')}>{t('nav.settings')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled>{t('nav.logout')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/logout')}>{t('nav.logout')}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

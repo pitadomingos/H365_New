@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, FlaskConical, RadioTower, Save, Smartphone, MapPin, ActivityIcon as BloodPressureIcon } from "lucide-react";
+import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, FlaskConical, RadioTower, Save, Smartphone, MapPin, ActivityIcon as BloodPressureIcon, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { TreatmentRecommendationInput, TreatmentRecommendationOutput } from '@/ai/flows/treatment-recommendation';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "@/hooks/use-toast";
@@ -46,8 +46,9 @@ const FormSchema = z.object({
   labResultsSummary: z.string().optional(),
   imagingDataSummary: z.string().optional(),
   doctorComments: z.string().optional(),
+  physicalExamNotes: z.string().optional(),
   finalDiagnosis: z.string().min(1, "Final Diagnosis is required for completion."),
-  finalPrescription: z.string().min(1, "Final Prescription is required for completion."),
+  finalPrescription: z.string().optional(),
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
     message: "At least one of symptoms, lab results summary, or imaging data summary must be provided for AI recommendation.",
     path: ["symptoms"],
@@ -81,6 +82,16 @@ const mockVisitHistory: VisitHistoryItem[] = [
   { id: "v3", date: "2023-11-05", department: "Specialist", doctor: "Dr. Eve", reason: "Cardiology Consult" },
   { id: "v4", date: "2023-08-15", department: "Laboratory", doctor: "N/A", reason: "Routine Blood Work" },
   { id: "v5", date: "2023-01-30", department: "Outpatient", doctor: "Dr. Smith", reason: "Flu Symptoms" },
+];
+
+const MOCK_DRUGS = [
+  { id: "d1", name: "Amoxicillin", strength: "500mg", form: "Capsule", stock: 1200 },
+  { id: "d2", name: "Paracetamol", strength: "500mg", form: "Tablet", stock: 5000 },
+  { id: "d3", name: "Artemether/Lumefantrine (Coartem)", strength: "20/120mg", form: "Tablet", stock: 450 },
+  { id: "d4", name: "Ciprofloxacin", strength: "500mg", form: "Tablet", stock: 300 },
+  { id: "d5", name: "Metformin", strength: "850mg", form: "Tablet", stock: 800 },
+  { id: "d6", name: "Salbutamol", strength: "100mcg", form: "Inhaler", stock: 50 },
+  { id: "d7", name: "ORS Sachet", strength: "N/A", form: "Powder", stock: 1000 },
 ];
 
 export interface ConsultationInitialData extends Partial<FormValues> {
@@ -166,6 +177,17 @@ export function ConsultationForm({ getRecommendationAction, getPatientContextAct
   const [isSubmittingImagingOrder, setIsSubmittingImagingOrder] = useState(false);
   const [isSavingProgress, setIsSavingProgress] = useState(false);
   const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false);
+  
+  const [prescribedDrugs, setPrescribedDrugs] = useState<any[]>([]);
+  const [drugSearchQuery, setDrugSearchQuery] = useState("");
+  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const STEP_LABELS = [
+    { num: 1, label: 'Intake & Vitals' },
+    { num: 2, label: 'Clinical Notes (SOAP)' },
+    { num: 3, label: 'AI Assist & Diagnostics' },
+    { num: 4, label: 'Prescriptions & Finalize' },
+  ];
 
 
   const form = useForm<FormValues>({
@@ -388,6 +410,7 @@ ${visitHistoryString || "No recent visit history available."}
       doctorNotes: currentFormData.doctorComments,
       finalDiagnosis: currentFormData.finalDiagnosis,
       prescription: currentFormData.finalPrescription,
+      structuredPrescription: prescribedDrugs,
       outcome: outcome,
     };
 
@@ -406,6 +429,17 @@ ${visitHistoryString || "No recent visit history available."}
     setSelectedLabTests({});
     setIsOutcomeModalOpen(false);
     setIsSubmittingOutcome(false);
+    setPrescribedDrugs([]);
+  };
+
+  const addDrugToPrescription = (drug: any) => {
+    if (prescribedDrugs.find(p => p.id === drug.id)) return;
+    setPrescribedDrugs([...prescribedDrugs, { ...drug, dosage: "1x1", frequency: "Daily", duration: "5 days" }]);
+    setDrugSearchQuery("");
+  };
+
+  const removeDrug = (drugId: string) => {
+    setPrescribedDrugs(prescribedDrugs.filter(p => p.id !== drugId));
   };
 
   const handleCreateReferral = async () => {
@@ -537,51 +571,73 @@ ${visitHistoryString || "No recent visit history available."}
   };
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6 items-start">
-      <div className="lg:col-span-2 space-y-6">
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle>{t('consultationForm.patientInfoCard.title')}</CardTitle>
-            <CardDescription>{t('consultationForm.patientInfoCard.description')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Input
-                id="nationalIdSearch"
-                placeholder={t('consultationForm.nationalId.placeholder')}
-                {...form.register('nationalIdSearch')}
-                className="max-w-xs"
-                disabled={isActionDisabled}
-              />
-              <Button onClick={handlePatientSearch} disabled={isActionDisabled || !form.watch("nationalIdSearch")?.trim()}>
-                {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                {isSearching ? t('consultationForm.searchButton.loading') : t('consultationForm.searchButton')}
-              </Button>
-            </div>
+    <div className="flex flex-col gap-6">
+      {/* Patient Search - Always visible */}
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>{t('consultationForm.patientInfoCard.title')}</CardTitle>
+          <CardDescription>{t('consultationForm.patientInfoCard.description')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Input id="nationalIdSearch" placeholder={t('consultationForm.nationalId.placeholder')} {...form.register('nationalIdSearch')} className="max-w-xs" disabled={isActionDisabled} />
+            <Button onClick={handlePatientSearch} disabled={isActionDisabled || !form.watch("nationalIdSearch")?.trim()}>
+              {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              {isSearching ? t('consultationForm.searchButton.loading') : t('consultationForm.searchButton')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-            {patientData && (
-              <div className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-4 items-start mt-4 p-4 border rounded-md bg-muted/30">
-                <Image
-                  src={patientData.photoUrl}
-                  alt={t('consultationForm.patientPhoto.alt')}
-                  width={120}
-                  height={120}
-                  className="rounded-md border"
-                  data-ai-hint={getAvatarHint(patientData.gender)}
-                />
-                <div className="space-y-1.5 text-sm">
-                  <h3 className="text-xl font-semibold">{patientData.fullName}</h3>
-                  <p><strong>{t('consultationForm.patientInfo.id')}:</strong> {patientData.nationalId}</p>
-                  <p><strong>{t('consultationForm.patientInfo.age')}:</strong> {patientData.age} | <strong>{t('consultationForm.patientInfo.gender')}:</strong> {t(`patientRegistration.gender.${patientData.gender.toLowerCase()}` as any)}</p>
-                  <p><strong>{t('consultationForm.patientInfo.address')}:</strong> {patientData.address}</p>
-                  <p><strong>{t('consultationForm.patientInfo.homeClinic')}:</strong> {patientData.homeClinic}</p>
-                </div>
+      {/* Persistent Patient Context Header */}
+      {patientData && (
+        <Card className="shadow-sm border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <Image src={patientData.photoUrl} alt={t('consultationForm.patientPhoto.alt')} width={64} height={64} className="rounded-full border-2 border-primary/30 shrink-0" data-ai-hint={getAvatarHint(patientData.gender)} />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold">{patientData.fullName}</h3>
+                <p className="text-xs text-muted-foreground">{t('consultationForm.patientInfo.id')}: {patientData.nationalId} | {t('consultationForm.patientInfo.age')}: {patientData.age} | {t(`patientRegistration.gender.${patientData.gender.toLowerCase()}` as any)}</p>
+              </div>
+              <div className="flex gap-2 flex-wrap justify-end">
+                {patientData.allergies?.map((a: string) => <Badge key={a} variant="destructive" className="text-[10px]">{a}</Badge>)}
+                {patientData.chronicConditions?.map((c: string) => <Badge key={c} variant="secondary" className="text-[10px]">{c}</Badge>)}
+              </div>
+            </div>
+            {/* Compact Vitals Strip */}
+            {(bmi || form.watch('bloodPressure') || form.watch('bodyTemperature')) && (
+              <div className="flex gap-3 mt-3 pt-3 border-t border-primary/10 flex-wrap">
+                {form.watch('bodyTemperature') && <Badge variant="outline" className="text-xs">🌡️ {form.watch('bodyTemperature')}°C</Badge>}
+                {form.watch('bloodPressure') && <Badge variant="outline" className="text-xs">💓 {form.watch('bloodPressure')} {bpDisplay?.status && bpDisplay.status !== 'N/A' ? `(${bpDisplay.status})` : ''}</Badge>}
+                {bmi && <Badge variant="outline" className="text-xs">⚖️ BMI: {bmi} {bmiDisplay?.status && bmiDisplay.status !== 'N/A' ? `(${bmiDisplay.status})` : ''}</Badge>}
               </div>
             )}
           </CardContent>
         </Card>
+      )}
 
-        <form onSubmit={form.handleSubmit(onAiSubmit)} className="space-y-6">
+      {/* Stepper Progress Bar */}
+      {patientData && (
+        <div className="flex items-center justify-between bg-background border rounded-lg p-3 shadow-sm">
+          {STEP_LABELS.map((step, idx) => (
+            <React.Fragment key={step.num}>
+              <button type="button" onClick={() => setCurrentStep(step.num)} className={cn("flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm font-medium", currentStep === step.num ? "bg-primary text-primary-foreground shadow-md" : currentStep > step.num ? "text-primary" : "text-muted-foreground")}>
+                <span className={cn("flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold border-2", currentStep === step.num ? "border-primary-foreground bg-primary-foreground/20" : currentStep > step.num ? "border-primary bg-primary/10" : "border-muted-foreground/30")}>
+                  {currentStep > step.num ? <CheckCircle2 className="h-4 w-4" /> : step.num}
+                </span>
+                <span className="hidden md:inline">{step.label}</span>
+              </button>
+              {idx < STEP_LABELS.length - 1 && <div className={cn("flex-1 h-0.5 mx-2", currentStep > step.num ? "bg-primary" : "bg-muted")} />}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+
+      {/* Phase Content */}
+      <form onSubmit={form.handleSubmit(onAiSubmit)} className="space-y-6">
+
+        {/* === PHASE 1: Intake & Vitals === */}
+        {patientData && currentStep === 1 && (
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>{t('consultationForm.vitalsCard.title')}</CardTitle>
@@ -629,24 +685,45 @@ ${visitHistoryString || "No recent visit history available."}
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
 
-              <div className="space-y-1">
-                <Label htmlFor="symptoms">{t('consultationForm.symptoms.label')} <span className="text-destructive">*</span></Label>
-                <Textarea
-                  id="symptoms"
-                  placeholder={t('consultationForm.symptoms.placeholder')}
-                  {...form.register('symptoms')}
-                  className="min-h-[100px]"
-                  disabled={isActionDisabled || !patientData}
-                />
-                {form.formState.errors.symptoms && (
-                  <p className="text-sm text-destructive">{form.formState.errors.symptoms.message}</p>
-                )}
+        {/* === PHASE 2: Clinical Notes (SOAP) === */}
+        {patientData && currentStep === 2 && (
+          <Card className="shadow-sm border-t-4 border-t-blue-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-blue-500" /> Clinical Notes (SOAP Format)</CardTitle>
+              <CardDescription>Structured documentation following the SOAP clinical standard.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="symptoms" className="text-base font-semibold text-blue-700 dark:text-blue-400">Subjective (S)</Label>
+                <p className="text-xs text-muted-foreground">Chief complaint, history of present illness, symptoms as described by the patient.</p>
+                <Textarea id="symptoms" placeholder="e.g., Patient reports a 3-day history of sharp chest pain..." {...form.register('symptoms')} className="min-h-[100px]" disabled={isActionDisabled} />
+                {form.formState.errors.symptoms && <p className="text-sm text-destructive">{form.formState.errors.symptoms.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="physicalExamNotes" className="text-base font-semibold text-green-700 dark:text-green-400">Objective (O)</Label>
+                <p className="text-xs text-muted-foreground">Vital signs, physical examination findings, observable clinical data.</p>
+                <Textarea id="physicalExamNotes" placeholder="e.g., BP 130/80, HR 88, Lungs clear to auscultation..." {...form.register('physicalExamNotes')} className="min-h-[120px]" disabled={isActionDisabled} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="doctorComments" className="text-base font-semibold text-orange-700 dark:text-orange-400">Assessment (A)</Label>
+                <p className="text-xs text-muted-foreground">Clinical impression, differential diagnosis, assessment of findings.</p>
+                <Textarea id="doctorComments" placeholder="e.g., Acute bronchitis, rule out pneumonia..." {...form.register('doctorComments')} className="min-h-[100px]" disabled={isActionDisabled} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-base font-semibold text-purple-700 dark:text-purple-400">Plan (P)</Label>
+                <p className="text-xs text-muted-foreground">Treatment plan, follow-up. Detailed prescriptions and orders are in Phase 3 & 4.</p>
+                <Textarea placeholder="e.g., Order chest X-ray, start antibiotics, return in 5 days..." className="min-h-[100px]" disabled={isActionDisabled} />
               </div>
             </CardContent>
           </Card>
-          
-          {patientData && (
+        )}
+
+        {/* === PHASE 3: AI Assist & Diagnostics === */}
+        {patientData && currentStep === 3 && (<>
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>{t('consultationForm.diagnosticOrders.title')}</CardTitle>
@@ -765,7 +842,98 @@ ${visitHistoryString || "No recent visit history available."}
                 </div>
               </CardContent>
             </Card>
-          )}
+
+
+            <Card className="shadow-sm border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Pill className="h-6 w-6 text-primary" /> Digital Prescription</CardTitle>
+                <CardDescription>Link medications directly to the Pharmacy module.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search inventory (e.g. Amoxicillin...)" 
+                    className="pl-9"
+                    value={drugSearchQuery}
+                    onChange={(e) => setDrugSearchQuery(e.target.value)}
+                  />
+                  {drugSearchQuery && (
+                    <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-[200px] overflow-y-auto">
+                      {MOCK_DRUGS.filter(d => d.name.toLowerCase().includes(drugSearchQuery.toLowerCase())).map(drug => (
+                        <div 
+                          key={drug.id} 
+                          className="p-2 hover:bg-muted cursor-pointer flex justify-between items-center text-sm"
+                          onClick={() => addDrugToPrescription(drug)}
+                        >
+                          <span>{drug.name} ({drug.strength}) - {drug.form}</span>
+                          <Badge variant="outline" className="text-[10px]">Stock: {drug.stock}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {prescribedDrugs.length > 0 ? (
+                    prescribedDrugs.map((drug) => (
+                      <div key={drug.id} className="p-3 border rounded-md bg-muted/30 relative">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute right-1 top-1 h-6 w-6 text-destructive"
+                          onClick={() => removeDrug(drug.id)}
+                        >
+                          <Skull className="h-3 w-3" />
+                        </Button>
+                        <h4 className="font-bold text-sm">{drug.name} {drug.strength}</h4>
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Dosage</Label>
+                            <Input 
+                              value={drug.dosage} 
+                              className="h-8 text-xs" 
+                              onChange={(e) => {
+                                setPrescribedDrugs(prescribedDrugs.map(p => p.id === drug.id ? { ...p, dosage: e.target.value } : p));
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Freq</Label>
+                            <Input 
+                              value={drug.frequency} 
+                              className="h-8 text-xs" 
+                              onChange={(e) => {
+                                setPrescribedDrugs(prescribedDrugs.map(p => p.id === drug.id ? { ...p, frequency: e.target.value } : p));
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Dur</Label>
+                            <Input 
+                              value={drug.duration} 
+                              className="h-8 text-xs" 
+                              onChange={(e) => {
+                                setPrescribedDrugs(prescribedDrugs.map(p => p.id === drug.id ? { ...p, duration: e.target.value } : p));
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 border-2 border-dashed rounded-md text-muted-foreground text-sm">
+                      No medications added yet. Use the search bar above.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter className="bg-primary/5 p-4 rounded-b-md">
+                <p className="text-[10px] text-muted-foreground italic">
+                  * Prescriptions created here are instantly visible to Pharmacy staff upon checkout.
+                </p>
+              </CardFooter>
+            </Card>
 
 
           <Card className="shadow-sm">
@@ -806,7 +974,10 @@ ${visitHistoryString || "No recent visit history available."}
               </Button>
             </CardFooter>
           </Card>
-        </form>
+        </>)}
+
+        {/* === PHASE 4: Prescriptions & Finalize === */}
+        {patientData && currentStep === 4 && (<>
 
 
         {error && !recommendation && (
@@ -867,20 +1038,6 @@ ${visitHistoryString || "No recent visit history available."}
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>{t('consultationForm.doctorComments.title')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Textarea
-                        id="doctorComments"
-                        placeholder={t('consultationForm.doctorComments.placeholder')}
-                        {...form.register('doctorComments')}
-                        className="min-h-[100px]"
-                        disabled={isActionDisabled}
-                        />
-                </CardContent>
-            </Card>
 
             <Card className="shadow-sm border-primary/20 bg-primary/5">
                 <CardHeader className="pb-3">
@@ -1017,75 +1174,87 @@ ${visitHistoryString || "No recent visit history available."}
             </div>
           </div>
         )}
-      </div>
+        </>)}
+      </form>
 
+      {/* Navigation Buttons */}
       {patientData && (
-        <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))]">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <UserCircle className="h-6 w-6 text-primary" /> {t('consultationForm.patientSummary.title')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div><strong>{t('consultationForm.patientSummary.name')}:</strong> {patientData.fullName}</div>
-              <div><strong>{t('consultationForm.patientSummary.age')}:</strong> {patientData.age} | <strong>{t('consultationForm.patientSummary.gender')}:</strong> {t(`patientRegistration.gender.${patientData.gender.toLowerCase()}` as any)}</div>
-              <div><strong>{t('consultationForm.patientSummary.id')}:</strong> {patientData.nationalId}</div>
-              <Separator />
-              <div>
-                <h4 className="font-semibold mb-1 flex items-center gap-1.5"><ShieldAlert className="h-4 w-4 text-destructive"/>{t('consultationForm.patientSummary.allergies')}:</h4>
-                {patientData.allergies.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {patientData.allergies.map(allergy => <Badge key={allergy} variant="destructive" className="text-xs">{allergy}</Badge>)}
+        <div className="flex items-center justify-between border-t pt-4">
+          <Button variant="outline" onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1 || isActionDisabled}>
+            <ChevronLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+          <span className="text-sm text-muted-foreground font-medium">Step {currentStep} of 4</span>
+          <div className="flex gap-2">
+            {currentStep < 4 ? (
+              <Button onClick={() => setCurrentStep(Math.min(4, currentStep + 1))} disabled={isActionDisabled}>
+                Next <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" disabled={isActionDisabled} size="lg" className="bg-green-600 hover:bg-green-700">
+                    <Send className="mr-2 h-4 w-4" /> Finalize Consultation
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>{t('consultationForm.outcomeModal.title', {patientName: patientData?.fullName || ""})}</DialogTitle>
+                    <DialogDescription>{t('consultationForm.outcomeModal.description')}</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
+                    {[
+                      { label: t('consultationForm.outcomeModal.options.sendHome'), value: "Send Home", icon: Home },
+                      { label: t('consultationForm.outcomeModal.options.sendToPharmacy'), value: "Send to Pharmacy", icon: ArrowRightToLine },
+                      { label: t('consultationForm.outcomeModal.options.admit'), value: "Send to Inpatient (Ward)", icon: BedDouble },
+                      { label: t('consultationForm.outcomeModal.options.referSpecialist'), value: "Refer to Specialist", icon: Users2 },
+                      { label: t('consultationForm.outcomeModal.options.deceased'), value: "Deceased", icon: Skull }
+                    ].map(opt => (
+                      <Button key={opt.value} variant="outline" onClick={() => handleOutcome(opt.value)} disabled={isSubmittingOutcome}>
+                        {isSubmittingOutcome ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <opt.icon className="mr-2 h-4 w-4"/>}
+                        {isSubmittingOutcome ? t('consultationForm.outcomeModal.processing') : opt.label}
+                      </Button>
+                    ))}
+                    <DialogClose asChild>
+                      <Button type="button" variant="ghost" disabled={isSubmittingOutcome}>{t('consultationForm.outcomeModal.cancelButton')}</Button>
+                    </DialogClose>
                   </div>
-                ) : <p className="text-muted-foreground">{t('consultationForm.patientSummary.noneReported')}</p>}
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-semibold mb-1 flex items-center gap-1.5"><HeartPulse className="h-4 w-4 text-blue-500"/>{t('consultationForm.patientSummary.chronicConditions')}:</h4>
-                {patientData.chronicConditions.length > 0 ? (
-                   <div className="flex flex-wrap gap-1">
-                    {patientData.chronicConditions.map(condition => <Badge key={condition} variant="secondary" className="text-xs">{condition}</Badge>)}
-                  </div>
-                ) : <p className="text-muted-foreground">{t('consultationForm.patientSummary.noneReported')}</p>}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <History className="h-6 w-6 text-primary" /> {t('consultationForm.visitHistory.title')}
-              </CardTitle>
-              <CardDescription>{t('consultationForm.visitHistory.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[400px] overflow-y-auto">
-              {mockVisitHistory.length > 0 ? (
-                <ul className="space-y-4">
-                  {mockVisitHistory.slice(0, 5).map((visit) => (
-                    <li key={visit.id} className="p-3 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="flex justify-between items-center mb-1">
-                        <p className="text-sm font-semibold flex items-center gap-1.5"><FileClock className="h-4 w-4" />{visit.date}</p>
-                        <Badge variant="outline" className="text-xs">{visit.department}</Badge>
-                      </div>
-                      <p className="text-xs"><strong>{t('consultationForm.visitHistory.doctor')}:</strong> {visit.doctor}</p>
-                      <p className="text-xs mt-0.5"><strong>{t('consultationForm.visitHistory.reason')}:</strong> {visit.reason}</p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">{t('consultationForm.visitHistory.empty')}</p>
-              )}
-            </CardContent>
-            <CardFooter>
-                <Button variant="link" className="p-0 h-auto text-xs" disabled>{t('consultationForm.visitHistory.viewFull')}</Button>
-            </CardFooter>
-          </Card>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Visit History Panel */}
+      {patientData && (
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <History className="h-6 w-6 text-primary" /> {t('consultationForm.visitHistory.title')}
+            </CardTitle>
+            <CardDescription>{t('consultationForm.visitHistory.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {mockVisitHistory.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {mockVisitHistory.slice(0, 6).map((visit) => (
+                  <div key={visit.id} className="p-3 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-sm font-semibold flex items-center gap-1.5"><FileClock className="h-4 w-4" />{visit.date}</p>
+                      <Badge variant="outline" className="text-xs">{visit.department}</Badge>
+                    </div>
+                    <p className="text-xs"><strong>{t('consultationForm.visitHistory.doctor')}:</strong> {visit.doctor}</p>
+                    <p className="text-xs mt-0.5"><strong>{t('consultationForm.visitHistory.reason')}:</strong> {visit.reason}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">{t('consultationForm.visitHistory.empty')}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }
-
-
-    

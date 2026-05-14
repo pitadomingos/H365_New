@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Microscope, ClipboardList, FlaskConical, AlertTriangle as AlertTriangleIcon, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3, Loader2, ListOrdered, BellDot, Layers, Wrench } from "lucide-react";
+import { Microscope, ClipboardList, FlaskConical, AlertTriangle as AlertTriangleIcon, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3, Loader2, ListOrdered, BellDot, Layers, Wrench, ShieldCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, defaultLocale } from '@/lib/i18n';
@@ -70,8 +71,10 @@ interface LabRequest {
   testsRequested: string[]; 
   orderingDoctor: string;
   requestDate: string;
-  status: "Sample Pending" | "Sample Collected" | "Processing" | "Results Ready" | "Cancelled";
+  status: "Sample Pending" | "Sample Collected" | "Processing" | "Pending Approval" | "Results Ready" | "Cancelled";
   results?: ResultInputItem[] | string; 
+  technicianId?: string;
+  verifiedBy?: string;
 }
 
 interface Reagent {
@@ -324,7 +327,7 @@ export default function LaboratoryManagementPage() {
     
     setLabRequests(prevReqs => prevReqs.map(req => 
       req.id === selectedRequestForResults.id 
-        ? { ...req, results: currentResultInputs, status: "Results Ready" as LabRequest["status"] } 
+        ? { ...req, results: currentResultInputs, status: "Pending Approval" as LabRequest["status"], technicianId: "TECH-CURRENT" } 
         : req
     ));
 
@@ -349,10 +352,18 @@ export default function LaboratoryManagementPage() {
     });
     setReagents(tempReagents);
     
-    toast({ title: t('labManagement.toast.resultsSaved'), description: t('labManagement.toast.resultsSaved.desc', {patientName: selectedRequestForResults.patientName}) });
+    toast({ title: "Results Submitted", description: "Results have been sent for verification by a pathologist." });
     setIsResultModalOpen(false);
     setSelectedRequestForResults(null);
     setCurrentResultInputs([]);
+    setIsSavingResults(false);
+  };
+
+  const handleApproveResults = async (requestId: string) => {
+    setIsSavingResults(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: "Results Ready", verifiedBy: "PATH-001" } : req));
+    toast({ title: "Results Approved", description: `Request ${requestId} has been verified and released to the clinician.` });
     setIsSavingResults(false);
   };
   
@@ -476,6 +487,71 @@ export default function LaboratoryManagementPage() {
   };
 
 
+  const renderLabRequestsTable = (requests: LabRequest[]) => {
+    if (requests.length === 0) {
+      return <p className="text-center py-10 text-muted-foreground">{t('labManagement.requests.empty')}</p>;
+    }
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t('labManagement.requests.table.patient')}</TableHead>
+            <TableHead>{t('labManagement.requests.table.tests')}</TableHead>
+            <TableHead>{t('labManagement.requests.table.doctor')}</TableHead>
+            <TableHead>{t('labManagement.requests.table.date')}</TableHead>
+            <TableHead>{t('labManagement.requests.table.status')}</TableHead>
+            <TableHead className="text-right">{t('labManagement.requests.table.actions')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {requests.map((req) => (
+            <TableRow key={req.id}>
+              <TableCell className="font-medium">
+                {req.patientName} <br/> 
+                <span className="text-xs text-muted-foreground">{req.nationalId}</span>
+              </TableCell>
+              <TableCell className="text-xs">
+                {req.testsRequested.map(testId => MOCK_TEST_DEFINITIONS[testId]?.name || testId).join(', ')}
+              </TableCell>
+              <TableCell>{req.orderingDoctor}</TableCell>
+              <TableCell>{new Date(req.requestDate + 'T00:00:00').toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')}</TableCell>
+              <TableCell>
+                <Select 
+                    value={req.status} 
+                    onValueChange={(value) => handleUpdateStatus(req.id, value as LabRequest["status"])}
+                    disabled={isSavingResults}
+                >
+                    <SelectTrigger className="h-8 text-xs w-[150px]">
+                        <SelectValue placeholder={t('labManagement.requests.status.placeholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Sample Pending">{t('labManagement.requests.status.samplePending')}</SelectItem>
+                        <SelectItem value="Sample Collected">{t('labManagement.requests.status.sampleCollected')}</SelectItem>
+                        <SelectItem value="Processing">{t('labManagement.requests.status.processing')}</SelectItem>
+                        <SelectItem value="Pending Approval">Pending Approval</SelectItem>
+                        <SelectItem value="Results Ready">{t('labManagement.requests.status.resultsReady')}</SelectItem>
+                        <SelectItem value="Cancelled">{t('labManagement.requests.status.cancelled')}</SelectItem>
+                    </SelectContent>
+                </Select>
+              </TableCell>
+              <TableCell className="text-right">
+                {req.status === "Pending Approval" ? (
+                   <Button size="sm" variant="default" className="bg-amber-600 hover:bg-amber-700" onClick={() => handleApproveResults(req.id)} disabled={isSavingResults}>
+                     <ShieldCheck className="mr-1 h-3 w-3" /> Verify
+                   </Button>
+                 ) : (
+                   <Button size="sm" variant="outline" onClick={() => handleOpenResultModal(req)} disabled={isSavingResults}>
+                     <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Results Ready" ? t('labManagement.requests.actions.viewEditResults') : t('labManagement.requests.actions.enterResults')}
+                   </Button>
+                 )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  };
+
   return (
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
@@ -505,59 +581,23 @@ export default function LaboratoryManagementPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="ml-2 text-muted-foreground">{t('labManagement.requests.loading')}</p>
                   </div>
-              ) : labRequests.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('labManagement.requests.table.patient')}</TableHead>
-                      <TableHead>{t('labManagement.requests.table.tests')}</TableHead>
-                      <TableHead>{t('labManagement.requests.table.doctor')}</TableHead>
-                      <TableHead>{t('labManagement.requests.table.date')}</TableHead>
-                      <TableHead>{t('labManagement.requests.table.status')}</TableHead>
-                      <TableHead className="text-right">{t('labManagement.requests.table.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {labRequests.map((req) => (
-                      <TableRow key={req.id}>
-                        <TableCell className="font-medium">
-                          {req.patientName} <br/> 
-                          <span className="text-xs text-muted-foreground">{req.nationalId}</span>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {req.testsRequested.map(testId => MOCK_TEST_DEFINITIONS[testId]?.name || testId).join(', ')}
-                        </TableCell>
-                        <TableCell>{req.orderingDoctor}</TableCell>
-                        <TableCell>{new Date(req.requestDate + 'T00:00:00').toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')}</TableCell>
-                        <TableCell>
-                          <Select 
-                              value={req.status} 
-                              onValueChange={(value) => handleUpdateStatus(req.id, value as LabRequest["status"])}
-                              disabled={isSavingResults}
-                          >
-                              <SelectTrigger className="h-8 text-xs w-[150px]">
-                                  <SelectValue placeholder={t('labManagement.requests.status.placeholder')} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="Sample Pending">{t('labManagement.requests.status.samplePending')}</SelectItem>
-                                  <SelectItem value="Sample Collected">{t('labManagement.requests.status.sampleCollected')}</SelectItem>
-                                  <SelectItem value="Processing">{t('labManagement.requests.status.processing')}</SelectItem>
-                                  <SelectItem value="Results Ready">{t('labManagement.requests.status.resultsReady')}</SelectItem>
-                                  <SelectItem value="Cancelled">{t('labManagement.requests.status.cancelled')}</SelectItem>
-                              </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant="outline" onClick={() => handleOpenResultModal(req)} disabled={isSavingResults}>
-                            <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Results Ready" ? t('labManagement.requests.actions.viewEditResults') : t('labManagement.requests.actions.enterResults')}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
               ) : (
-                <p className="text-center py-10 text-muted-foreground">{t('labManagement.requests.empty')}</p>
+                <Tabs defaultValue="technician" className="w-full">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="technician">Result Entry (Tech)</TabsTrigger>
+                    <TabsTrigger value="pathologist">Review/Approve (Pathologist)</TabsTrigger>
+                    <TabsTrigger value="all">All Requests</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="technician">
+                    {renderLabRequestsTable(labRequests.filter(req => req.status === "Sample Collected" || req.status === "Processing" || req.status === "Sample Pending" || req.status === "Results Ready"))}
+                  </TabsContent>
+                  <TabsContent value="pathologist">
+                    {renderLabRequestsTable(labRequests.filter(req => req.status === "Pending Approval" || req.status === "Results Ready"))}
+                  </TabsContent>
+                  <TabsContent value="all">
+                    {renderLabRequestsTable(labRequests)}
+                  </TabsContent>
+                </Tabs>
               )}
             </CardContent>
              <CardFooter>

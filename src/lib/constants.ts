@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint, Smartphone } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint, Smartphone, Brain, Scissors, Utensils, History, HeartPulse, UserCog } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -23,8 +23,15 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/appointments', labelKey: 'nav.appointments', icon: CalendarDays },
       { href: '/visiting-patients', labelKey: 'nav.visitingPatients', icon: Users },
       { href: '/treatment-recommendation', labelKey: 'nav.consultationRoom', icon: ClipboardEdit },
+      { href: '/clinical-notes', labelKey: 'nav.clinicalNotes', icon: FileText },
+      { href: '/prescription-management', labelKey: 'nav.prescriptionManagement', icon: Pill },
       { href: '/specializations', labelKey: 'nav.specializations', icon: Star },
       { href: '/maternity-care', labelKey: 'nav.maternityCare', icon: Baby },
+      { href: '/pediatrics', labelKey: 'nav.pediatrics', icon: Baby },
+      { href: '/chronic-care', labelKey: 'nav.chronicCare', icon: History },
+      { href: '/mental-health', labelKey: 'nav.mentalHealth', icon: Brain },
+      { href: '/operation-theatre', labelKey: 'nav.operationTheatre', icon: Scissors },
+      { href: '/nutrition', labelKey: 'nav.nutrition', icon: Utensils },
       { href: '/ward-management', labelKey: 'nav.wardManagement', icon: BedDouble },
     ]
   },
@@ -57,6 +64,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/billing', labelKey: 'nav.billingFinance', icon: CreditCard },
       { href: '/inventory-management', labelKey: 'nav.inventory', icon: Package },
       { href: '/mpi-reconciliation', labelKey: 'nav.mpi', icon: Fingerprint },
+      { href: '/staff-management', labelKey: 'nav.staffManagement', icon: UserCog },
       { href: '/biomedical-engineering', labelKey: 'nav.biomedical', icon: Settings },
     ]
   },
@@ -84,9 +92,9 @@ export const NAV_GROUPS: NavGroup[] = [
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap(g => g.items);
 
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
-    { href: '#', labelKey: 'nav.notifications', icon: Bell, disabled: true }, 
-    { href: '#', labelKey: 'nav.settings', icon: Settings, disabled: true },  
-    { href: '#', labelKey: 'nav.logout', icon: LogOut, disabled: true },    
+    { href: '/notifications', labelKey: 'nav.notifications', icon: Bell }, 
+    { href: '/settings', labelKey: 'nav.settings', icon: Settings },  
+    { href: '/logout', labelKey: 'nav.logout', icon: LogOut },    
 ];
 
 export interface OrderableLabTest {
