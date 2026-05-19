@@ -125,10 +125,14 @@ export default function VisitingPatientsPage() {
         // if (!wlResponse.ok) throw new Error("Failed to fetch waiting list");
         // const wlData = await wlResponse.json();
         await new Promise(resolve => setTimeout(resolve, 1000));
-        const wlData = initialMockWaitingListData.map(item => ({
-            ...item,
-            location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
-        }));
+        const wlData = initialMockWaitingListData.map(item => {
+            const key = `visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`;
+            const trans = t(key);
+            return {
+                ...item,
+                location: trans === key ? item.location : trans
+            };
+        });
         setWaitingList(wlData);
 
         // Fetch Analytics Stats
@@ -141,20 +145,28 @@ export default function VisitingPatientsPage() {
             summaryStats: { avgWaitTime: "15", totalProcessed: (initialMockWaitingListData.length + 5).toString(), peakHour: "10:00 AM"}
         };
 
-        setVisitChartData(statsData.chartData.map((d: any) => ({
-            ...d,
-            department: t(`visitingPatients.visitDetails.department.${d.department.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, d.department)
-        })) || initialVisitChartDataTemplate(t).map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 })));
+        setVisitChartData(statsData.chartData.map((d: any) => {
+            const key = `visitingPatients.visitDetails.department.${d.department.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`;
+            const trans = t(key);
+            return {
+                ...d,
+                department: trans === key ? d.department : trans
+            };
+        }) || initialVisitChartDataTemplate(t).map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 })));
         setAnalyticsStats(statsData.summaryStats || { avgWaitTime: "15", totalProcessed: (initialMockWaitingListData.length + 5).toString(), peakHour: "10:00 AM"});
 
       } catch (error) {
         console.error("Error fetching initial data:", error);
         toast({ variant: "destructive", title: t('visitingPatients.toast.loadError'), description: (error as Error).message || t('visitingPatients.toast.loadError.desc') });
         // Fallback mock data
-        setWaitingList(initialMockWaitingListData.map(item => ({
-            ...item,
-            location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
-        })));
+        setWaitingList(initialMockWaitingListData.map(item => {
+            const key = `visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`;
+            const trans = t(key);
+            return {
+                ...item,
+                location: trans === key ? item.location : trans
+            };
+        }));
         const fallbackChartData = initialVisitChartDataTemplate(t).map(d => ({...d, visits: Math.floor(Math.random()*50) + 5 }));
         setVisitChartData(fallbackChartData);
         setAnalyticsStats({ avgWaitTime: "25", totalProcessed: (initialMockWaitingListData.length + 15).toString(), peakHour: "11:00 AM"});
@@ -271,9 +283,9 @@ export default function VisitingPatientsPage() {
         if (deptIndex > -1) {
           updatedChartData[deptIndex].visits += 1;
         } else {
-           const departmentKey = department.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '') as keyof typeof chartConfig;
-           const color = chartConfig[departmentKey]?.color || "hsl(var(--chart-5))"; // Fallback color
-           updatedChartData.push({ department: department, visits: 1, fill: color });
+            const departmentKey = department.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '') as keyof typeof chartConfig;
+            const color = (chartConfig as any)[departmentKey]?.color || "hsl(var(--chart-5))"; // Fallback color
+            updatedChartData.push({ department: department, visits: 1, fill: color });
         }
         return updatedChartData;
       });
@@ -479,7 +491,7 @@ export default function VisitingPatientsPage() {
                   <CardHeader>
                     <CardTitle className="text-xl">{searchedPatient.fullName}</CardTitle>
                     <CardDescription>
-                      {t('visitingPatients.patientCard.nationalId')} {searchedPatient.nationalId} | {t('visitingPatients.patientCard.dob')} {new Date(searchedPatient.dob+"T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')} | {t('visitingPatients.patientCard.gender')} {t(`patientRegistration.gender.${searchedPatient.gender.toLowerCase()}` as any, searchedPatient.gender)}
+                      {t('visitingPatients.patientCard.nationalId')} {searchedPatient.nationalId} | {t('visitingPatients.patientCard.dob')} {new Date(searchedPatient.dob+"T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')} | {t('visitingPatients.patientCard.gender')} {t(`patientRegistration.gender.${searchedPatient.gender.toLowerCase()}` as any) || searchedPatient.gender}
                       <br/>{t('visitingPatients.patientCard.chronicConditions')} {searchedPatient.chronicConditions || t('visitingPatients.patientCard.noneReported')}
                     </CardDescription>
                   </CardHeader>
@@ -661,8 +673,8 @@ export default function VisitingPatientsPage() {
                         // })));
                         await new Promise(resolve => setTimeout(resolve, 700)); // Simulate API delay
                         const mockData: WaitingListItem[] = [
-                            { id: Date.now(), name: "Refreshed Patient Alpha", gender: "Male", timeAdded: new Date().toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: t('visitingPatients.visitDetails.department.outpatient'), status: "Waiting", photoUrl: "https://placehold.co/40x40.png" },
-                            ...initialMockWaitingListData.slice(0,2).map(p => ({...p, timeAdded: new Date(Date.now() - Math.random()*100000).toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: t(`visitingPatients.visitDetails.department.${p.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, p.location)})),
+                            { id: Date.now(), patientName: "Refreshed Patient Alpha", gender: "Male" as const, timeAdded: new Date().toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: t('visitingPatients.visitDetails.department.outpatient'), status: "Waiting", photoUrl: "https://placehold.co/40x40.png" },
+                            ...initialMockWaitingListData.slice(0,2).map(p => ({...p, timeAdded: new Date(Date.now() - Math.random()*100000).toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: t(`visitingPatients.visitDetails.department.${p.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}` as any) || p.location})),
                         ].sort(() => 0.5 - Math.random());
                         setWaitingList(mockData);
                         toast({title: t('visitingPatients.toast.listRefreshed')});
@@ -742,7 +754,7 @@ export default function VisitingPatientsPage() {
                        {visitChartData.map((_entry, index) => {
                         const departmentName = _entry.department || "Unknown Department";
                         const departmentKey = departmentName.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '') as keyof typeof chartConfig;
-                        const chartItem = chartConfig[departmentKey];
+                        const chartItem = chartConfig[departmentKey] as any;
                         const color = _entry.fill || chartItem?.color || '#8884d8';
                         return <Cell key={`cell-${index}`} fill={color} />;
                       })}
@@ -755,7 +767,7 @@ export default function VisitingPatientsPage() {
                               {visitChartData.map((dataEntry, index) => {
                                 const departmentName = dataEntry.department || "Unknown Department";
                                 const departmentKey = departmentName.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '') as keyof typeof chartConfig;
-                                const chartItem = chartConfig[departmentKey];
+                                const chartItem = chartConfig[departmentKey] as any;
                                 const label = chartItem?.label || departmentName;
                                 const color = dataEntry.fill || chartItem?.color || '#8884d8';
 

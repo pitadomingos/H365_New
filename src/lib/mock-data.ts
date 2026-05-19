@@ -18,6 +18,8 @@ export interface MockPatient {
   status?: string;
   location?: string;
   timeAdded?: string;
+  allergies?: string[];
+  chronicConditions?: string[];
 }
 
 export const MOCK_PATIENTS: MockPatient[] = [

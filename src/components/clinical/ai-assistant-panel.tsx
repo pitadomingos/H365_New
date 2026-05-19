@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,27 @@ import { cn } from "@/lib/utils";
 import { addToQueue, getAIQueue, syncQueue, type AIQueueItem } from "@/lib/clinical-ai-queue";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from "@/lib/i18n";
+import { sanitizePatientData, sanitizeText } from "@/lib/phi-sanitizer";
+
+function getLocalFallbackSuggestion(department?: string, patientData?: any, currentLocale?: string): string {
+  const isPt = currentLocale === 'pt';
+  const complaint = (patientData?.chiefComplaint || "").toLowerCase();
+  
+  if (department === "Emergency Room") {
+    if (complaint.includes("chest") || complaint.includes("dor") || complaint.includes("peito")) {
+      return isPt 
+        ? `**Sugestão Offline Local (Protocolo de Dor Torácica)**:\n1. Obter ECG de 12 derivações imediatamente.\n2. Administrar Aspirina 300mg VO se não houver contraindicação.\n3. Monitorar sinais vitais continuamente. Alto risco de IAM.\n4. Manter desfibrilador ao lado do leito.`
+        : `**Local Offline Suggestion (Chest Pain Protocol)**:\n1. Immediately obtain 12-lead ECG and Troponin levels.\n2. Administer Aspirin 300mg PO if not contraindicated.\n3. Monitor vitals continuously. High risk of myocardial infarction.\n4. Keep emergency resuscitation cart at bedside.`;
+    }
+    return isPt 
+      ? `**Sugestão Offline Local (Protocolo de Triagem Urgente)**:\n1. Avaliar Vias Aéreas, Respiração e Circulação (ABC).\n2. Estabelecer acesso venoso periférico se instável.\n3. Iniciar monitorização contínua de sinais vitais.`
+      : `**Local Offline Suggestion (Urgent Triage Protocol)**:\n1. Assess ABCs (Airway, Breathing, Circulation).\n2. Establish IV access if unstable.\n3. Monitor vital signs continuously.`;
+  }
+  
+  return isPt 
+    ? `**Sugestão Offline Local (Protocolo Geral)**:\n1. Revisar histórico clínico, alergias e medicações ativas.\n2. Realizar exame físico direcionado à queixa principal.\n3. Solicitar exames básicos de triagem (Hemograma, PCR) se indicado.`
+    : `**Local Offline Suggestion (General Protocol)**:\n1. Review clinical history, active allergies, and medications.\n2. Perform physical examination targeted to chief complaint.\n3. Order basic screening tests (CBC, CRP) as indicated.`;
+}
 
 interface AIAssistantPanelProps {
   context?: string;
@@ -21,7 +42,7 @@ interface AIAssistantPanelProps {
 
 export function AIAssistantPanel({ context, department, patientData, onAcceptSuggestion }: AIAssistantPanelProps) {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = useMemo(() => getTranslator(currentLocale), [currentLocale]);
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -30,12 +51,10 @@ export function AIAssistantPanel({ context, department, patientData, onAcceptSug
   const [showQueue, setShowQueue] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
-  // Check queue status on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const queue = getAIQueue();
     setPendingCount(queue.filter(i => i.status === 'pending').length);
     
-    // Simple online/offline detection
     const updateOnlineStatus = () => setIsOfflineMode(!navigator.onLine);
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
@@ -50,9 +69,13 @@ export function AIAssistantPanel({ context, department, patientData, onAcceptSug
   const handleAIRequest = async () => {
     if (!prompt.trim() && !patientData) return;
 
-    // If offline or if user chooses deferred audit
+    const sanitizedPatient = sanitizePatientData(patientData);
+    const sanitizedPrompt = sanitizeText(prompt);
+
     if (isOfflineMode) {
       handleQueueRequest();
+      const offlineSug = getLocalFallbackSuggestion(department, sanitizedPatient, currentLocale);
+      setResult(`${offlineSug}\n\n*${t('ai.assistant.result.queued')}*`);
       return;
     }
 
@@ -70,7 +93,7 @@ export function AIAssistantPanel({ context, department, patientData, onAcceptSug
         You are a Clinical Decision Support Assistant for a public health hospital.
         Department: ${department || "General"}
         Role: Assistive only (not autonomous). Your suggestions must be reviewed by a qualified clinician.
-        Patient Data Context: ${JSON.stringify(patientData || {})}
+        Patient Data Context: ${JSON.stringify(sanitizedPatient || {})}
         Instructions: Provide concise, evidence-based clinical reasoning or summaries. 
         Always include a disclaimer that the final decision rests with the attending provider.
         IMPORTANT: Your response MUST be in the following language: ${currentLocale === 'pt' ? 'Portuguese' : 'English'}.
@@ -78,15 +101,16 @@ export function AIAssistantPanel({ context, department, patientData, onAcceptSug
 
       const response = await ai.models.generateContent({
         model: "gemini-1.5-flash",
-        contents: `${clinicalContext}\n\nClinical Inquiry: ${prompt || (currentLocale === 'pt' ? 'Analise os dados atuais do paciente para potenciais anomalias ou otimizações de tratamento.' : 'Analyze the current patient data for potential anomalies or treatment optimizations.')}`,
+        contents: `${clinicalContext}\n\nClinical Inquiry: ${sanitizedPrompt || (currentLocale === 'pt' ? 'Analise os dados atuais do paciente para potenciais anomalias ou otimizações de tratamento.' : 'Analyze the current patient data for potential anomalies or treatment optimizations.')}`,
       });
 
-      const resultText = response.response.text();
+      const resultText = response.text;
       setResult(resultText || t('ai.assistant.result.noInsight'));
     } catch (err: any) {
       console.error("AI Assistant Error:", err);
-      // Fallback to queue if network fails
       setError(t('ai.assistant.error.connectivity'));
+      const localSug = getLocalFallbackSuggestion(department, sanitizedPatient, currentLocale);
+      setResult(`${localSug}\n\n*${t('ai.assistant.result.queued')}*`);
       setTimeout(() => {
         handleQueueRequest();
       }, 2000);
@@ -96,17 +120,17 @@ export function AIAssistantPanel({ context, department, patientData, onAcceptSug
   };
 
   const handleQueueRequest = () => {
+    const sanitizedPatient = sanitizePatientData(patientData);
     addToQueue({
       requestId: Math.random().toString(36).substring(7),
       department: department || "General",
       prompt: prompt || (currentLocale === 'pt' ? "Auditoria Completa do Caso" : "Full Case Audit"),
-      context: patientData,
-      patientName: patientData?.fullName,
-      patientId: patientData?.id,
+      context: sanitizedPatient,
+      patientName: sanitizedPatient?.fullName || "REDACTED_PATIENT",
+      patientId: sanitizedPatient?.id,
       locale: currentLocale
     });
     setPendingCount(prev => prev + 1);
-    setResult(t('ai.assistant.result.queued'));
     setPrompt("");
     setError(null);
   };

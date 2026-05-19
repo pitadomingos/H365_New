@@ -416,7 +416,7 @@ export default function PatientRegistrationPage() {
                             width={240} 
                             height={308} 
                             className="w-full h-full object-cover rounded-md" 
-                            data-ai-hint={getAvatarHint(form.watch("gender") as PatientFormValues["gender"])}
+                            data-ai-hint={getAvatarHint(form.watch("gender") as "Male" | "Female" | "Other")}
                           />
                         ) : !(stream && hasCameraPermission) && (
                              <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-2">
@@ -512,9 +512,14 @@ export default function PatientRegistrationPage() {
                         <p className="text-sm text-muted-foreground">{t('patientRegistration.photoCapture.description')}</p>
                         <div className="flex gap-2 mt-2">
                         {!stream && !capturedImage && (
+                          <>
                             <Button type="button" onClick={enableCamera} variant="outline">
                             <Camera className="mr-2 h-4 w-4" /> {t('patientRegistration.photoCapture.enableCamera')}
                             </Button>
+                            <Button type="button" id="mock-photo-btn" onClick={() => setCapturedImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")} variant="secondary">
+                            Mock Photo
+                            </Button>
+                          </>
                         )}
                         {stream && hasCameraPermission && !capturedImage && (
                             <Button type="button" onClick={capturePhoto}>
@@ -702,7 +707,7 @@ export default function PatientRegistrationPage() {
                         // setWaitingList(data);
                         await new Promise(resolve => setTimeout(resolve, 700)); // Simulate API delay
                         const mockData: WaitingListItem[] = [
-                            { id: Date.now(), name: "Refreshed Patient Alpha", gender: "Male", timeAdded: new Date().toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: "Outpatient", status: "Waiting", photoUrl: "https://placehold.co/40x40.png" },
+                            { id: Date.now(), name: "Refreshed Patient Alpha", gender: "Male" as const, timeAdded: new Date().toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: "Outpatient", status: "Waiting", photoUrl: "https://placehold.co/40x40.png" },
                             ...waitingList.slice(0,2).map(p => ({...p, timeAdded: new Date(Date.now() - Math.random()*100000).toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'})})),
                         ].sort(() => 0.5 - Math.random());
                         setWaitingList(mockData);

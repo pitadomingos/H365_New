@@ -291,8 +291,8 @@ export default function ConsultationRoomPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1200));
       const initialMockLabNotificationsData: MockListItem[] = [
-        { id: "NOTIF001", patientName: "Charlie Brown", gender: "Male", message: localT('consultationRoom.notifications.mock.resultsReady'), time: "5 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
-        { id: "NOTIF002", patientName: "Diana Prince", gender: "Female", message: localT('consultationRoom.notifications.mock.imagingReady'), time: "15 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
+        { id: "NOTIF001", patientName: "Charlie Brown", nationalId: "NOTIF001_NID", gender: "Male", message: localT('consultationRoom.notifications.mock.resultsReady'), time: "5 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
+        { id: "NOTIF002", patientName: "Diana Prince", nationalId: "NOTIF002_NID", gender: "Female", message: localT('consultationRoom.notifications.mock.imagingReady'), time: "15 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
       ];
       setLabNotificationsState(initialMockLabNotificationsData);
       setIsLoadingLabNotifications(false);
@@ -309,6 +309,7 @@ export default function ConsultationRoomPage() {
       setDraftedConsultations(MOCK_DRAFTS.map(d => ({
         id: d.id,
         patientName: d.patientName,
+        nationalId: d.id === "D1" ? "1029384756" : d.id === "D2" ? "5647382910" : "9988776655",
         reasonForDraft: d.specialtyOrReason,
         lastSavedTime: d.lastSavedTime,
         photoUrl: "https://placehold.co/32x32.png",

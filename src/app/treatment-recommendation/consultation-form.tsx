@@ -66,6 +66,10 @@ interface PatientData {
   photoUrl: string;
   allergies: string[];
   chronicConditions: string[];
+  referringDoctor?: string;
+  referringDepartment?: string;
+  reasonForReferral?: string;
+  assignedSpecialty?: string;
 }
 
 interface VisitHistoryItem {
@@ -97,6 +101,8 @@ const MOCK_DRUGS = [
 export interface ConsultationInitialData extends Partial<FormValues> {
   patientData?: PatientData | null;
   recommendation?: TreatmentRecommendationOutput | null;
+  specialistComments?: string;
+  currentSpecialty?: string;
 }
 
 interface ConsultationFormProps {
@@ -415,21 +421,80 @@ ${visitHistoryString || "No recent visit history available."}
     };
 
     console.log("Submitting to /api/v1/consultations (mock):", payload);
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
 
-    toast({ title: t('consultationForm.toast.outcome.success'), description: t('consultationForm.toast.outcome.success.desc', {outcome: outcome, patientName: patientData.fullName}) });
-    
-    form.reset();
-    setPatientData(null);
-    setRecommendation(null);
-    setError(null);
-    setBmi(null);
-    setBmiDisplay(getBmiStatusAndColor(null, t));
-    setBpDisplay(getBloodPressureStatus("", t));
-    setSelectedLabTests({});
-    setIsOutcomeModalOpen(false);
-    setIsSubmittingOutcome(false);
-    setPrescribedDrugs([]);
+    try {
+      // 1. Process Send to Pharmacy Outcome
+      if (outcome === "Send to Pharmacy") {
+        const currentPrescriptions = await LocalDB.get<any[]>("pharmacy_prescriptions", []);
+        const items = prescribedDrugs.length > 0 
+          ? prescribedDrugs.map((drug, idx) => ({
+              id: drug.id || `rx-item-${idx}-${Date.now()}`,
+              drugName: drug.name || drug.drugName || "Prescribed Medication",
+              strength: drug.strength || "",
+              form: drug.form || "",
+              dosage: drug.dosage || "1x1",
+              frequency: drug.frequency || "Daily",
+              duration: drug.duration || "5 days",
+              quantity: 10
+            }))
+          : [
+              {
+                id: `rx-item-fallback-${Date.now()}`,
+                drugName: currentFormData.finalPrescription || "Prescribed Medication",
+                strength: "",
+                form: "",
+                dosage: "1x1",
+                frequency: "Daily",
+                duration: "5 days",
+                quantity: 10
+              }
+            ];
+
+        const newPrescription = {
+          id: `RX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+          patientId: patientData.nationalId,
+          patientName: patientData.fullName,
+          doctor: "Dr. Current User",
+          date: new Date().toISOString(),
+          items,
+          status: "Waiting" as const
+        };
+        await LocalDB.save("pharmacy_prescriptions", [...currentPrescriptions, newPrescription]);
+      }
+
+      // 2. Process Send to Inpatient (Ward) Outcome
+      if (outcome === "Send to Inpatient (Ward)") {
+        const currentAdmissions = await LocalDB.get<any[]>("pending_ward_admissions", []);
+        const newAdmission = {
+          id: `PEND-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+          patientId: patientData.nationalId,
+          patientName: patientData.fullName,
+          referringDepartment: "Outpatient General Consultation",
+          reasonForAdmission: currentFormData.finalDiagnosis || "Requires inpatient monitoring and management."
+        };
+        await LocalDB.save("pending_ward_admissions", [...currentAdmissions, newAdmission]);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
+
+      toast({ title: t('consultationForm.toast.outcome.success'), description: t('consultationForm.toast.outcome.success.desc', {outcome: outcome, patientName: patientData.fullName}) });
+      
+      form.reset();
+      setPatientData(null);
+      setRecommendation(null);
+      setError(null);
+      setBmi(null);
+      setBmiDisplay(getBmiStatusAndColor(null, t));
+      setBpDisplay(getBloodPressureStatus("", t));
+      setSelectedLabTests({});
+      setIsOutcomeModalOpen(false);
+      setIsSubmittingOutcome(false);
+      setPrescribedDrugs([]);
+    } catch (err) {
+      console.error("Failed to submit outcome:", err);
+      toast({ variant: "destructive", title: "Outcome routing failed", description: "Could not save consultation outcome to local DB." });
+      setIsSubmittingOutcome(false);
+    }
   };
 
   const addDrugToPrescription = (drug: any) => {
@@ -804,8 +869,8 @@ ${visitHistoryString || "No recent visit history available."}
                         <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="consultImagingType">{t('consultationForm.imagingModal.type.label')}</Label>
-                            <Select disabled={isSubmittingImagingOrder} name="consultImagingType" defaultValue="" id="consultImagingType">
-                            <SelectTrigger>
+                            <Select disabled={isSubmittingImagingOrder} name="consultImagingType" defaultValue="">
+                            <SelectTrigger id="consultImagingType">
                                 <SelectValue placeholder={t('consultationForm.imagingModal.type.placeholder')} />
                             </SelectTrigger>
                             <SelectContent>

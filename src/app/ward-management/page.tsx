@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { LocalDB } from '@/lib/db';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle, Thermometer, Weight, Ruler, Sigma, Save, ActivityIcon as BloodPressureIcon, AlertTriangle as AlertTriangleIcon, Stethoscope, Layers, ClipboardCheck, History as HistoryIcon } from "lucide-react";
@@ -397,9 +398,14 @@ export default function WardManagementPage() {
     const fetchInitialWardData = async () => {
       setIsLoadingAllWards(true);
       try {
-        // Simulate API call: GET /api/v1/wards
         await new Promise(resolve => setTimeout(resolve, 500));
-        setAllWardsData(mockWardSummariesData);
+        const storedWards = await LocalDB.get<WardSummary[]>("facility_wards", []);
+        if (storedWards.length === 0) {
+          await LocalDB.save("facility_wards", mockWardSummariesData);
+          setAllWardsData(mockWardSummariesData);
+        } else {
+          setAllWardsData(storedWards);
+        }
       } catch (error) {
         console.error("Error fetching wards:", error);
         toast({ variant: "destructive", title: t('wardManagement.toast.loadWardsError'), description: t('wardManagement.toast.loadWardsError') });
@@ -411,9 +417,14 @@ export default function WardManagementPage() {
     const fetchInitialPendingAdmissions = async () => {
         setIsLoadingPendingAdmissions(true);
         try {
-             // Simulate API call: GET /api/v1/admissions/pending
-            await new Promise(resolve => setTimeout(resolve, 700));
-            setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const localAdmissions = await LocalDB.get<PendingAdmission[]>("pending_ward_admissions", []);
+            if (localAdmissions.length === 0) {
+                await LocalDB.save("pending_ward_admissions", mockHospitalPendingAdmissionsData);
+                setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
+            } else {
+                setHospitalPendingAdmissions(localAdmissions);
+            }
         } catch (error) {
             console.error("Error fetching pending admissions:", error);
             toast({ variant: "destructive", title: t('wardManagement.toast.loadPendingAdmissionsError'), description: t('wardManagement.toast.loadPendingAdmissionsError') });
@@ -434,34 +445,54 @@ export default function WardManagementPage() {
       setLongestStayPatients([]);
       const fetchWardDetails = async () => {
         try {
-            // Simulate API call: GET /api/v1/wards/{selectedWardId}/details
             await new Promise(resolve => setTimeout(resolve, 600));
-            const details = mockWardDetailsData[selectedWardId]; 
+            const storedDetailsMap = await LocalDB.get<Record<string, WardDetails>>("ward_details", {});
+            
+            let details = storedDetailsMap[selectedWardId];
+            if (Object.keys(storedDetailsMap).length === 0) {
+                await LocalDB.save("ward_details", mockWardDetailsData);
+                details = mockWardDetailsData[selectedWardId];
+            }
+            
             if (details) {
-                // Bridge mock ward details with centralized MOCK_WARD_PATIENTS
-                const patientsInThisWard = MOCK_WARD_PATIENTS
-                  .filter(p => p.ward.includes(details.name.replace(' Ward', '')))
-                  .map(p => ({
-                    admissionId: p.id,
-                    patientId: p.id,
-                    name: p.name,
-                    bedNumber: p.bed,
-                    admittedDate: p.admissionDate,
-                    primaryDiagnosis: p.diagnosis,
-                    keyAlerts: []
-                  }));
+                const hasPatients = details.patients && details.patients.length > 0;
+                let patientsInThisWard = details.patients || [];
+                
+                if (!hasPatients && details.name) {
+                    patientsInThisWard = MOCK_WARD_PATIENTS
+                      .filter(p => p.ward.includes(details.name.replace(' Ward', '')))
+                      .map(p => ({
+                        admissionId: p.id,
+                        patientId: p.id,
+                        name: p.name,
+                        bedNumber: p.bed,
+                        admittedDate: p.admissionDate,
+                        primaryDiagnosis: p.diagnosis,
+                        keyAlerts: []
+                      }));
+                }
 
                 const updatedDetails = {
                   ...details,
-                  patients: patientsInThisWard.length > 0 ? patientsInThisWard : details.patients
+                  patients: patientsInThisWard
                 };
 
                 const occupiedBeds = updatedDetails.patients.length;
                 const availableBeds = details.totalBeds - occupiedBeds;
                 const occupancyRate = details.totalBeds > 0 ? (occupiedBeds / details.totalBeds) * 100 : 0;
                 
+                const updatedBeds = details.beds.map(bed => {
+                    const patient = patientsInThisWard.find(p => p.bedNumber === bed.bedNumber);
+                    if (patient) {
+                        return { ...bed, status: "Occupied" as const, patientId: patient.patientId, patientName: patient.name };
+                    } else if (bed.status === "Occupied") {
+                        return { ...bed, status: "Available" as const, patientId: undefined, patientName: undefined };
+                    }
+                    return bed;
+                });
+
                 const today = new Date();
-                const stays = details.patients.map(p => {
+                const stays = patientsInThisWard.map(p => {
                     const admittedDate = new Date(p.admittedDate);
                     const durationMs = today.getTime() - admittedDate.getTime();
                     const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
@@ -475,12 +506,20 @@ export default function WardManagementPage() {
                         admissionId: p.admissionId 
                     }))
                 );
-                setCurrentWardDetails({
-                    ...details,
+                
+                const finalWardDetails = {
+                    ...updatedDetails,
+                    beds: updatedBeds,
                     occupiedBeds,
                     availableBeds,
                     occupancyRate,
-                });
+                };
+                
+                setCurrentWardDetails(finalWardDetails);
+                
+                const currentMap = await LocalDB.get<Record<string, WardDetails>>("ward_details", {});
+                currentMap[selectedWardId] = finalWardDetails;
+                await LocalDB.save("ward_details", currentMap);
             } else {
                 setCurrentWardDetails(null);
                 toast({variant: "destructive", title: t('wardManagement.toast.loadWardDetailsError'), description: t('wardManagement.toast.loadWardDetailsError.generic')});
@@ -509,12 +548,18 @@ export default function WardManagementPage() {
       const fetchPatientFullDetails = async () => {
         try {
             await new Promise(resolve => setTimeout(resolve, 500));
-            const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
+            const storedAdmittedDetails = await LocalDB.get<Record<string, AdmittedPatientFullDetails>>("admitted_patient_details", {});
+            
+            let fullDetails = storedAdmittedDetails[selectedPatientForDetails.admissionId];
+            if (Object.keys(storedAdmittedDetails).length === 0) {
+                await LocalDB.save("admitted_patient_details", mockAdmittedPatientFullDetailsData);
+                fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
+            }
+            
             setCurrentAdmittedPatientFullDetails(fullDetails || null);
             setEditableVitals(fullDetails?.vitals || {});
             setEditedTreatmentPlan(fullDetails?.treatmentPlan || "");
             
-            // Find primary diagnosis from ward details
             const diag = currentWardDetails?.patients.find(p => p.admissionId === selectedPatientForDetails.admissionId)?.primaryDiagnosis || "";
             setEditedDiagnosis(diag);
 
@@ -559,15 +604,22 @@ export default function WardManagementPage() {
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, vitals: editableVitals };
     
     try {
-        console.log("Saving vitals (mock):", payload);
+        console.log("Saving vitals:", payload);
         await new Promise(resolve => setTimeout(resolve, 1000)); 
         const updatedVitalsWithCalculated = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
         
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, vitals: updatedVitalsWithCalculated }) : null);
         
-        if(mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]){
-            mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].vitals = updatedVitalsWithCalculated;
+        const storedAdmittedDetails = await LocalDB.get<Record<string, AdmittedPatientFullDetails>>("admitted_patient_details", {});
+        if (storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId]) {
+            storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId].vitals = updatedVitalsWithCalculated;
+        } else {
+            storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId] = {
+                ...currentAdmittedPatientFullDetails,
+                vitals: updatedVitalsWithCalculated
+            };
         }
+        await LocalDB.save("admitted_patient_details", storedAdmittedDetails);
         toast({ title: t('wardManagement.toast.vitalsSave.success'), description: t('wardManagement.toast.vitalsSave.success.desc') });
     } catch (error: any) {
         toast({ variant: "destructive", title: t('wardManagement.toast.vitalsSave.error'), description: error.message || t('wardManagement.toast.vitalsSave.error.desc') });
@@ -594,17 +646,8 @@ export default function WardManagementPage() {
     }
     
     const newAdmissionId = `ADM${Date.now()}`;
-    const payload = {
-        patientId: patientToAdmit.patientId,
-        wardId: selectedWardId,
-        bedId: selectedAvailableBedId,
-        admittingDoctor: admissionDoctor,
-        primaryDiagnosis: admissionDiagnosis,
-        admissionDate: new Date().toISOString(),
-    };
     
     try {
-        console.log("Admitting patient (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         const newPatientInWard: PatientInWard = {
@@ -617,25 +660,29 @@ export default function WardManagementPage() {
             keyAlerts: ["New Admission"] 
         };
         
-        setCurrentWardDetails(prev => {
-            if (!prev) return null;
-            const updatedPatients = [...prev.patients, newPatientInWard];
-            const updatedBeds = prev.beds.map(b => 
-                b.id === selectedAvailableBedId ? { ...b, status: "Occupied" as "Occupied", patientId: patientToAdmit.patientId, patientName: patientToAdmit.patientName } : b
-            );
-            const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
-            return {
-                ...prev,
-                patients: updatedPatients,
-                beds: updatedBeds,
-                occupiedBeds: occupiedBeds,
-                availableBeds: prev.totalBeds - occupiedBeds,
-                occupancyRate: (occupiedBeds / prev.totalBeds) * 100,
-                 alerts: { ...prev.alerts, newAdmissionOrders: prev.alerts.newAdmissionOrders + 1 }
-            };
-        });
+        const updatedPatients = [...currentWardDetails.patients, newPatientInWard];
+        const updatedBeds = currentWardDetails.beds.map(b => 
+            b.id === selectedAvailableBedId ? { ...b, status: "Occupied" as const, patientId: patientToAdmit.patientId, patientName: patientToAdmit.patientName } : b
+        );
+        const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
         
-        mockAdmittedPatientFullDetailsData[newAdmissionId] = {
+        const updatedWardDetails = {
+            ...currentWardDetails,
+            patients: updatedPatients,
+            beds: updatedBeds,
+            occupiedBeds: occupiedBeds,
+            availableBeds: currentWardDetails.totalBeds - occupiedBeds,
+            occupancyRate: (occupiedBeds / currentWardDetails.totalBeds) * 100,
+            alerts: { ...currentWardDetails.alerts, newAdmissionOrders: currentWardDetails.alerts.newAdmissionOrders + 1 }
+        };
+        
+        setCurrentWardDetails(updatedWardDetails);
+        
+        const storedDetailsMap = await LocalDB.get<Record<string, WardDetails>>("ward_details", {});
+        storedDetailsMap[selectedWardId] = updatedWardDetails;
+        await LocalDB.save("ward_details", storedDetailsMap);
+        
+        const newPatientFullDetails: AdmittedPatientFullDetails = {
             admissionId: newAdmissionId,
             patientId: patientToAdmit.patientId,
             name: patientToAdmit.patientName,
@@ -646,8 +693,14 @@ export default function WardManagementPage() {
             doctorNotes: [{noteId: `DN-ADMIT-${Date.now()}`, date: new Date().toISOString(), doctor: admissionDoctor, note: `Admitted for ${admissionDiagnosis}.`}],
             vitals: {}, allergies: [], chronicConditions: [], codeStatus: "Full Code", visitHistory: []
         };
+        
+        const storedAdmittedDetails = await LocalDB.get<Record<string, AdmittedPatientFullDetails>>("admitted_patient_details", {});
+        storedAdmittedDetails[newAdmissionId] = newPatientFullDetails;
+        await LocalDB.save("admitted_patient_details", storedAdmittedDetails);
 
-        setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
+        const updatedAdmissions = hospitalPendingAdmissions.filter(p => p.id !== selectedPendingPatientId);
+        await LocalDB.save("pending_ward_admissions", updatedAdmissions);
+        setHospitalPendingAdmissions(updatedAdmissions);
         toast({ title: t('wardManagement.toast.admit.success'), description: t('wardManagement.toast.admit.success.desc', {patientName: patientToAdmit.patientName, wardName: currentWardDetails.name, bedNumber: bedToOccupy.bedNumber}) });
 
         setSelectedPendingPatientId("");
@@ -665,17 +718,17 @@ export default function WardManagementPage() {
   const handleAddNote = async () => {
     if (!newDoctorNote.trim() || !currentAdmittedPatientFullDetails) return;
     setIsAddingNote(true);
-    const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, doctorId: "doc-currentUser-mockId", note: newDoctorNote };
     
     try {
-        console.log("Adding doctor note (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1000)); 
         const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
         
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
         
-        if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
-          mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const storedAdmittedDetails = await LocalDB.get<Record<string, AdmittedPatientFullDetails>>("admitted_patient_details", {});
+        if (storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId]) {
+          storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          await LocalDB.save("admitted_patient_details", storedAdmittedDetails);
         }
         toast({title: t('wardManagement.toast.noteAdd.success'), description: t('wardManagement.toast.noteAdd.success.desc')});
         setNewDoctorNote("");
@@ -692,8 +745,11 @@ export default function WardManagementPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 800));
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, treatmentPlan: editedTreatmentPlan }) : null);
-        if (mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
-            mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].treatmentPlan = editedTreatmentPlan;
+        
+        const storedAdmittedDetails = await LocalDB.get<Record<string, AdmittedPatientFullDetails>>("admitted_patient_details", {});
+        if (storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId]) {
+            storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId].treatmentPlan = editedTreatmentPlan;
+            await LocalDB.save("admitted_patient_details", storedAdmittedDetails);
         }
         toast({ title: "Treatment Plan Updated", description: "The patient's treatment plan has been successfully updated." });
         setIsEditingPlan(false);
@@ -710,15 +766,19 @@ export default function WardManagementPage() {
     try {
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        setCurrentWardDetails(prev => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                patients: prev.patients.map(p => 
+        if (currentWardDetails) {
+            const updatedWardDetails = {
+                ...currentWardDetails,
+                patients: currentWardDetails.patients.map(p => 
                     p.admissionId === currentAdmittedPatientFullDetails.admissionId ? { ...p, primaryDiagnosis: editedDiagnosis } : p
                 )
             };
-        });
+            setCurrentWardDetails(updatedWardDetails);
+            
+            const storedDetailsMap = await LocalDB.get<Record<string, WardDetails>>("ward_details", {});
+            storedDetailsMap[selectedWardId] = updatedWardDetails;
+            await LocalDB.save("ward_details", storedDetailsMap);
+        }
 
         toast({ title: "Primary Diagnosis Updated", description: "The patient's primary diagnosis has been successfully updated." });
         setIsEditingDiagnosis(false);
@@ -771,15 +831,15 @@ export default function WardManagementPage() {
   const handleSaveMedicationUpdates = async () => {
     if (!currentAdmittedPatientFullDetails) return;
     setIsSavingMedicationUpdates(true);
-    const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, updatedSchedule: medicationScheduleInModal };
      try {
-        console.log("Saving medication log (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1000)); 
         
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
         
-        if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
-            mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
+        const storedAdmittedDetails = await LocalDB.get<Record<string, AdmittedPatientFullDetails>>("admitted_patient_details", {});
+        if (storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId]) {
+            storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
+            await LocalDB.save("admitted_patient_details", storedAdmittedDetails);
         }
 
         toast({title: t('wardManagement.toast.medication.save.success'), description: t('wardManagement.toast.medication.save.success.desc')});
@@ -794,10 +854,8 @@ export default function WardManagementPage() {
   const handleDischarge = async () => {
     if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
     setIsDischarging(true);
-    const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
     
     try {
-        console.log("Discharging patient (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1500)); 
         toast({ title: t('wardManagement.toast.discharge.success'), description: t('wardManagement.toast.discharge.success.desc', {patientName: currentAdmittedPatientFullDetails.name}) });
         
@@ -807,23 +865,29 @@ export default function WardManagementPage() {
         setSelectedPatientForDetails(null); 
         setCurrentAdmittedPatientFullDetails(null);
         
-        setCurrentWardDetails(prevDetails => {
-            if (!prevDetails) return null;
-            const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToDischarge);
-            const updatedBeds = prevDetails.beds.map(bed => 
-                bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
+        if (currentWardDetails) {
+            const updatedPatients = currentWardDetails.patients.filter(p => p.admissionId !== admissionIdToDischarge);
+            const updatedBeds = currentWardDetails.beds.map(bed => 
+                bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as const, patientId: undefined, patientName: undefined } : bed
             );
             const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
-            return { 
-                ...prevDetails, 
+            
+            const finalDetails = { 
+                ...currentWardDetails, 
                 patients: updatedPatients, 
                 beds: updatedBeds, 
                 occupiedBeds: occupiedBeds, 
-                availableBeds: prevDetails.totalBeds - occupiedBeds, 
-                occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100,
-                alerts: { ...prevDetails.alerts, pendingDischarges: Math.max(0, prevDetails.alerts.pendingDischarges -1) }
+                availableBeds: currentWardDetails.totalBeds - occupiedBeds, 
+                occupancyRate: (occupiedBeds / currentWardDetails.totalBeds) * 100,
+                alerts: { ...currentWardDetails.alerts, pendingDischarges: Math.max(0, currentWardDetails.alerts.pendingDischarges -1) }
             };
-        });
+            
+            setCurrentWardDetails(finalDetails);
+            
+            const storedDetailsMap = await LocalDB.get<Record<string, WardDetails>>("ward_details", {});
+            storedDetailsMap[selectedWardId] = finalDetails;
+            await LocalDB.save("ward_details", storedDetailsMap);
+        }
     } catch (error: any) {
         toast({ variant: "destructive", title: t('wardManagement.toast.discharge.error'), description: error.message || t('wardManagement.toast.discharge.error.desc') });
     } finally {
@@ -855,45 +919,77 @@ export default function WardManagementPage() {
     }
 
     setIsProcessingTransfer(true);
-    const payload = { 
-        admissionId: currentAdmittedPatientFullDetails.admissionId, 
-        transferDate: new Date().toISOString(), 
-        transferType: transferType,
-        destinationWardId: transferType === "internal_ward" ? targetInternalWardId : undefined,
-        destinationFacility: transferType === "external_hospital" ? externalHospitalName : undefined,
-        transferReason: transferReason,
-        transferredBy: "doc-currentUser-mockId" 
-    };
+    const admissionIdToTransfer = currentAdmittedPatientFullDetails.admissionId;
+    const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
     
     try {
-        console.log("Transferring patient (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1500)); 
         const destinationName = transferType === "internal_ward" 
             ? allWardsData.find(w => w.id === targetInternalWardId)?.name || t('wardManagement.selectedWard')
             : externalHospitalName;
+            
         toast({ title: t('wardManagement.toast.transfer.success'), description: t('wardManagement.toast.transfer.success.desc', {patientName: currentAdmittedPatientFullDetails.name, destinationName: destinationName}) });
         
-        const admissionIdToTransfer = currentAdmittedPatientFullDetails.admissionId;
-        const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
+        if (transferType === "internal_ward" && targetInternalWardId) {
+            const patientDataToTransfer = currentWardDetails?.patients.find(p => p.admissionId === admissionIdToTransfer);
+            if (patientDataToTransfer) {
+                const storedMap = await LocalDB.get<Record<string, WardDetails>>("ward_details", {});
+                const destWardDetails = storedMap[targetInternalWardId];
+                if (destWardDetails) {
+                    const availableBed = destWardDetails.beds.find(b => b.status === "Available");
+                    const bedNum = availableBed ? availableBed.bedNumber : `Bed ${destWardDetails.beds.length + 1}`;
+                    
+                    const newPatientData: PatientInWard = {
+                        ...patientDataToTransfer,
+                        bedNumber: bedNum
+                    };
+                    
+                    const updatedBeds = destWardDetails.beds.map(b => 
+                        (availableBed && b.id === availableBed.id) 
+                            ? { ...b, status: "Occupied" as const, patientId: newPatientData.patientId, patientName: newPatientData.name } 
+                            : b
+                    );
+                    
+                    const occupied = updatedBeds.filter(b => b.status === "Occupied").length;
+                    
+                    storedMap[targetInternalWardId] = {
+                        ...destWardDetails,
+                        patients: [...destWardDetails.patients, newPatientData],
+                        beds: updatedBeds,
+                        occupiedBeds: occupied,
+                        availableBeds: destWardDetails.totalBeds - occupied,
+                        occupancyRate: (occupied / destWardDetails.totalBeds) * 100
+                    };
+                    await LocalDB.save("ward_details", storedMap);
+                }
+            }
+        }
         
         setSelectedPatientForDetails(null); 
         setCurrentAdmittedPatientFullDetails(null);
-        setCurrentWardDetails(prevDetails => {
-            if (!prevDetails) return null;
-            const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToTransfer);
-            const updatedBeds = prevDetails.beds.map(bed => 
-                bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
+        
+        if (currentWardDetails) {
+            const updatedPatients = currentWardDetails.patients.filter(p => p.admissionId !== admissionIdToTransfer);
+            const updatedBeds = currentWardDetails.beds.map(bed => 
+                bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as const, patientId: undefined, patientName: undefined } : bed
             );
             const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
-            return { 
-                ...prevDetails, 
+            
+            const finalDetails = { 
+                ...currentWardDetails, 
                 patients: updatedPatients, 
                 beds: updatedBeds, 
                 occupiedBeds: occupiedBeds, 
-                availableBeds: prevDetails.totalBeds - occupiedBeds, 
-                occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100 
+                availableBeds: currentWardDetails.totalBeds - occupiedBeds, 
+                occupancyRate: (occupiedBeds / currentWardDetails.totalBeds) * 100 
             };
-        });
+            
+            setCurrentWardDetails(finalDetails);
+            
+            const storedDetailsMap = await LocalDB.get<Record<string, WardDetails>>("ward_details", {});
+            storedDetailsMap[selectedWardId] = finalDetails;
+            await LocalDB.save("ward_details", storedDetailsMap);
+        }
         
         setIsTransferModalOpen(false);
     } catch (error: any) {
@@ -920,10 +1016,16 @@ export default function WardManagementPage() {
       console.log("Submitting Handover (SBAR):", newHandover);
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      setCurrentAdmittedPatientFullDetails(prev => prev ? ({
-        ...prev,
-        handovers: [newHandover, ...(prev.handovers || [])]
-      }) : null);
+      const updatedFullDetails = {
+        ...currentAdmittedPatientFullDetails,
+        handovers: [newHandover, ...(currentAdmittedPatientFullDetails.handovers || [])]
+      };
+      
+      setCurrentAdmittedPatientFullDetails(updatedFullDetails);
+      
+      const storedAdmittedDetails = await LocalDB.get<Record<string, AdmittedPatientFullDetails>>("admitted_patient_details", {});
+      storedAdmittedDetails[currentAdmittedPatientFullDetails.admissionId] = updatedFullDetails;
+      await LocalDB.save("admitted_patient_details", storedAdmittedDetails);
       
       toast({ title: "Handover Completed", description: `Clinical SBAR handed over to ${handoverForm.toNurse}` });
       setIsHandoverModalOpen(false);

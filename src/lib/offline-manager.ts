@@ -97,4 +97,43 @@ export class OfflineManager {
       }
     }
   }
+
+  /**
+   * Performs a Last-Write-Wins (LWW) resolution and field-level merge
+   * to resolve conflicts between local and remote datasets.
+   */
+  static resolveConflict<T extends Record<string, any>>(local: T, remote: T): T {
+    if (!local) return remote;
+    if (!remote) return local;
+
+    // Check parent level timestamps for LWW
+    const localTime = new Date(local.updatedAt || local.timestamp || 0).getTime();
+    const remoteTime = new Date(remote.updatedAt || remote.timestamp || 0).getTime();
+
+    const merged = { ...remote, ...local } as any;
+
+    // Field-level merging
+    for (const key of Object.keys(merged)) {
+      const localVal = local[key];
+      const remoteVal = remote[key];
+
+      if (localVal !== undefined && remoteVal !== undefined) {
+        if (
+          typeof localVal === 'object' && localVal !== null &&
+          typeof remoteVal === 'object' && remoteVal !== null &&
+          !Array.isArray(localVal) && !Array.isArray(remoteVal)
+        ) {
+          merged[key] = this.resolveConflict(localVal, remoteVal);
+        } else {
+          merged[key] = localTime >= remoteTime ? localVal : remoteVal;
+        }
+      } else if (localVal !== undefined) {
+        merged[key] = localVal;
+      } else {
+        merged[key] = remoteVal;
+      }
+    }
+
+    return merged;
+  }
 }

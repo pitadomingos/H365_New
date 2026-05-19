@@ -391,9 +391,19 @@ export default function MaternityCarePage() {
     await new Promise(resolve => setTimeout(resolve, 1500));
     const savedVisit: AntenatalVisit = { 
         id: `AV${Date.now()}`,
-        ...payload,
+        date: payload.visitDate,
+        gestationalAge: payload.gestationalAge,
+        weightKg: payload.weightKg,
+        bp: payload.bp,
+        fhrBpm: payload.fhrBpm,
+        fundalHeightCm: payload.fundalHeightCm,
+        notes: payload.notes,
         diagnosis: newVisitForm.diagnosis,
         prescription: newVisitForm.prescription,
+        nextAppointment: payload.nextAppointmentDate,
+        bodyTemperature: payload.bodyTemperature,
+        heightCm: payload.heightCm,
+        bmi: payload.bmi || undefined,
         bmiStatus: payload.bmiStatus || "N/A", // Ensure these have default values
         bpStatus: payload.bpStatus || "N/A",   // Ensure these have default values
     };
@@ -988,8 +998,8 @@ export default function MaternityCarePage() {
                         <div className="grid gap-4 py-4">
                           <div className="space-y-2">
                             <Label htmlFor="maternityImagingType">{t('maternity.orderImagingModal.type.label')}</Label>
-                            <Select disabled={isOrderingImaging} name="maternityImagingType" defaultValue="" id="maternityImagingType">
-                              <SelectTrigger>
+                            <Select disabled={isOrderingImaging} name="maternityImagingType" defaultValue="">
+                              <SelectTrigger id="maternityImagingType">
                                 <SelectValue placeholder={t('maternity.orderImagingModal.type.placeholder')} />
                               </SelectTrigger>
                               <SelectContent>

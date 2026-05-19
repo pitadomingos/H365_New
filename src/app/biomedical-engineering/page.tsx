@@ -66,8 +66,8 @@ const MOCK_WORK_ORDERS = [
 ];
 
 export default function BiomedicalEngineeringPage() {
-  const { locale } = useLocale();
-  const t = getTranslator(locale);
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 

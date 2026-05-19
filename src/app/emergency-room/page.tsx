@@ -419,13 +419,11 @@ export default function EmergencyRoomPage() {
                                     </div>
 
                                     <VitalsForm 
-                                        compact
                                         title="Rapid Vitals" 
                                         onVitalsChange={setVitalsData}
                                     />
 
                                     <AIAssistantPanel 
-                                      condensed
                                       department="Emergency Room"
                                       patientData={{ ...activeTriage, vitals: vitalsData }}
                                       onAcceptSuggestion={(suggestion) => {

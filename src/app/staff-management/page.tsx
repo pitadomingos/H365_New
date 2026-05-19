@@ -7,38 +7,14 @@ import { motion } from "motion/react";
 import { Search, Plus, UserCog, MoreVertical, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { LocalDB } from "@/lib/db";
 
 type StaffRole = 'doctor' | 'nurse' | 'admin';
 
@@ -54,9 +30,9 @@ interface StaffMember {
 }
 
 const MOCK_STAFF: StaffMember[] = [
-  { id: "1", firstName: "Alice", lastName: "Wonderland", role: "doctor", department: "Cardiology", email: "alice.w@hospital.com", phone: "(555) 123-4567", status: "active" },
-  { id: "2", firstName: "Bob", lastName: "Builder", role: "nurse", department: "Pediatrics", email: "bob.b@hospital.com", phone: "(555) 987-6543", status: "active" },
-  { id: "3", firstName: "Charlie", lastName: "Chaplin", role: "admin", department: "Operations", email: "charlie.c@hospital.com", phone: "(555) 555-5555", status: "inactive" },
+  { id: "STF-001", firstName: "Alice", lastName: "Wonderland", role: "doctor", department: "Cardiology", email: "alice.w@hospital.com", phone: "(555) 123-4567", status: "active" },
+  { id: "STF-002", firstName: "Bob", lastName: "Builder", role: "nurse", department: "Pediatrics", email: "bob.b@hospital.com", phone: "(555) 987-6543", status: "active" },
+  { id: "STF-003", firstName: "Charlie", lastName: "Chaplin", role: "admin", department: "Operations", email: "charlie.c@hospital.com", phone: "(555) 555-5555", status: "inactive" },
 ];
 
 export default function StaffManagementPage() {
@@ -64,7 +40,7 @@ export default function StaffManagementPage() {
   const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
   const { toast } = useToast();
 
-  const [staffList, setStaffList] = React.useState<StaffMember[]>(MOCK_STAFF);
+  const [staffList, setStaffList] = React.useState<StaffMember[]>([]);
   const [searchQuery, setSearchQuery] = React.useState("");
   
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -77,6 +53,15 @@ export default function StaffManagementPage() {
   const [department, setDepartment] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
+
+  const loadStaff = async () => {
+    const list = await LocalDB.get<StaffMember[]>("staff_members", MOCK_STAFF);
+    setStaffList(list);
+  };
+
+  React.useEffect(() => {
+    loadStaff();
+  }, []);
 
   const filteredStaff = staffList.filter(s => {
     const full = `${s.firstName} ${s.lastName}`.toLowerCase();
@@ -107,20 +92,21 @@ export default function StaffManagementPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!firstName || !lastName || !role || !department) {
       return; 
     }
 
+    let newList: StaffMember[];
     if (editingStaff) {
-      setStaffList(prev => prev.map(s => 
+      newList = staffList.map(s => 
         s.id === editingStaff.id 
         ? { ...s, firstName, lastName, role: role as StaffRole, department, email, phone } 
         : s
-      ));
+      );
     } else {
       const newStaff: StaffMember = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: `STF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
         firstName,
         lastName,
         role: role as StaffRole,
@@ -129,18 +115,28 @@ export default function StaffManagementPage() {
         phone,
         status: 'active'
       };
-      setStaffList(prev => [...prev, newStaff]);
+      newList = [...staffList, newStaff];
     }
 
+    setStaffList(newList);
+    await LocalDB.save("staff_members", newList);
     setIsModalOpen(false);
+
     toast({
       title: t('staffManagement.toast.saved'),
       description: t('staffManagement.toast.saved.desc'),
     });
   };
 
-  const toggleStatus = (id: string) => {
-    setStaffList(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' } : s));
+  const toggleStatus = async (id: string) => {
+    const newList = staffList.map(s => s.id === id ? { ...s, status: (s.status === 'active' ? 'inactive' : 'active') as 'active' | 'inactive' } : s);
+    setStaffList(newList);
+    await LocalDB.save("staff_members", newList);
+    
+    toast({
+      title: "Status Toggled",
+      description: "Staff state modified successfully."
+    });
   };
 
   return (
@@ -154,7 +150,7 @@ export default function StaffManagementPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => handleOpenModal()} className="gap-2">
+          <Button onClick={() => handleOpenModal()} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white border-none">
             <Plus className="h-4 w-4" />
             {t('staffManagement.addStaff')}
           </Button>
@@ -203,23 +199,23 @@ export default function StaffManagementPage() {
               ) : (
                 filteredStaff.map((staff) => (
                   <TableRow key={staff.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-semibold text-sm">
                       {staff.firstName} {staff.lastName}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="capitalize">
+                      <Badge variant="outline" className="capitalize border-indigo-200 text-indigo-700 bg-indigo-50/50">
                         {t(`staffManagement.modal.role.${staff.role}`)}
                       </Badge>
                     </TableCell>
-                    <TableCell>{staff.department}</TableCell>
+                    <TableCell className="text-sm font-medium">{staff.department}</TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        <div>{staff.email}</div>
-                        <div className="text-muted-foreground">{staff.phone}</div>
+                      <div className="text-xs space-y-0.5">
+                        <div className="font-mono">{staff.email}</div>
+                        <div className="text-muted-foreground font-semibold">{staff.phone}</div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={staff.status === 'active' ? 'default' : 'secondary'}>
+                      <Badge variant={staff.status === 'active' ? 'default' : 'secondary'} className={staff.status === 'active' ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : ''}>
                         {staff.status}
                       </Badge>
                     </TableCell>
@@ -259,7 +255,7 @@ export default function StaffManagementPage() {
               {t('staffManagement.modal.description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 text-sm">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">{t('staffManagement.modal.firstName')}</Label>
@@ -327,7 +323,7 @@ export default function StaffManagementPage() {
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               {t('staffManagement.modal.cancel')}
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white border-none">
               {t('staffManagement.modal.save')}
             </Button>
           </DialogFooter>

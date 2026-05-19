@@ -76,7 +76,7 @@ export const syncQueue = async (onProgress?: (id: string, result: string | null,
         contents: `${clinicalContext}\n\nClinician Inquiry/Notes: ${item.prompt || "General Record Audit"}`,
       });
 
-      const resultText = response.response.text();
+      const resultText = response.text;
       queue[index].status = 'completed';
       queue[index].result = resultText;
       queue[index].syncedAt = new Date().toISOString();

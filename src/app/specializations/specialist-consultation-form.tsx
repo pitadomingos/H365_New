@@ -720,8 +720,8 @@ ${visitHistoryString || "No recent visit history available."}
                       <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                           <Label htmlFor="specialistImagingType">{t('consultationForm.imagingModal.type.label')}</Label>
-                          <Select disabled={isSubmittingImagingOrder} name="specialistImagingType" defaultValue="" id="specialistImagingType">
-                            <SelectTrigger>
+                          <Select disabled={isSubmittingImagingOrder} name="specialistImagingType" defaultValue="">
+                            <SelectTrigger id="specialistImagingType">
                               <SelectValue placeholder={t('consultationForm.imagingModal.type.placeholder')} />
                             </SelectTrigger>
                             <SelectContent>

@@ -31,7 +31,9 @@ import {
   Smartphone,
   Landmark,
   FileText,
-  Filter
+  Filter,
+  Loader2,
+  Link2
 } from "lucide-react";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
@@ -41,6 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "motion/react";
 import {
   AreaChart,
@@ -89,12 +92,118 @@ const INSURANCE_CLAIMS = [
   { provider: "MCS - Medicare", pending: 22, value: "780,000 MT", days: 18 },
 ];
 
+const MOCK_RECON_PAYMENTS = [
+  { id: "TXN-9081", sender: "M-Pesa Payout", amount: "4,500 MT", ref: "REF-001", date: "2024-05-04", status: "Unmatched" },
+  { id: "TXN-9082", sender: "MDS - Medis Payout", amount: "12,800 MT", ref: "REF-002", date: "2024-05-04", status: "Unmatched" },
+  { id: "TXN-9083", sender: "E-Mola Payout", amount: "5,600 MT", ref: "REF-005", date: "2024-05-03", status: "Unmatched" },
+  { id: "TXN-9084", sender: "Standard Bank Transfer", amount: "2,500 MT", ref: "REF-999", date: "2024-05-03", status: "Unmatched" },
+];
+
+const MOCK_RECON_INVOICES = [
+  { id: "INV-2024-001", patient: "Mussa Alberto", amount: "4,500 MT", ref: "REF-001", status: "Unmatched" },
+  { id: "INV-2024-002", patient: "Elena Chilaule", amount: "12,800 MT", ref: "REF-002", status: "Unmatched" },
+  { id: "INV-2024-005", patient: "Tito Langa", amount: "5,600 MT", ref: "REF-005", status: "Unmatched" },
+  { id: "INV-2024-099", patient: "Sara Mondlane", amount: "2,500 MT", ref: "REF-998", status: "Unmatched" },
+];
+
 export default function BillingPage() {
   const { currentLocale } = useLocale();
   const t = useMemo(() => getTranslator(currentLocale), [currentLocale]);
   
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentTab, setCurrentTab] = useState("invoices");
+
+  const [reconPayments, setReconPayments] = useState(MOCK_RECON_PAYMENTS);
+  const [reconInvoices, setReconInvoices] = useState(MOCK_RECON_INVOICES);
+  const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleOneClickMatch = () => {
+    let matchCount = 0;
+    const updatedPayments = reconPayments.map(p => {
+      if (p.status === "Matched") return p;
+      const matchingInv = reconInvoices.find(inv => inv.status === "Unmatched" && inv.ref === p.ref && inv.amount === p.amount);
+      if (matchingInv) {
+        matchCount++;
+        return { ...p, status: "Matched" as const };
+      }
+      return p;
+    });
+
+    const updatedInvoices = reconInvoices.map(inv => {
+      if (inv.status === "Matched") return inv;
+      const matchingPay = reconPayments.find(p => p.status === "Unmatched" && p.ref === inv.ref && p.amount === inv.amount);
+      if (matchingPay) {
+        return { ...inv, status: "Matched" as const };
+      }
+      return inv;
+    });
+
+    setReconPayments(updatedPayments);
+    setReconInvoices(updatedInvoices);
+
+    if (matchCount > 0) {
+      toast({
+        title: "Reconciliation Complete",
+        description: `Successfully matched ${matchCount} transaction(s) using auto-reconciliation.`,
+      });
+    } else {
+      toast({
+        title: "No Matches Found",
+        description: "No unmatched payments matched invoices by exact Reference and Amount.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleManualMatch = () => {
+    if (!selectedPayment || !selectedInvoice) return;
+    const payment = reconPayments.find(p => p.id === selectedPayment);
+    const invoice = reconInvoices.find(inv => inv.id === selectedInvoice);
+    if (!payment || !invoice) return;
+
+    const isExactMatch = payment.amount === invoice.amount;
+    const newStatus = isExactMatch ? ("Matched" as const) : ("Partially Matched" as const);
+
+    setReconPayments(prev => prev.map(p => p.id === selectedPayment ? { ...p, status: newStatus } : p));
+    setReconInvoices(prev => prev.map(inv => inv.id === selectedInvoice ? { ...inv, status: newStatus } : inv));
+    
+    toast({
+      title: isExactMatch ? "Manual Match Successful" : "Partial Match Flagged",
+      description: isExactMatch 
+        ? `Linked ${payment.id} with ${invoice.id} successfully.`
+        : `Linked ${payment.id} with ${invoice.id} as a partial match (amount difference).`,
+    });
+
+    setSelectedPayment(null);
+    setSelectedInvoice(null);
+  };
+
+  const handleFlagDiscrepancy = (id: string, type: 'payment' | 'invoice') => {
+    if (type === 'payment') {
+      setReconPayments(prev => prev.map(p => p.id === id ? { ...p, status: "Discrepancy" as const } : p));
+    } else {
+      setReconInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status: "Discrepancy" as const } : inv));
+    }
+    toast({
+      title: "Transaction Flagged",
+      description: `Transaction ${id} was flagged for clinical audit review.`,
+      variant: "destructive",
+    });
+  };
+
+  const handleDownloadPDFSummary = () => {
+    setIsExporting(true);
+    setTimeout(() => {
+      setIsExporting(false);
+      toast({
+        title: "PDF Export Complete",
+        description: "Billing reconciliation summary exported to downloads.",
+      });
+    }, 1500);
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -125,7 +234,12 @@ export default function BillingPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="h-10 text-[10px] font-bold uppercase tracking-wider bg-background border-2">
+          <Button 
+            onClick={() => setCurrentTab("reconciliation")}
+            variant="outline" 
+            size="sm" 
+            className="h-10 text-[10px] font-bold uppercase tracking-wider bg-background border-2"
+          >
             <Landmark className="mr-2 h-4 w-4" /> Reconciliation
           </Button>
           <Button size="sm" className="h-10 text-[10px] font-bold uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 shadow-lg px-6">
@@ -171,7 +285,7 @@ export default function BillingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Main Financial Section */}
         <div className="lg:col-span-8 space-y-6">
-          <Tabs defaultValue="invoices" className="w-full">
+          <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <TabsList className="bg-transparent h-auto p-0 flex gap-6 border-b rounded-none mb-6">
               <TabsTrigger 
                 value="invoices" 
@@ -190,6 +304,12 @@ export default function BillingPage() {
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:bg-transparent px-2 py-3 text-sm font-bold uppercase tracking-tight transition-all"
               >
                 Insurance Claims
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reconciliation" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:bg-transparent px-2 py-3 text-sm font-bold uppercase tracking-tight transition-all"
+              >
+                Reconciliation Console
               </TabsTrigger>
             </TabsList>
 
@@ -352,6 +472,209 @@ export default function BillingPage() {
                      </div>
                   </CardContent>
                </Card>
+            </TabsContent>
+
+            <TabsContent value="reconciliation" className="outline-none space-y-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-black uppercase text-indigo-900 tracking-tight flex items-center gap-2">
+                    <Landmark className="h-4 w-4 text-indigo-600" /> Transaction Reconciliation Console
+                  </h3>
+                  <p className="text-[11px] text-indigo-700 leading-tight">
+                    Verify deposits and mobile payment ledgers against client invoice records.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    onClick={handleOneClickMatch}
+                    size="sm" 
+                    className="h-9 px-4 text-[10px] font-bold uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
+                  >
+                    One-Click Match
+                  </Button>
+                  <Button 
+                    onClick={handleDownloadPDFSummary}
+                    disabled={isExporting}
+                    variant="outline" 
+                    size="sm" 
+                    className="h-9 px-4 text-[10px] font-bold uppercase tracking-wider border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                  >
+                    {isExporting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-2 h-3.5 w-3.5" />}
+                    Export PDF Summary
+                  </Button>
+                </div>
+              </div>
+
+              {/* Matching Status Metrics */}
+              <div className="grid grid-cols-4 gap-4">
+                {[
+                  { label: "Total Transactions", value: reconPayments.length + reconInvoices.length, color: "border-slate-200" },
+                  { label: "Fully Reconciled", value: reconPayments.filter(p => p.status === "Matched").length, color: "border-green-200 text-green-700 bg-green-50/20" },
+                  { label: "Partial Matches", value: reconPayments.filter(p => p.status === "Partially Matched").length, color: "border-amber-200 text-amber-600 bg-amber-50/20" },
+                  { label: "Anomalies / Unmatched", value: reconPayments.filter(p => p.status === "Unmatched" || p.status === "Discrepancy").length + reconInvoices.filter(i => i.status === "Unmatched" || i.status === "Discrepancy").length, color: "border-red-200 text-red-600 bg-red-50/20" },
+                ].map((m, idx) => (
+                  <Card key={idx} className={cn("border shadow-sm p-4 flex flex-col justify-center", m.color)}>
+                    <p className="text-[9px] font-black uppercase tracking-wider opacity-60 leading-none">{m.label}</p>
+                    <p className="text-xl font-black mt-1.5">{m.value}</p>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Dual Parallel Lists */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Column 1: Bank & Mobile Money Payments */}
+                <Card className="border shadow-sm overflow-hidden flex flex-col">
+                  <CardHeader className="bg-slate-50 border-b py-3 px-4">
+                    <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center justify-between">
+                      <span>Deposits / Bank Payouts</span>
+                      <Badge variant="outline" className="text-[9px] bg-background">
+                        {reconPayments.filter(p => p.status !== "Matched").length} Remaining
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 divide-y max-h-[350px] overflow-y-auto">
+                    {reconPayments.map((pay) => (
+                      <div 
+                        key={pay.id} 
+                        onClick={() => pay.status !== "Matched" && setSelectedPayment(selectedPayment === pay.id ? null : pay.id)}
+                        className={cn(
+                          "p-4 flex flex-col gap-2 transition-all cursor-pointer",
+                          pay.status === "Matched" ? "bg-green-50/30 opacity-70 cursor-not-allowed" :
+                          selectedPayment === pay.id ? "bg-indigo-50 border-l-4 border-indigo-600" : "hover:bg-slate-50/50"
+                        )}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-mono text-[10px] font-bold text-indigo-600">{pay.id}</span>
+                          <Badge className={cn(
+                            "text-[8px] font-black uppercase px-2 py-0.5",
+                            pay.status === 'Matched' ? "bg-green-100 text-green-700" :
+                            pay.status === 'Partially Matched' ? "bg-amber-100 text-amber-700" :
+                            pay.status === 'Discrepancy' ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"
+                          )} variant="outline">
+                            {pay.status}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <p className="text-xs font-black">{pay.sender}</p>
+                            <p className="text-[9px] text-muted-foreground font-medium">Ref: {pay.ref} • {pay.date}</p>
+                          </div>
+                          <span className="text-sm font-black tracking-tight">{pay.amount}</span>
+                        </div>
+                        {pay.status !== "Matched" && selectedPayment === pay.id && (
+                          <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-dashed">
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              className="h-7 text-[9px] font-bold uppercase tracking-wider"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFlagDiscrepancy(pay.id, 'payment');
+                              }}
+                            >
+                              Flag Discrepancy
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Column 2: Invoices */}
+                <Card className="border shadow-sm overflow-hidden flex flex-col">
+                  <CardHeader className="bg-slate-50 border-b py-3 px-4">
+                    <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center justify-between">
+                      <span>Unreconciled Invoices</span>
+                      <Badge variant="outline" className="text-[9px] bg-background">
+                        {reconInvoices.filter(i => i.status !== "Matched").length} Remaining
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 divide-y max-h-[350px] overflow-y-auto">
+                    {reconInvoices.map((inv) => (
+                      <div 
+                        key={inv.id} 
+                        onClick={() => inv.status !== "Matched" && setSelectedInvoice(selectedInvoice === inv.id ? null : inv.id)}
+                        className={cn(
+                          "p-4 flex flex-col gap-2 transition-all cursor-pointer",
+                          inv.status === "Matched" ? "bg-green-50/30 opacity-70 cursor-not-allowed" :
+                          selectedInvoice === inv.id ? "bg-indigo-50 border-l-4 border-indigo-600" : "hover:bg-slate-50/50"
+                        )}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-mono text-[10px] font-bold text-indigo-600">{inv.id}</span>
+                          <Badge className={cn(
+                            "text-[8px] font-black uppercase px-2 py-0.5",
+                            inv.status === 'Matched' ? "bg-green-100 text-green-700" :
+                            inv.status === 'Partially Matched' ? "bg-amber-100 text-amber-700" :
+                            inv.status === 'Discrepancy' ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"
+                          )} variant="outline">
+                            {inv.status}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <p className="text-xs font-black">{inv.patient}</p>
+                            <p className="text-[9px] text-muted-foreground font-medium">Ref: {inv.ref}</p>
+                          </div>
+                          <span className="text-sm font-black tracking-tight">{inv.amount}</span>
+                        </div>
+                        {inv.status !== "Matched" && selectedInvoice === inv.id && (
+                          <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-dashed">
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              className="h-7 text-[9px] font-bold uppercase tracking-wider"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFlagDiscrepancy(inv.id, 'invoice');
+                              }}
+                            >
+                              Flag Discrepancy
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Manual Matching Action Bar */}
+              {selectedPayment && selectedInvoice && (
+                <div className="flex justify-between items-center p-4 bg-indigo-50 border border-indigo-200 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-4 text-xs font-bold text-indigo-900">
+                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border">
+                      <span className="text-[10px] text-muted-foreground">Payment:</span> {selectedPayment}
+                    </div>
+                    <Link2 className="h-4 w-4 text-indigo-600" />
+                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border">
+                      <span className="text-[10px] text-muted-foreground">Invoice:</span> {selectedInvoice}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedPayment(null);
+                        setSelectedInvoice(null);
+                      }}
+                      variant="ghost" 
+                      className="text-xs"
+                    >
+                      Cancel Selection
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleManualMatch}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4"
+                    >
+                      Link Selected
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>

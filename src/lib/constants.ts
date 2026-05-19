@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint, Smartphone, Brain, Scissors, Utensils, History, HeartPulse, UserCog } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint, Smartphone, Brain, Scissors, Utensils, History, HeartPulse, UserCog, Sliders } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -40,7 +40,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/laboratory-management', labelKey: 'nav.laboratory', icon: Microscope },
       { href: '/imaging-management', labelKey: 'nav.imaging', icon: MonitorPlay },
-      { href: '/pharmacy-locator', labelKey: 'nav.drugDispensing', icon: Pill },
+      { href: '/pharmacy', labelKey: 'nav.drugDispensing', icon: Pill },
       { href: '/blood-bank', labelKey: 'nav.bloodBank', icon: Droplets },
       { href: '/emergency-room', labelKey: 'nav.emergencyRoom', icon: Siren },
       { href: '/telemedicine', labelKey: 'nav.telemedicine', icon: Video },
@@ -65,6 +65,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/inventory-management', labelKey: 'nav.inventory', icon: Package },
       { href: '/mpi-reconciliation', labelKey: 'nav.mpi', icon: Fingerprint },
       { href: '/staff-management', labelKey: 'nav.staffManagement', icon: UserCog },
+      { href: '/facility-configuration', labelKey: 'nav.facilityConfig', icon: Sliders },
       { href: '/biomedical-engineering', labelKey: 'nav.biomedical', icon: Settings },
     ]
   },

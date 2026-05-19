@@ -54,8 +54,12 @@ export default function PatientMedicationsPage() {
     setConfirmedMeds(prev => [...prev, id]);
     toast({
       title: "Intake Confirmed",
-      description: "Your provider has been notified of your adherence. Keep it up!",
-      icon: <CheckCircle2 className="h-5 w-5 text-green-500" />
+      description: (
+        <span className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-green-500 inline-block" />
+          <span>Your provider has been notified of your adherence. Keep it up!</span>
+        </span>
+      )
     });
   };
 

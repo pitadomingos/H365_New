@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
-  const { currentLocale, setLocale } = useLocale();
+  const { currentLocale, setCurrentLocale } = useLocale();
   const { user, setUser } = useUser();
   const { theme, setTheme } = useTheme();
   
@@ -198,8 +198,8 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <Label>System Language</Label>
                 <div className="flex flex-wrap gap-2">
-                  <Button variant={currentLocale === 'en' ? 'default' : 'outline'} size="sm" onClick={() => setLocale('en')}>English</Button>
-                  <Button variant={currentLocale === 'pt' ? 'default' : 'outline'} size="sm" onClick={() => setLocale('pt')}>Português</Button>
+                  <Button variant={currentLocale === 'en' ? 'default' : 'outline'} size="sm" onClick={() => setCurrentLocale('en')}>English</Button>
+                  <Button variant={currentLocale === 'pt' ? 'default' : 'outline'} size="sm" onClick={() => setCurrentLocale('pt')}>Português</Button>
                   <Button variant={currentLocale === 'it' ? 'default' : 'outline'} size="sm" disabled className="opacity-50">Italiano (Coming Soon)</Button>
                   <Button variant={currentLocale === 'es' ? 'default' : 'outline'} size="sm" disabled className="opacity-50">Español (Coming Soon)</Button>
                 </div>

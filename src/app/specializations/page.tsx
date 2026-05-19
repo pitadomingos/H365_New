@@ -135,8 +135,8 @@ export default function SpecializationsPage() {
     setIsLoadingSpecialistNotifications(true);
     setTimeout(() => {
       const mockSpecialistNotificationsData: MockListItem[] = [
-        { id: "SNOTIF001", patientName: "Walter White", gender: "Male", message: "CT Chest results available.", time: "10 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
-        { id: "SNOTIF002", patientName: "Skyler White", gender: "Female", message: "EEG scheduled for tomorrow.", time: "25 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
+        { id: "SNOTIF001", patientName: "Walter White", nationalId: "SPEC_DRF001_NID", gender: "Male", message: "CT Chest results available.", time: "10 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
+        { id: "SNOTIF002", patientName: "Skyler White", nationalId: "SPEC_DRF002_NID", gender: "Female", message: "EEG scheduled for tomorrow.", time: "25 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
       ];
       setSpecialistNotifications(mockSpecialistNotificationsData);
       setIsLoadingSpecialistNotifications(false);

@@ -57,8 +57,8 @@ const MOCK_MATCH_GROUPS = [
 ];
 
 export default function MPIPage() {
-  const { locale } = useLocale();
-  const t = getTranslator(locale);
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {

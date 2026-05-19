@@ -14,6 +14,7 @@ interface DiagramBoxProps {
   textColor?: string;
   borderColor?: string;
   items?: string[];
+  children?: React.ReactNode;
 }
 
 const DiagramBox: React.FC<DiagramBoxProps> = ({ 
@@ -24,7 +25,8 @@ const DiagramBox: React.FC<DiagramBoxProps> = ({
   bgColor = "bg-card",
   textColor = "text-card-foreground",
   borderColor = "border-primary/30",
-  items
+  items,
+  children
 }) => (
   <div
     className={cn(
@@ -43,6 +45,7 @@ const DiagramBox: React.FC<DiagramBoxProps> = ({
             {items.map((item, index) => <li key={index}>{item}</li>)}
         </ul>
     )}
+    {children}
   </div>
 );
 

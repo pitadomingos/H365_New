@@ -499,7 +499,7 @@ export default function AppointmentsPage() {
                             apt.status === "Cancelled" ? "destructive" :
                             "outline"
                           }>
-                            {t(`appointments.status.${apt.status.toLowerCase()}` as any, apt.status)}
+                            {t(`appointments.status.${apt.status.toLowerCase()}` as any) || apt.status}
                           </Badge>
                         </TableCell>
                       </TableRow>

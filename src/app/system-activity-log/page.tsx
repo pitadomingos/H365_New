@@ -6,44 +6,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ListCollapse, Loader2, Activity as ActivityIcon } from "lucide-react";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, type Locale } from '@/lib/i18n';
-
-interface ActivityLogItem {
-  id: string;
-  user: string;
-  action: string;
-  timestamp: string; // Could be a Date object, formatted for display
-  details?: string; // Optional additional details
-}
-
-const mockSystemActivityLog: ActivityLogItem[] = [
-  { id: "sa001", user: "Dr. Smith", action: "updated patient chart for Alice Johnson.", timestamp: "2024-08-15 10:30:00 AM", details: "Added new medication: Aspirin 75mg" },
-  { id: "sa002", user: "Reception", action: "registered new patient: Bob Williams.", timestamp: "2024-08-15 10:15:00 AM", details: "National ID: BW12345" },
-  { id: "sa003", user: "LabTech01", action: "uploaded results for patient ID #7890.", timestamp: "2024-08-15 09:00:00 AM", details: "Test: CBC, Glucose. All normal." },
-  { id: "sa004", user: "Nurse Eva", action: "scheduled follow-up for Mike Brown.", timestamp: "2024-08-15 07:00:00 AM", details: "Appointment on 2024-08-22." },
-  { id: "sa005", user: "Ward A Admin", action: "discharged patient: Charlie Davis.", timestamp: "2024-08-15 05:00:00 AM" },
-  { id: "sa006", user: "System", action: "Automated backup completed.", timestamp: "2024-08-15 03:00:00 AM" },
-  { id: "sa007", user: "Dr. Jones", action: "ordered lab tests for patient: Sarah Miller.", timestamp: "2024-08-14 04:30:00 PM", details: "Tests: Lipid Panel, TSH" },
-  { id: "sa008", user: "Pharmacist02", action: "dispensed medication for RX00123.", timestamp: "2024-08-14 03:15:00 PM", details: "Medication: Amoxicillin 250mg" },
-  { id: "sa009", user: "AdminUser", action: "updated user role for 'nurse_eva'.", timestamp: "2024-08-14 02:00:00 PM", details: "Role changed to 'Senior Nurse'" },
-  { id: "sa010", user: "ImagingTech", action: "uploaded X-Ray report for patient ID #5678.", timestamp: "2024-08-14 01:00:00 PM" },
-  { id: "sa011", user: "Dr. Smith", action: "viewed patient record: Bob Williams.", timestamp: "2024-08-14 12:00:00 PM" },
-  { id: "sa012", user: "System", action: "Low stock alert for Paracetamol triggered.", timestamp: "2024-08-14 11:00:00 AM" },
-];
+import { SentryLogger, type LogEntry } from "@/lib/sentry-logger";
 
 export default function SystemActivityLogPage() {
   const { currentLocale } = useLocale();
   const t = useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
-  const [activityLog, setActivityLog] = useState<ActivityLogItem[]>([]);
+  const [activityLog, setActivityLog] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setActivityLog(mockSystemActivityLog);
+    // Simulate API call loading logs from SentryLogger
+    const timer = setTimeout(() => {
+      setActivityLog(SentryLogger.getLogs());
       setIsLoading(false);
-    }, 1000);
+    }, 800);
+    return () => clearTimeout(timer);
   }, []);
 
   return (

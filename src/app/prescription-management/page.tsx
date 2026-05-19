@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import Image from 'next/image';
+import { LocalDB } from '@/lib/db';
 
 const MOCK_DRUGS = [
   { id: "d1", name: "Amoxicillin", strength: "500mg", form: "Capsule", stock: 1200 },
@@ -77,16 +78,59 @@ export default function PrescriptionManagementPage() {
   };
 
   const handleSendPrescription = async () => {
+    if (!patientData || prescriptionItems.length === 0) return;
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({
-      title: "Prescription Sent",
-      description: "The digital prescription has been routed to the Pharmacy module successfully.",
-    });
-    setPrescriptionItems([]);
-    setPatientData(null);
-    setSearchId("");
-    setIsSubmitting(false);
+    
+    try {
+      // Load current prescriptions from LocalDB
+      const currentPrescriptions = await LocalDB.get<any[]>("pharmacy_prescriptions", []);
+
+      // Construct new prescription object
+      const newPrescription = {
+        id: `RX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        patientId: patientData.nationalId,
+        patientName: patientData.fullName,
+        doctor: "Dr. Current User",
+        date: new Date().toISOString(),
+        items: prescriptionItems.map(item => {
+          // Parse quantity from duration if numeric or default to 10
+          const match = item.duration.match(/\d+/);
+          const durationDays = match ? parseInt(match[0], 10) : 5;
+          const qty = durationDays * 2; // general estimation: 2 units per day
+          return {
+            id: item.id,
+            drugName: item.drugName,
+            strength: item.strength,
+            form: item.form,
+            dosage: item.dosage,
+            frequency: item.frequency,
+            duration: item.duration,
+            quantity: qty
+          };
+        }),
+        status: "Waiting"
+      };
+
+      // Save to LocalDB
+      await LocalDB.save("pharmacy_prescriptions", [...currentPrescriptions, newPrescription]);
+
+      toast({
+        title: "Prescription Sent",
+        description: "The digital prescription has been routed to the Pharmacy module successfully.",
+      });
+      setPrescriptionItems([]);
+      setPatientData(null);
+      setSearchId("");
+    } catch (error) {
+      console.error("Prescription creation error:", error);
+      toast({
+        variant: "destructive",
+        title: "Prescription Error",
+        description: "Failed to send prescription. Please try again."
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
