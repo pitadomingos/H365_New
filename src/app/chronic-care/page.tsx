@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { History, Search, FileText, Activity, Loader2, Save, Pill, HeartPulse, ClipboardList, TrendingUp, AlertTriangle, CheckCircle2, Plus, Calendar, AlertCircle } from "lucide-react";
+import { History, Search, FileText, Activity, Loader2, Save, Pill, HeartPulse, ClipboardList, TrendingUp, AlertTriangle, CheckCircle2, Plus, Calendar, AlertCircle, ShieldAlert, ShieldCheck } from "lucide-react";
 import { AIAssistantPanel } from "@/components/clinical/ai-assistant-panel";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
@@ -17,6 +17,9 @@ import { LocalDB } from '@/lib/db';
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { cn } from "@/lib/utils";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface DotsLog {
   day: number;
@@ -30,6 +33,12 @@ interface LabMarker {
   cd4: number;
 }
 
+interface SputumTest {
+  date: string;
+  method: "Sputum Smear" | "GeneXpert";
+  result: "Positive" | "Negative";
+}
+
 interface ChronicPatient {
   id: string;
   nationalId: string;
@@ -37,6 +46,9 @@ interface ChronicPatient {
   condition: string;
   regimen: string;
   adherenceRate: number; // percentage
+  whoStage: 1 | 2 | 3 | 4;
+  tbTreatmentOutcome?: "On Treatment" | "Cured" | "Treatment Completed" | "Treatment Failed" | "Died" | "Lost to Follow-up" | "Not Evaluated";
+  tbSputumHistory?: SputumTest[];
   lastRefill: string;
   nextRefill: string;
   status: "Stable" | "Unstable" | "Lacking Adherence";
@@ -52,6 +64,13 @@ const DEFAULT_CHRONIC_PATIENTS: ChronicPatient[] = [
     condition: "HIV / TB Co-infection",
     regimen: "TLD (Tenofovir/Lamivudine/Dolutegravir) + RHZE (Tuberculosis DOTS)",
     adherenceRate: 93,
+    whoStage: 3,
+    tbTreatmentOutcome: "On Treatment",
+    tbSputumHistory: [
+      { date: "2026-01-10", method: "Sputum Smear", result: "Positive" },
+      { date: "2026-03-15", method: "GeneXpert", result: "Positive" },
+      { date: "2026-05-05", method: "Sputum Smear", result: "Negative" },
+    ],
     lastRefill: "2026-05-02",
     nextRefill: "2026-06-02",
     status: "Stable",
@@ -97,6 +116,12 @@ export default function ChronicCarePage() {
   const [logVL, setLogVL] = useState("");
   const [logCD4, setLogCD4] = useState("");
   const [isSavingLab, setIsSavingLab] = useState(false);
+
+  // New Sputum Log form state
+  const [sputumDate, setSputumDate] = useState("");
+  const [sputumMethod, setSputumMethod] = useState<"Sputum Smear" | "GeneXpert">("Sputum Smear");
+  const [sputumResult, setSputumResult] = useState<"Positive" | "Negative">("Positive");
+  const [isSavingSputum, setIsSavingSputum] = useState(false);
 
   const loadPatients = async () => {
     const list = await LocalDB.get<ChronicPatient[]>("chronic_patients", DEFAULT_CHRONIC_PATIENTS);
@@ -204,6 +229,71 @@ export default function ChronicCarePage() {
     setLogCD4("");
   };
 
+  const handleAddSputumRecord = async () => {
+    if (!selectedPatient || !sputumDate) return;
+    setIsSavingSputum(true);
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    const newSputum: SputumTest = {
+      date: sputumDate,
+      method: sputumMethod,
+      result: sputumResult
+    };
+
+    const currentHistory = selectedPatient.tbSputumHistory || [];
+    const updatedHistory = [...currentHistory, newSputum].sort((a, b) => b.date.localeCompare(a.date));
+
+    const updatedPatient: ChronicPatient = {
+      ...selectedPatient,
+      tbSputumHistory: updatedHistory
+    };
+
+    const updatedList = patientsList.map(p => p.id === selectedPatient.id ? updatedPatient : p);
+    await LocalDB.save("chronic_patients", updatedList);
+    setPatientsList(updatedList);
+    setSelectedPatient(updatedPatient);
+
+    toast({
+      title: "Sputum Record Logged",
+      description: `TB diagnosis logs updated with ${sputumMethod} (${sputumResult}).`
+    });
+
+    setIsSavingSputum(false);
+    setSputumDate("");
+  };
+
+  const handleUpdateWhoStage = async (newStage: 1 | 2 | 3 | 4) => {
+    if (!selectedPatient) return;
+    const updatedPatient: ChronicPatient = {
+      ...selectedPatient,
+      whoStage: newStage
+    };
+    const updatedList = patientsList.map(p => p.id === selectedPatient.id ? updatedPatient : p);
+    await LocalDB.save("chronic_patients", updatedList);
+    setPatientsList(updatedList);
+    setSelectedPatient(updatedPatient);
+    toast({
+      title: "WHO Stage Updated",
+      description: `Patient's HIV WHO Stage is now Set to Stage ${newStage}.`
+    });
+  };
+
+  const handleUpdateTbOutcome = async (newOutcome: ChronicPatient["tbTreatmentOutcome"]) => {
+    if (!selectedPatient) return;
+    const updatedPatient: ChronicPatient = {
+      ...selectedPatient,
+      tbTreatmentOutcome: newOutcome
+    };
+    const updatedList = patientsList.map(p => p.id === selectedPatient.id ? updatedPatient : p);
+    await LocalDB.save("chronic_patients", updatedList);
+    setPatientsList(updatedList);
+    setSelectedPatient(updatedPatient);
+    toast({
+      title: "TB Treatment Outcome Updated",
+      description: `Patient's TB Treatment outcome is now: ${newOutcome || "None"}.`
+    });
+  };
+
   // DOTS cell backgrounds
   const getCellColor = (status: DotsLog["status"]) => {
     switch (status) {
@@ -293,9 +383,10 @@ export default function ChronicCarePage() {
 
             {/* Stepper Tabs */}
             <Tabs defaultValue="clinical" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="clinical" className="gap-2"><Activity className="h-4 w-4" /> Lab Biomarkers (VL / CD4)</TabsTrigger>
                 <TabsTrigger value="adherence" className="gap-2"><Calendar className="h-4 w-4" /> TB/ART DOTS Calendar</TabsTrigger>
+                <TabsTrigger value="programmatic" className="gap-2"><ClipboardList className="h-4 w-4" /> HIV & TB Program Tracking</TabsTrigger>
               </TabsList>
 
               {/* Lab Biomarkers and Chart */}
@@ -399,6 +490,211 @@ export default function ChronicCarePage() {
                         </div>
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* HIV & TB Program Tracking Panel */}
+              <TabsContent value="programmatic" className="mt-4 space-y-6">
+                {/* HIV WHO Clinical Staging */}
+                <Card className="shadow-sm border-slate-100 dark:border-slate-800">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                       <ClipboardList className="h-5 w-5 text-indigo-600" />
+                       WHO Clinical Staging (HIV Programmatic Tracking)
+                    </CardTitle>
+                    <CardDescription>
+                       Assess and log patient's disease progression stage based on standardized clinical criteria.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      {[
+                        { stage: 1, title: "Stage 1", desc: "Asymptomatic, Persistent Generalized Lymphadenopathy" },
+                        { stage: 2, title: "Stage 2", desc: "Mild Weight Loss, Recurrent URIs, Minor Mucocutaneous Symptoms" },
+                        { stage: 3, title: "Stage 3", desc: "Severe Weight Loss, Chronic Diarrhea > 1 Month, Pulmonary TB" },
+                        { stage: 4, title: "Stage 4", desc: "HIV Wasting Syndrome, Opportunistic Infections, Extrapulmonary TB" },
+                      ].map((item) => {
+                        const isActive = selectedPatient.whoStage === item.stage;
+                        return (
+                          <button
+                            key={item.stage}
+                            onClick={() => handleUpdateWhoStage(item.stage as 1 | 2 | 3 | 4)}
+                            className={cn(
+                              "p-3.5 border rounded-xl text-left transition-all flex flex-col justify-between h-32 shadow-sm",
+                              isActive 
+                                ? "bg-indigo-600 border-indigo-600 text-white dark:bg-indigo-600" 
+                                : "bg-white hover:bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-foreground"
+                            )}
+                          >
+                            <span className={cn("text-xs font-bold uppercase tracking-wider", isActive ? "text-indigo-200" : "text-indigo-600 dark:text-indigo-400")}>
+                              {item.title}
+                            </span>
+                            <span className="text-xs font-medium line-clamp-3 leading-relaxed mt-2 opacity-90">
+                              {item.desc}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* TB Treatment Status & Sputum Tracking */}
+                <Card className="shadow-sm border-slate-100 dark:border-slate-800">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-indigo-600" />
+                      Tuberculosis Treatment Registry & Diagnostics
+                    </CardTitle>
+                    <CardDescription>
+                      Monitor DOTS outcome indicators, sputum smear, and GeneXpert diagnostic logs.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Outcome dropdown and warning alerts */}
+                    <div className="grid sm:grid-cols-2 gap-4 items-center bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <div className="space-y-1">
+                        <Label htmlFor="tbOutcome" className="font-bold text-xs uppercase tracking-wider text-muted-foreground">TB Treatment Outcome Status</Label>
+                        <Select 
+                          value={selectedPatient.tbTreatmentOutcome || "On Treatment"}
+                          onValueChange={(val) => handleUpdateTbOutcome(val as any)}
+                        >
+                          <SelectTrigger id="tbOutcome" className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                            <SelectValue placeholder="Select Outcome" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="On Treatment">Active - On Treatment</SelectItem>
+                            <SelectItem value="Cured">Cured (Sputum Negative)</SelectItem>
+                            <SelectItem value="Treatment Completed">Treatment Completed</SelectItem>
+                            <SelectItem value="Treatment Failed">Treatment Failed</SelectItem>
+                            <SelectItem value="Died">Patient Deceased (Died)</SelectItem>
+                            <SelectItem value="Lost to Follow-up">Lost to Follow-up (LTFU)</SelectItem>
+                            <SelectItem value="Not Evaluated">Not Evaluated</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="text-xs">
+                        {selectedPatient.tbTreatmentOutcome === "Cured" || selectedPatient.tbTreatmentOutcome === "Treatment Completed" ? (
+                          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 rounded-lg flex gap-2">
+                            <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-bold text-emerald-800 dark:text-emerald-300">Treatment Completed Successfully</p>
+                              <p>TB program therapy finished. Patient can transition to post-TB respiratory wellness monitoring.</p>
+                            </div>
+                          </div>
+                        ) : selectedPatient.tbTreatmentOutcome === "Treatment Failed" || selectedPatient.tbTreatmentOutcome === "Lost to Follow-up" ? (
+                          <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 rounded-lg flex gap-2">
+                            <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5 animate-pulse" />
+                            <div>
+                              <p className="font-bold text-rose-800 dark:text-rose-300 font-bold">Urgent Action Required</p>
+                              <p>High clinical risk! Re-evaluate drug susceptibility patterns, initiate active community trace, or rule out MDR-TB.</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-indigo-50 dark:bg-indigo-950/10 border border-indigo-150 dark:border-indigo-950/30 text-indigo-800 dark:text-indigo-300 rounded-lg flex gap-2">
+                            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-bold text-indigo-800 dark:text-indigo-300">Therapy In Progress</p>
+                              <p>Directly Observed Therapy Short-course is ongoing. Maintain adherence &gt; 95% threshold.</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Sputum Smear Logs */}
+                    <div className="space-y-4">
+                      <Label className="font-bold text-sm">Sputum Smear & GeneXpert History</Label>
+                      {selectedPatient.tbSputumHistory && selectedPatient.tbSputumHistory.length > 0 ? (
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-slate-50 dark:bg-slate-900/60">
+                                <TableHead className="py-2 text-xs">Date Analyzed</TableHead>
+                                <TableHead className="py-2 text-xs">Test Method</TableHead>
+                                <TableHead className="py-2 text-xs">Result</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {selectedPatient.tbSputumHistory.map((log, index) => (
+                                <TableRow key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/20">
+                                  <TableCell className="py-2 text-xs font-mono">{log.date}</TableCell>
+                                  <TableCell className="py-2 text-xs font-medium">{log.method}</TableCell>
+                                  <TableCell className="py-2 text-xs">
+                                    <Badge 
+                                      className="text-[10px] border-none font-bold px-2 py-0.5 justify-center"
+                                      variant={log.result === "Positive" ? "destructive" : "default"}
+                                    >
+                                      {log.result}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <p className="text-center py-6 text-muted-foreground text-xs italic">No diagnostic sputum history logged.</p>
+                      )}
+                    </div>
+
+                    {/* Log Sputum test inline form */}
+                    <div className="p-4 border rounded-xl space-y-3 bg-slate-50/50 dark:bg-slate-900/10">
+                      <p className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Log New Diagnostic Sputum Test</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Date (YYYY-MM-DD)</Label>
+                          <Input 
+                            type="date" 
+                            value={sputumDate} 
+                            onChange={e => setSputumDate(e.target.value)} 
+                            className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Method</Label>
+                          <Select 
+                            value={sputumMethod} 
+                            onValueChange={(val: any) => setSputumMethod(val)}
+                          >
+                            <SelectTrigger className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Sputum Smear">Sputum Smear</SelectItem>
+                              <SelectItem value="GeneXpert">GeneXpert</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Result</Label>
+                          <Select 
+                            value={sputumResult} 
+                            onValueChange={(val: any) => setSputumResult(val)}
+                          >
+                            <SelectTrigger className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Positive">Positive</SelectItem>
+                              <SelectItem value="Negative">Negative</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button 
+                          onClick={handleAddSputumRecord} 
+                          disabled={isSavingSputum || !sputumDate} 
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 w-full font-semibold"
+                        >
+                          {isSavingSputum ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                          Log Result
+                        </Button>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

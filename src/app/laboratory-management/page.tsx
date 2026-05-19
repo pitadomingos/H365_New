@@ -75,6 +75,8 @@ interface LabRequest {
   results?: ResultInputItem[] | string; 
   technicianId?: string;
   verifiedBy?: string;
+  technicianNotes?: string;
+  pathologistNotes?: string;
 }
 
 interface Reagent {
@@ -316,10 +318,11 @@ export default function LaboratoryManagementPage() {
   const handleSaveResults = async () => {
     if (!selectedRequestForResults) return;
     setIsSavingResults(true);
+    const labTechnicianComments = (document.getElementById('labTechComments') as HTMLTextAreaElement)?.value || "";
     const payload = {
         requestId: selectedRequestForResults.id,
         results: currentResultInputs,
-        labTechnicianComments: (document.getElementById('labTechComments') as HTMLTextAreaElement)?.value || ""
+        labTechnicianComments
     };
     console.log("Saving lab results (mock):", payload);
     
@@ -327,7 +330,7 @@ export default function LaboratoryManagementPage() {
     
     setLabRequests(prevReqs => prevReqs.map(req => 
       req.id === selectedRequestForResults.id 
-        ? { ...req, results: currentResultInputs, status: "Pending Approval" as LabRequest["status"], technicianId: "TECH-CURRENT" } 
+        ? { ...req, results: currentResultInputs, status: "Pending Approval" as LabRequest["status"], technicianId: "TECH-CURRENT", technicianNotes: labTechnicianComments } 
         : req
     ));
 
@@ -359,12 +362,24 @@ export default function LaboratoryManagementPage() {
     setIsSavingResults(false);
   };
 
-  const handleApproveResults = async (requestId: string) => {
+  const handleApproveResults = async (requestId: string, pathologistNotes?: string) => {
     setIsSavingResults(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: "Results Ready", verifiedBy: "PATH-001" } : req));
+    setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: "Results Ready", verifiedBy: "PATH-001", pathologistNotes } : req));
     toast({ title: "Results Approved", description: `Request ${requestId} has been verified and released to the clinician.` });
     setIsSavingResults(false);
+    setIsResultModalOpen(false);
+    setSelectedRequestForResults(null);
+  };
+
+  const handleRejectResults = async (requestId: string, pathologistNotes?: string) => {
+    setIsSavingResults(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: "Processing", verifiedBy: undefined, pathologistNotes } : req));
+    toast({ title: "Results Rejected", description: `Request ${requestId} has been returned to technician for recalibration.`, variant: "destructive" });
+    setIsSavingResults(false);
+    setIsResultModalOpen(false);
+    setSelectedRequestForResults(null);
   };
   
   const isReagentPendingRequisition = (reagentId: string): boolean => {
@@ -536,8 +551,8 @@ export default function LaboratoryManagementPage() {
               </TableCell>
               <TableCell className="text-right">
                 {req.status === "Pending Approval" ? (
-                   <Button size="sm" variant="default" className="bg-amber-600 hover:bg-amber-700" onClick={() => handleApproveResults(req.id)} disabled={isSavingResults}>
-                     <ShieldCheck className="mr-1 h-3 w-3" /> Verify
+                   <Button size="sm" variant="default" className="bg-amber-600 hover:bg-amber-700 gap-1" onClick={() => handleOpenResultModal(req)} disabled={isSavingResults}>
+                     <ShieldCheck className="h-3.5 w-3.5" /> Verify & Approve
                    </Button>
                  ) : (
                    <Button size="sm" variant="outline" onClick={() => handleOpenResultModal(req)} disabled={isSavingResults}>
@@ -827,76 +842,232 @@ export default function LaboratoryManagementPage() {
         <Dialog open={isResultModalOpen} onOpenChange={setIsResultModalOpen}>
             <DialogContent className="sm:max-w-2xl"> 
                 <DialogHeader>
-                    <DialogTitle>{t('labManagement.resultsModal.title', {patientName: selectedRequestForResults?.patientName || ""})}</DialogTitle>
+                    <div className="flex justify-between items-center pr-6">
+                        <DialogTitle>{t('labManagement.resultsModal.title', {patientName: selectedRequestForResults?.patientName || ""})}</DialogTitle>
+                        {selectedRequestForResults?.status === "Pending Approval" ? (
+                            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 font-bold border-none uppercase tracking-wider text-[10px]">
+                                Pathologist Verification Mode
+                            </Badge>
+                        ) : selectedRequestForResults?.status === "Results Ready" ? (
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 font-bold border-none uppercase tracking-wider text-[10px]">
+                                Released Lab Report
+                            </Badge>
+                        ) : (
+                            <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold border-none uppercase tracking-wider text-[10px]">
+                                Technician Entry Mode
+                            </Badge>
+                        )}
+                    </div>
                     <DialogDescription>
                         {t('labManagement.resultsModal.description', {requestId: selectedRequestForResults?.id || "", tests: selectedRequestForResults?.testsRequested.map(testId => MOCK_TEST_DEFINITIONS[testId]?.name || testId).join(", ") || ""})}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                    {currentResultInputs.map((inputItem, index) => (
-                        <div key={inputItem.testId || index} className="p-3 border rounded-md space-y-2 bg-muted/20">
-                            <Label htmlFor={`result-${inputItem.testId}`} className="font-semibold">{inputItem.testName}</Label>
-                            {inputItem.isNumeric ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr_auto] gap-2 items-center">
-                                    <Input
+
+                {selectedRequestForResults?.status === "Pending Approval" ? (
+                    /* PATHOLOGIST VERIFICATION VIEW */
+                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                        <div className="space-y-3">
+                            <Label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Technician Results Analysis</Label>
+                            {currentResultInputs.map((inputItem, index) => (
+                                <div key={inputItem.testId || index} className="p-3 border rounded-lg space-y-1 bg-slate-50 dark:bg-slate-900/40">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-semibold text-sm">{inputItem.testName}</span>
+                                        <Badge 
+                                            variant={
+                                                inputItem.interpretation === t('labManagement.interpretation.normal') ? "default" : 
+                                                inputItem.interpretation === t('labManagement.interpretation.na') || inputItem.interpretation === t('labManagement.interpretation.invalid') ? "outline" :
+                                                "secondary" 
+                                            }
+                                            className={cn("text-[10px] justify-center px-2 py-0.5 border-none", {
+                                                "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300": inputItem.interpretation === t('labManagement.interpretation.normal'),
+                                                "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300": inputItem.interpretation === t('labManagement.interpretation.low') || inputItem.interpretation === t('labManagement.interpretation.high'),
+                                                "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300": inputItem.interpretation === t('labManagement.interpretation.veryLow') || inputItem.interpretation === t('labManagement.interpretation.veryHigh'),
+                                            })}
+                                        >
+                                            {inputItem.interpretation}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between text-xs mt-1">
+                                        <span>Entered Value: <strong className="text-sm font-bold text-foreground">{inputItem.value} {inputItem.unit}</strong></span>
+                                        <span className="text-muted-foreground">Normal Range: {inputItem.normalRangeDisplay}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {selectedRequestForResults?.technicianNotes && (
+                            <div className="p-3.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-950/50 rounded-lg text-xs space-y-1 mt-1">
+                                <p className="font-bold text-indigo-700 dark:text-indigo-400">Technician Comments (TECH-CURRENT):</p>
+                                <p className="italic text-muted-foreground">"{selectedRequestForResults.technicianNotes}"</p>
+                            </div>
+                        )}
+
+                        <Separator className="my-2"/>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="labPathologistComments" className="font-bold">Pathologist Verification & QA Comments</Label>
+                            <Textarea
+                                id="labPathologistComments"
+                                placeholder="Enter clinical sign-off notes, reference review, or specify reason if rejecting for recalibration..."
+                                className="min-h-[90px]"
+                                disabled={isSavingResults}
+                            />
+                        </div>
+
+                        <DialogFooter className="flex sm:justify-between items-center w-full gap-2 pt-2">
+                            <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingResults}>{t('labManagement.resultsModal.cancelButton')}</Button></DialogClose>
+                            <div className="flex items-center gap-2">
+                                <Button 
+                                    type="button" 
+                                    variant="destructive" 
+                                    onClick={() => handleRejectResults(
+                                        selectedRequestForResults.id, 
+                                        (document.getElementById('labPathologistComments') as HTMLTextAreaElement)?.value
+                                    )} 
+                                    disabled={isSavingResults}
+                                >
+                                    {isSavingResults ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Reject & Recalibrate
+                                </Button>
+                                <Button 
+                                    type="button" 
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    onClick={() => handleApproveResults(
+                                        selectedRequestForResults.id, 
+                                        (document.getElementById('labPathologistComments') as HTMLTextAreaElement)?.value
+                                    )} 
+                                    disabled={isSavingResults}
+                                >
+                                    {isSavingResults ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    <ShieldCheck className="mr-1.5 h-4 w-4" /> Approve & Release
+                                </Button>
+                            </div>
+                        </DialogFooter>
+                    </div>
+                ) : selectedRequestForResults?.status === "Results Ready" ? (
+                    /* CLINICAL RELEASED REPORT VIEW (READ ONLY) */
+                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                        <div className="space-y-3">
+                            <Label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Released Results</Label>
+                            {currentResultInputs.map((inputItem, index) => (
+                                <div key={inputItem.testId || index} className="p-3 border rounded-lg space-y-1 bg-slate-50 dark:bg-slate-900/40">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-semibold text-sm">{inputItem.testName}</span>
+                                        <Badge 
+                                            variant="outline"
+                                            className={cn("text-[10px] justify-center px-2 py-0.5 border-none", {
+                                                "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300": inputItem.interpretation === t('labManagement.interpretation.normal'),
+                                                "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300": inputItem.interpretation === t('labManagement.interpretation.low') || inputItem.interpretation === t('labManagement.interpretation.high'),
+                                                "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300": inputItem.interpretation === t('labManagement.interpretation.veryLow') || inputItem.interpretation === t('labManagement.interpretation.veryHigh'),
+                                            })}
+                                        >
+                                            {inputItem.interpretation}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between text-xs mt-1">
+                                        <span>Value: <strong className="text-sm font-bold text-foreground">{inputItem.value} {inputItem.unit}</strong></span>
+                                        <span className="text-muted-foreground">Normal Range: {inputItem.normalRangeDisplay}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <Separator className="my-2"/>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 bg-muted/30 border rounded-lg text-xs space-y-1">
+                                <p className="font-bold text-slate-700 dark:text-slate-400">Technician Sign-off</p>
+                                <p className="text-[10px] text-muted-foreground">Technician ID: {selectedRequestForResults.technicianId || "TECH-CURRENT"}</p>
+                                {selectedRequestForResults.technicianNotes ? (
+                                    <p className="italic text-slate-600 dark:text-slate-400 mt-1">"{selectedRequestForResults.technicianNotes}"</p>
+                                ) : (
+                                    <p className="text-muted-foreground italic mt-1">No comments logged.</p>
+                                )}
+                            </div>
+                            <div className="p-3 bg-emerald-50/30 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-950/30 rounded-lg text-xs space-y-1">
+                                <p className="font-bold text-emerald-700 dark:text-emerald-400">Pathologist Verification</p>
+                                <p className="text-[10px] text-muted-foreground">Pathologist ID: {selectedRequestForResults.verifiedBy || "PATH-001"}</p>
+                                {selectedRequestForResults.pathologistNotes ? (
+                                    <p className="italic text-emerald-600 dark:text-emerald-400 mt-1">"{selectedRequestForResults.pathologistNotes}"</p>
+                                ) : (
+                                    <p className="text-muted-foreground italic mt-1">No comments logged.</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <DialogFooter className="pt-2">
+                            <DialogClose asChild><Button type="button" className="bg-indigo-600 hover:bg-indigo-700 text-white w-24">Close</Button></DialogClose>
+                        </DialogFooter>
+                    </div>
+                ) : (
+                    /* TECHNICIAN RESULT ENTRY VIEW */
+                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {currentResultInputs.map((inputItem, index) => (
+                            <div key={inputItem.testId || index} className="p-3 border rounded-md space-y-2 bg-muted/20">
+                                <Label htmlFor={`result-${inputItem.testId}`} className="font-semibold">{inputItem.testName}</Label>
+                                {inputItem.isNumeric ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr_auto] gap-2 items-center">
+                                        <Input
+                                            id={`result-${inputItem.testId}`}
+                                            type="number"
+                                            step="any"
+                                            value={inputItem.value}
+                                            onChange={(e) => handleResultInputChange(index, e.target.value)}
+                                            placeholder={t('labManagement.resultsModal.value.placeholder')}
+                                            className="sm:col-span-1"
+                                            disabled={isSavingResults}
+                                        />
+                                        <span className="text-xs text-muted-foreground sm:col-span-1">{inputItem.unit}</span>
+                                        <span className="text-xs text-muted-foreground sm:col-span-1">
+                                            {t('labManagement.resultsModal.range.label')} {inputItem.normalRangeDisplay}
+                                        </span>
+                                         <Badge 
+                                            variant={
+                                                inputItem.interpretation === t('labManagement.interpretation.normal') ? "default" : 
+                                                inputItem.interpretation === t('labManagement.interpretation.na') || inputItem.interpretation === t('labManagement.interpretation.invalid') ? "outline" :
+                                                "secondary" 
+                                            }
+                                            className={cn("text-xs sm:col-span-1 justify-center border-none", {
+                                                "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300": inputItem.interpretation === t('labManagement.interpretation.normal'),
+                                                "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300": inputItem.interpretation === t('labManagement.interpretation.low') || inputItem.interpretation === t('labManagement.interpretation.high'),
+                                                "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300": inputItem.interpretation === t('labManagement.interpretation.veryLow') || inputItem.interpretation === t('labManagement.interpretation.veryHigh'),
+                                            })}
+                                        >
+                                            {inputItem.interpretation}
+                                        </Badge>
+                                    </div>
+                                ) : (
+                                    <Textarea
                                         id={`result-${inputItem.testId}`}
-                                        type="number"
-                                        step="any"
                                         value={inputItem.value}
                                         onChange={(e) => handleResultInputChange(index, e.target.value)}
-                                        placeholder={t('labManagement.resultsModal.value.placeholder')}
-                                        className="sm:col-span-1"
+                                        placeholder={t('labManagement.resultsModal.qualitative.placeholder')}
+                                        className="min-h-[60px]"
                                         disabled={isSavingResults}
                                     />
-                                    <span className="text-xs text-muted-foreground sm:col-span-1">{inputItem.unit}</span>
-                                    <span className="text-xs text-muted-foreground sm:col-span-1">
-                                        {t('labManagement.resultsModal.range.label')} {inputItem.normalRangeDisplay}
-                                    </span>
-                                     <Badge 
-                                        variant={
-                                            inputItem.interpretation === t('labManagement.interpretation.normal') ? "default" : 
-                                            inputItem.interpretation === t('labManagement.interpretation.na') || inputItem.interpretation === t('labManagement.interpretation.invalid') ? "outline" :
-                                            "secondary" 
-                                        }
-                                        className={cn("text-xs sm:col-span-1 justify-center", {
-                                            "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300": inputItem.interpretation === t('labManagement.interpretation.normal'),
-                                            "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300": inputItem.interpretation === t('labManagement.interpretation.low') || inputItem.interpretation === t('labManagement.interpretation.high'),
-                                            "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300": inputItem.interpretation === t('labManagement.interpretation.veryLow') || inputItem.interpretation === t('labManagement.interpretation.veryHigh'),
-                                        })}
-                                    >
-                                        {inputItem.interpretation}
-                                    </Badge>
-                                </div>
-                            ) : (
-                                <Textarea
-                                    id={`result-${inputItem.testId}`}
-                                    value={inputItem.value}
-                                    onChange={(e) => handleResultInputChange(index, e.target.value)}
-                                    placeholder={t('labManagement.resultsModal.qualitative.placeholder')}
-                                    className="min-h-[60px]"
-                                    disabled={isSavingResults}
-                                />
-                            )}
+                                )}
+                            </div>
+                        ))}
+                        <Separator className="my-3"/>
+                        <div className="space-y-2">
+                            <Label htmlFor="labTechComments">{t('labManagement.resultsModal.comments.label')}</Label>
+                            <Textarea
+                            id="labTechComments"
+                            defaultValue={selectedRequestForResults?.technicianNotes || ""}
+                            placeholder={t('labManagement.resultsModal.comments.placeholder')}
+                            className="min-h-[80px]"
+                            disabled={isSavingResults}
+                            />
                         </div>
-                    ))}
-                    <Separator className="my-3"/>
-                    <div className="space-y-2">
-                        <Label htmlFor="labTechComments">{t('labManagement.resultsModal.comments.label')}</Label>
-                        <Textarea
-                        id="labTechComments"
-                        placeholder={t('labManagement.resultsModal.comments.placeholder')}
-                        className="min-h-[80px]"
-                        disabled={isSavingResults}
-                        />
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingResults}>{t('labManagement.resultsModal.cancelButton')}</Button></DialogClose>
+                            <Button type="button" onClick={handleSaveResults} disabled={isSavingResults || currentResultInputs.some(input => input.value.trim() === '')}>
+                                {isSavingResults ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                {isSavingResults ? t('labManagement.resultsModal.saveButton.loading') : t('labManagement.resultsModal.saveButton')}
+                            </Button>
+                        </DialogFooter>
                     </div>
-                </div>
-                <DialogFooter>
-                <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingResults}>{t('labManagement.resultsModal.cancelButton')}</Button></DialogClose>
-                <Button type="button" onClick={handleSaveResults} disabled={isSavingResults || currentResultInputs.some(input => input.value.trim() === '')}>
-                    {isSavingResults ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {isSavingResults ? t('labManagement.resultsModal.saveButton.loading') : t('labManagement.resultsModal.saveButton')}
-                </Button>
-                </DialogFooter>
+                )}
             </DialogContent>
         </Dialog>
 

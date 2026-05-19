@@ -44,6 +44,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { ShieldAlert } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   AreaChart,
@@ -92,18 +94,42 @@ const INSURANCE_CLAIMS = [
   { provider: "MCS - Medicare", pending: 22, value: "780,000 MT", days: 18 },
 ];
 
-const MOCK_RECON_PAYMENTS = [
-  { id: "TXN-9081", sender: "M-Pesa Payout", amount: "4,500 MT", ref: "REF-001", date: "2024-05-04", status: "Unmatched" },
-  { id: "TXN-9082", sender: "MDS - Medis Payout", amount: "12,800 MT", ref: "REF-002", date: "2024-05-04", status: "Unmatched" },
-  { id: "TXN-9083", sender: "E-Mola Payout", amount: "5,600 MT", ref: "REF-005", date: "2024-05-03", status: "Unmatched" },
-  { id: "TXN-9084", sender: "Standard Bank Transfer", amount: "2,500 MT", ref: "REF-999", date: "2024-05-03", status: "Unmatched" },
+interface InsurerClaim {
+  id: string;
+  patient: string;
+  insurer: string;
+  claimedAmount: number;
+  status: "Unmatched" | "Matched" | "Discrepancy" | "Rejected";
+  invoiceDate: string;
+  ref: string;
+}
+
+interface InsurerRemittance {
+  id: string;
+  insurer: string;
+  remittedAmount: number;
+  status: "Unmatched" | "Matched" | "Discrepancy";
+  date: string;
+  ref: string;
+  claimId?: string;
+}
+
+const MOCK_INSURER_CLAIMS: InsurerClaim[] = [
+  { id: "CLM-101", patient: "Mussa Alberto", insurer: "MDS - Medis", claimedAmount: 4500, ref: "REF-CLM-101", invoiceDate: "2024-05-01", status: "Unmatched" },
+  { id: "CLM-102", patient: "Elena Chilaule", insurer: "Sim - Saúde", claimedAmount: 12800, ref: "REF-CLM-102", invoiceDate: "2024-05-02", status: "Unmatched" },
+  { id: "CLM-103", patient: "Ricardo Gomis", insurer: "MCS - Medicare", claimedAmount: 2100, ref: "REF-CLM-103", invoiceDate: "2024-05-02", status: "Unmatched" },
+  { id: "CLM-104", patient: "Sara Mondlane", insurer: "MDS - Medis", claimedAmount: 8400, ref: "REF-CLM-104", invoiceDate: "2024-05-03", status: "Unmatched" },
+  { id: "CLM-105", patient: "Tito Langa", insurer: "Sim - Saúde", claimedAmount: 5600, ref: "REF-CLM-105", invoiceDate: "2024-05-03", status: "Unmatched" },
+  { id: "CLM-106", patient: "Amelia Zita", insurer: "MCS - Medicare", claimedAmount: 3500, ref: "REF-CLM-106", invoiceDate: "2024-05-04", status: "Unmatched" },
 ];
 
-const MOCK_RECON_INVOICES = [
-  { id: "INV-2024-001", patient: "Mussa Alberto", amount: "4,500 MT", ref: "REF-001", status: "Unmatched" },
-  { id: "INV-2024-002", patient: "Elena Chilaule", amount: "12,800 MT", ref: "REF-002", status: "Unmatched" },
-  { id: "INV-2024-005", patient: "Tito Langa", amount: "5,600 MT", ref: "REF-005", status: "Unmatched" },
-  { id: "INV-2024-099", patient: "Sara Mondlane", amount: "2,500 MT", ref: "REF-998", status: "Unmatched" },
+const MOCK_INSURER_REMITTANCES: InsurerRemittance[] = [
+  { id: "REM-9001", insurer: "MDS - Medis", remittedAmount: 4500, ref: "REF-CLM-101", date: "2024-05-06", status: "Unmatched" },
+  { id: "REM-9002", insurer: "Sim - Saúde", remittedAmount: 11500, ref: "REF-CLM-102", date: "2024-05-07", status: "Unmatched" },
+  { id: "REM-9003", insurer: "MCS - Medicare", remittedAmount: 2100, ref: "REF-CLM-103", date: "2024-05-07", status: "Unmatched" },
+  { id: "REM-9004", insurer: "MDS - Medis", remittedAmount: 8000, ref: "REF-CLM-104", date: "2024-05-08", status: "Unmatched" },
+  { id: "REM-9005", insurer: "Sim - Saúde", remittedAmount: 5600, ref: "REF-CLM-105", date: "2024-05-08", status: "Unmatched" },
+  { id: "REM-9006", insurer: "MCS - Medicare", remittedAmount: 0, ref: "REF-CLM-106", date: "2024-05-09", status: "Unmatched" },
 ];
 
 export default function BillingPage() {
@@ -114,82 +140,102 @@ export default function BillingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentTab, setCurrentTab] = useState("invoices");
 
-  const [reconPayments, setReconPayments] = useState(MOCK_RECON_PAYMENTS);
-  const [reconInvoices, setReconInvoices] = useState(MOCK_RECON_INVOICES);
-  const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
-  const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null);
+  const [selectedInsurer, setSelectedInsurer] = useState("All Insurers");
+  const [claims, setClaims] = useState(MOCK_INSURER_CLAIMS);
+  const [remittances, setRemittances] = useState(MOCK_INSURER_REMITTANCES);
+  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
+  const [selectedRemittanceId, setSelectedRemittanceId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
+  const filteredClaims = useMemo(() => {
+    return claims.filter(c => selectedInsurer === "All Insurers" || c.insurer === selectedInsurer);
+  }, [claims, selectedInsurer]);
+
+  const filteredRemittances = useMemo(() => {
+    return remittances.filter(r => selectedInsurer === "All Insurers" || r.insurer === selectedInsurer);
+  }, [remittances, selectedInsurer]);
+
   const handleOneClickMatch = () => {
-    let matchCount = 0;
-    const updatedPayments = reconPayments.map(p => {
-      if (p.status === "Matched") return p;
-      const matchingInv = reconInvoices.find(inv => inv.status === "Unmatched" && inv.ref === p.ref && inv.amount === p.amount);
-      if (matchingInv) {
-        matchCount++;
-        return { ...p, status: "Matched" as const };
+    let matchedCount = 0;
+    let discrepancyCount = 0;
+    let rejectedCount = 0;
+
+    let updatedRemittances = [...remittances];
+
+    const updatedClaims = claims.map(claim => {
+      if (claim.status !== "Unmatched") return claim;
+
+      const remIndex = updatedRemittances.findIndex(
+        r => r.status === "Unmatched" && r.ref === claim.ref && r.insurer === claim.insurer
+      );
+
+      if (remIndex !== -1) {
+        const rem = updatedRemittances[remIndex];
+        if (rem.remittedAmount === claim.claimedAmount) {
+          matchedCount++;
+          updatedRemittances[remIndex] = { ...rem, status: "Matched", claimId: claim.id };
+          return { ...claim, status: "Matched" as const };
+        } else if (rem.remittedAmount === 0) {
+          rejectedCount++;
+          updatedRemittances[remIndex] = { ...rem, status: "Discrepancy", claimId: claim.id };
+          return { ...claim, status: "Rejected" as const };
+        } else {
+          discrepancyCount++;
+          updatedRemittances[remIndex] = { ...rem, status: "Discrepancy", claimId: claim.id };
+          return { ...claim, status: "Discrepancy" as const };
+        }
       }
-      return p;
+      return claim;
     });
 
-    const updatedInvoices = reconInvoices.map(inv => {
-      if (inv.status === "Matched") return inv;
-      const matchingPay = reconPayments.find(p => p.status === "Unmatched" && p.ref === inv.ref && p.amount === inv.amount);
-      if (matchingPay) {
-        return { ...inv, status: "Matched" as const };
-      }
-      return inv;
-    });
+    setClaims(updatedClaims);
+    setRemittances(updatedRemittances);
 
-    setReconPayments(updatedPayments);
-    setReconInvoices(updatedInvoices);
-
-    if (matchCount > 0) {
+    if (matchedCount > 0 || discrepancyCount > 0 || rejectedCount > 0) {
       toast({
-        title: "Reconciliation Complete",
-        description: `Successfully matched ${matchCount} transaction(s) using auto-reconciliation.`,
+        title: "Insurer Auto-Reconciliation Complete",
+        description: `Successfully processed claims: ${matchedCount} matched perfectly, ${discrepancyCount} underpayments flagged, ${rejectedCount} rejections noted.`,
       });
     } else {
       toast({
-        title: "No Matches Found",
-        description: "No unmatched payments matched invoices by exact Reference and Amount.",
+        title: "No New Matches Found",
+        description: "No unmatched claims could be auto-linked to outstanding remittances.",
         variant: "destructive",
       });
     }
   };
 
   const handleManualMatch = () => {
-    if (!selectedPayment || !selectedInvoice) return;
-    const payment = reconPayments.find(p => p.id === selectedPayment);
-    const invoice = reconInvoices.find(inv => inv.id === selectedInvoice);
-    if (!payment || !invoice) return;
+    if (!selectedClaimId || !selectedRemittanceId) return;
+    const claim = claims.find(c => c.id === selectedClaimId);
+    const remittance = remittances.find(r => r.id === selectedRemittanceId);
+    if (!claim || !remittance) return;
 
-    const isExactMatch = payment.amount === invoice.amount;
-    const newStatus = isExactMatch ? ("Matched" as const) : ("Partially Matched" as const);
+    const isExact = claim.claimedAmount === remittance.remittedAmount;
+    const newClaimStatus = isExact ? ("Matched" as const) : remittance.remittedAmount === 0 ? ("Rejected" as const) : ("Discrepancy" as const);
+    const newRemStatus = isExact ? ("Matched" as const) : ("Discrepancy" as const);
 
-    setReconPayments(prev => prev.map(p => p.id === selectedPayment ? { ...p, status: newStatus } : p));
-    setReconInvoices(prev => prev.map(inv => inv.id === selectedInvoice ? { ...inv, status: newStatus } : inv));
-    
+    setClaims(prev => prev.map(c => c.id === selectedClaimId ? { ...c, status: newClaimStatus } : c));
+    setRemittances(prev => prev.map(r => r.id === selectedRemittanceId ? { ...r, status: newRemStatus, claimId: claim.id } : r));
+
     toast({
-      title: isExactMatch ? "Manual Match Successful" : "Partial Match Flagged",
-      description: isExactMatch 
-        ? `Linked ${payment.id} with ${invoice.id} successfully.`
-        : `Linked ${payment.id} with ${invoice.id} as a partial match (amount difference).`,
+      title: "Manual Claim Link Saved",
+      description: `Claim ${claim.id} manually reconciled with remittance payout ${remittance.id} (${isExact ? "Exact Match" : "Flagged Discrepancy"}).`,
     });
 
-    setSelectedPayment(null);
-    setSelectedInvoice(null);
+    setSelectedClaimId(null);
+    setSelectedRemittanceId(null);
   };
 
-  const handleFlagDiscrepancy = (id: string, type: 'payment' | 'invoice') => {
-    if (type === 'payment') {
-      setReconPayments(prev => prev.map(p => p.id === id ? { ...p, status: "Discrepancy" as const } : p));
+  const handleFlagDiscrepancy = (id: string, type: 'claim' | 'remittance') => {
+    if (type === 'claim') {
+      setClaims(prev => prev.map(c => c.id === id ? { ...c, status: "Discrepancy" as const } : c));
     } else {
-      setReconInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status: "Discrepancy" as const } : inv));
+      setRemittances(prev => prev.map(r => r.id === id ? { ...r, status: "Discrepancy" as const } : r));
     }
     toast({
-      title: "Transaction Flagged",
-      description: `Transaction ${id} was flagged for clinical audit review.`,
+      title: "Reconciliation Flagged",
+      description: `${type === 'claim' ? 'Claim' : 'Remittance'} ${id} marked for manual insurer clinical audit.`,
       variant: "destructive",
     });
   };
@@ -478,19 +524,32 @@ export default function BillingPage() {
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
                 <div className="space-y-1">
                   <h3 className="text-sm font-black uppercase text-indigo-900 tracking-tight flex items-center gap-2">
-                    <Landmark className="h-4 w-4 text-indigo-600" /> Transaction Reconciliation Console
+                    <Landmark className="h-4 w-4 text-indigo-600" /> Insurer Claims Reconciliation Console
                   </h3>
                   <p className="text-[11px] text-indigo-700 leading-tight">
-                    Verify deposits and mobile payment ledgers against client invoice records.
+                    Verify claim submissions and reconcile payouts against explanation of benefits (EOB) remittances.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <Select value={selectedInsurer} onValueChange={setSelectedInsurer}>
+                    <SelectTrigger className="w-[180px] h-9 bg-white dark:bg-slate-900 border-indigo-200 font-semibold text-xs text-indigo-900">
+                      <Filter className="h-3.5 w-3.5 mr-2 text-indigo-500" />
+                      <SelectValue placeholder="All Insurers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All Insurers">All Insurers</SelectItem>
+                      <SelectItem value="MDS - Medis">MDS - Medis</SelectItem>
+                      <SelectItem value="Sim - Saúde">Sim - Saúde</SelectItem>
+                      <SelectItem value="MCS - Medicare">MCS - Medicare</SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   <Button 
                     onClick={handleOneClickMatch}
                     size="sm" 
                     className="h-9 px-4 text-[10px] font-bold uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
                   >
-                    One-Click Match
+                    Auto-Match Claims
                   </Button>
                   <Button 
                     onClick={handleDownloadPDFSummary}
@@ -506,12 +565,12 @@ export default function BillingPage() {
               </div>
 
               {/* Matching Status Metrics */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "Total Transactions", value: reconPayments.length + reconInvoices.length, color: "border-slate-200" },
-                  { label: "Fully Reconciled", value: reconPayments.filter(p => p.status === "Matched").length, color: "border-green-200 text-green-700 bg-green-50/20" },
-                  { label: "Partial Matches", value: reconPayments.filter(p => p.status === "Partially Matched").length, color: "border-amber-200 text-amber-600 bg-amber-50/20" },
-                  { label: "Anomalies / Unmatched", value: reconPayments.filter(p => p.status === "Unmatched" || p.status === "Discrepancy").length + reconInvoices.filter(i => i.status === "Unmatched" || i.status === "Discrepancy").length, color: "border-red-200 text-red-600 bg-red-50/20" },
+                  { label: "Total Submissions", value: filteredClaims.length + filteredRemittances.length, color: "border-slate-200" },
+                  { label: "Fully Reconciled", value: filteredClaims.filter(c => c.status === "Matched").length, color: "border-green-200 text-green-700 bg-green-50/20" },
+                  { label: "Discrepancy (Underpaid)", value: filteredClaims.filter(c => c.status === "Discrepancy").length, color: "border-amber-200 text-amber-600 bg-amber-50/20" },
+                  { label: "Rejections (Zero Payout)", value: filteredClaims.filter(c => c.status === "Rejected").length, color: "border-red-200 text-red-600 bg-red-50/20" },
                 ].map((m, idx) => (
                   <Card key={idx} className={cn("border shadow-sm p-4 flex flex-col justify-center", m.color)}>
                     <p className="text-[9px] font-black uppercase tracking-wider opacity-60 leading-none">{m.label}</p>
@@ -521,160 +580,212 @@ export default function BillingPage() {
               </div>
 
               {/* Dual Parallel Lists */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Column 1: Bank & Mobile Money Payments */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Column 1: Sent Insurer Claims */}
                 <Card className="border shadow-sm overflow-hidden flex flex-col">
                   <CardHeader className="bg-slate-50 border-b py-3 px-4">
                     <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center justify-between">
-                      <span>Deposits / Bank Payouts</span>
+                      <span>Submitted Claims</span>
                       <Badge variant="outline" className="text-[9px] bg-background">
-                        {reconPayments.filter(p => p.status !== "Matched").length} Remaining
+                        {filteredClaims.filter(c => c.status !== "Matched").length} Outstanding
                       </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0 divide-y max-h-[350px] overflow-y-auto">
-                    {reconPayments.map((pay) => (
-                      <div 
-                        key={pay.id} 
-                        onClick={() => pay.status !== "Matched" && setSelectedPayment(selectedPayment === pay.id ? null : pay.id)}
-                        className={cn(
-                          "p-4 flex flex-col gap-2 transition-all cursor-pointer",
-                          pay.status === "Matched" ? "bg-green-50/30 opacity-70 cursor-not-allowed" :
-                          selectedPayment === pay.id ? "bg-indigo-50 border-l-4 border-indigo-600" : "hover:bg-slate-50/50"
-                        )}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-mono text-[10px] font-bold text-indigo-600">{pay.id}</span>
-                          <Badge className={cn(
-                            "text-[8px] font-black uppercase px-2 py-0.5",
-                            pay.status === 'Matched' ? "bg-green-100 text-green-700" :
-                            pay.status === 'Partially Matched' ? "bg-amber-100 text-amber-700" :
-                            pay.status === 'Discrepancy' ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"
-                          )} variant="outline">
-                            {pay.status}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between items-end">
-                          <div>
-                            <p className="text-xs font-black">{pay.sender}</p>
-                            <p className="text-[9px] text-muted-foreground font-medium">Ref: {pay.ref} • {pay.date}</p>
+                    {filteredClaims.length > 0 ? (
+                      filteredClaims.map((claim) => (
+                        <div 
+                          key={claim.id} 
+                          onClick={() => claim.status !== "Matched" && setSelectedClaimId(selectedClaimId === claim.id ? null : claim.id)}
+                          className={cn(
+                            "p-4 flex flex-col gap-2 transition-all cursor-pointer",
+                            claim.status === "Matched" ? "bg-green-50/30 opacity-70 cursor-not-allowed" :
+                            selectedClaimId === claim.id ? "bg-indigo-50 border-l-4 border-indigo-600" : "hover:bg-slate-50/50"
+                          )}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[10px] font-bold text-indigo-600">{claim.id}</span>
+                              <Badge variant="secondary" className="text-[8px] font-bold px-1.5 py-0 bg-indigo-50 text-indigo-700 border-none">{claim.insurer}</Badge>
+                            </div>
+                            <Badge className={cn(
+                              "text-[8px] font-black uppercase px-2 py-0.5",
+                              claim.status === 'Matched' ? "bg-green-100 text-green-700" :
+                              claim.status === 'Discrepancy' ? "bg-amber-100 text-amber-700" :
+                              claim.status === 'Rejected' ? "bg-rose-100 text-rose-700 animate-pulse" : "bg-slate-100 text-slate-700"
+                            )} variant="outline">
+                              {claim.status}
+                            </Badge>
                           </div>
-                          <span className="text-sm font-black tracking-tight">{pay.amount}</span>
-                        </div>
-                        {pay.status !== "Matched" && selectedPayment === pay.id && (
-                          <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-dashed">
-                            <Button 
-                              size="sm" 
-                              variant="destructive" 
-                              className="h-7 text-[9px] font-bold uppercase tracking-wider"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFlagDiscrepancy(pay.id, 'payment');
-                              }}
-                            >
-                              Flag Discrepancy
-                            </Button>
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <p className="text-xs font-black">{claim.patient}</p>
+                              <p className="text-[9px] text-muted-foreground font-medium">Ref: {claim.ref} • {claim.invoiceDate}</p>
+                            </div>
+                            <span className="text-sm font-black tracking-tight text-slate-900 dark:text-slate-100">{claim.claimedAmount.toLocaleString()} MT</span>
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          {claim.status !== "Matched" && selectedClaimId === claim.id && (
+                            <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-dashed">
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                className="h-7 text-[9px] font-bold uppercase tracking-wider"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFlagDiscrepancy(claim.id, 'claim');
+                                }}
+                              >
+                                Dispute / Flag Discrepancy
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center py-10 text-muted-foreground text-xs italic">No claims matched selected filters.</p>
+                    )}
                   </CardContent>
                 </Card>
 
-                {/* Column 2: Invoices */}
+                {/* Column 2: Remittances (EOB Payouts) */}
                 <Card className="border shadow-sm overflow-hidden flex flex-col">
                   <CardHeader className="bg-slate-50 border-b py-3 px-4">
                     <CardTitle className="text-xs font-black uppercase tracking-wider flex items-center justify-between">
-                      <span>Unreconciled Invoices</span>
+                      <span>EOB Remittances</span>
                       <Badge variant="outline" className="text-[9px] bg-background">
-                        {reconInvoices.filter(i => i.status !== "Matched").length} Remaining
+                        {filteredRemittances.filter(r => r.status !== "Matched").length} Remaining
                       </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0 divide-y max-h-[350px] overflow-y-auto">
-                    {reconInvoices.map((inv) => (
-                      <div 
-                        key={inv.id} 
-                        onClick={() => inv.status !== "Matched" && setSelectedInvoice(selectedInvoice === inv.id ? null : inv.id)}
-                        className={cn(
-                          "p-4 flex flex-col gap-2 transition-all cursor-pointer",
-                          inv.status === "Matched" ? "bg-green-50/30 opacity-70 cursor-not-allowed" :
-                          selectedInvoice === inv.id ? "bg-indigo-50 border-l-4 border-indigo-600" : "hover:bg-slate-50/50"
-                        )}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-mono text-[10px] font-bold text-indigo-600">{inv.id}</span>
-                          <Badge className={cn(
-                            "text-[8px] font-black uppercase px-2 py-0.5",
-                            inv.status === 'Matched' ? "bg-green-100 text-green-700" :
-                            inv.status === 'Partially Matched' ? "bg-amber-100 text-amber-700" :
-                            inv.status === 'Discrepancy' ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"
-                          )} variant="outline">
-                            {inv.status}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between items-end">
-                          <div>
-                            <p className="text-xs font-black">{inv.patient}</p>
-                            <p className="text-[9px] text-muted-foreground font-medium">Ref: {inv.ref}</p>
+                    {filteredRemittances.length > 0 ? (
+                      filteredRemittances.map((rem) => (
+                        <div 
+                          key={rem.id} 
+                          onClick={() => rem.status !== "Matched" && setSelectedRemittanceId(selectedRemittanceId === rem.id ? null : rem.id)}
+                          className={cn(
+                            "p-4 flex flex-col gap-2 transition-all cursor-pointer",
+                            rem.status === "Matched" ? "bg-green-50/30 opacity-70 cursor-not-allowed" :
+                            selectedRemittanceId === rem.id ? "bg-indigo-50 border-l-4 border-indigo-600" : "hover:bg-slate-50/50"
+                          )}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[10px] font-bold text-indigo-600">{rem.id}</span>
+                              <Badge variant="secondary" className="text-[8px] font-bold px-1.5 py-0 bg-slate-100 border-none">{rem.insurer}</Badge>
+                            </div>
+                            <Badge className={cn(
+                              "text-[8px] font-black uppercase px-2 py-0.5",
+                              rem.status === 'Matched' ? "bg-green-100 text-green-700" :
+                              rem.status === 'Discrepancy' ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"
+                            )} variant="outline">
+                              {rem.status}
+                            </Badge>
                           </div>
-                          <span className="text-sm font-black tracking-tight">{inv.amount}</span>
-                        </div>
-                        {inv.status !== "Matched" && selectedInvoice === inv.id && (
-                          <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-dashed">
-                            <Button 
-                              size="sm" 
-                              variant="destructive" 
-                              className="h-7 text-[9px] font-bold uppercase tracking-wider"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFlagDiscrepancy(inv.id, 'invoice');
-                              }}
-                            >
-                              Flag Discrepancy
-                            </Button>
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <p className="text-xs font-black">Remittance Ref: {rem.ref}</p>
+                              <p className="text-[9px] text-muted-foreground font-medium">Date Paid: {rem.date} {rem.claimId && `• Linked to ${rem.claimId}`}</p>
+                            </div>
+                            <span className="text-sm font-black tracking-tight text-slate-900 dark:text-slate-100">
+                              {rem.remittedAmount.toLocaleString()} MT
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          {rem.status !== "Matched" && selectedRemittanceId === rem.id && (
+                            <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-dashed">
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                className="h-7 text-[9px] font-bold uppercase tracking-wider"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFlagDiscrepancy(rem.id, 'remittance');
+                                }}
+                              >
+                                Flag Remittance Dispute
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center py-10 text-muted-foreground text-xs italic">No remittances matched selected filters.</p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
 
               {/* Manual Matching Action Bar */}
-              {selectedPayment && selectedInvoice && (
-                <div className="flex justify-between items-center p-4 bg-indigo-50 border border-indigo-200 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="flex items-center gap-4 text-xs font-bold text-indigo-900">
-                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border">
-                      <span className="text-[10px] text-muted-foreground">Payment:</span> {selectedPayment}
+              {selectedClaimId && selectedRemittanceId && (() => {
+                const claim = claims.find(c => c.id === selectedClaimId);
+                const rem = remittances.find(r => r.id === selectedRemittanceId);
+                if (!claim || !rem) return null;
+                const isUnderpaid = rem.remittedAmount < claim.claimedAmount;
+                const isRejected = rem.remittedAmount === 0;
+
+                return (
+                  <div className="flex flex-col gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-2.5 text-xs font-bold text-indigo-900">
+                        <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border">
+                          <span className="text-[10px] text-muted-foreground">Claim ID:</span> {selectedClaimId}
+                        </div>
+                        <Link2 className="h-4 w-4 text-indigo-600" />
+                        <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border">
+                          <span className="text-[10px] text-muted-foreground">Remittance ID:</span> {selectedRemittanceId}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          onClick={() => {
+                            setSelectedClaimId(null);
+                            setSelectedRemittanceId(null);
+                          }}
+                          variant="ghost" 
+                          className="text-xs"
+                        >
+                          Cancel Selection
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          onClick={handleManualMatch}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4"
+                        >
+                          Link Selected Claim
+                        </Button>
+                      </div>
                     </div>
-                    <Link2 className="h-4 w-4 text-indigo-600" />
-                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border">
-                      <span className="text-[10px] text-muted-foreground">Invoice:</span> {selectedInvoice}
-                    </div>
+
+                    {isUnderpaid && (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border border-amber-200 text-xs rounded-xl flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <div>
+                          <p className="font-bold text-amber-800 dark:text-amber-300">Underpayment Discrepancy Flagged</p>
+                          <p>
+                            Remittance payout of <strong>{rem.remittedAmount.toLocaleString()} MT</strong> is less than claim submission 
+                            of <strong>{claim.claimedAmount.toLocaleString()} MT</strong>. Reconciling will record a clinical shortage 
+                            discrepancy of <strong>{(claim.claimedAmount - rem.remittedAmount).toLocaleString()} MT</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {isRejected && (
+                      <div className="p-3 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 border border-rose-200 text-xs rounded-xl flex items-center gap-2">
+                        <ShieldAlert className="h-4 w-4 shrink-0 animate-pulse" />
+                        <div>
+                          <p className="font-bold text-rose-800 dark:text-rose-300 font-bold">Zero Remittance / Claim Rejection Alert</p>
+                          <p>
+                            Remittance payout shows <strong>0 MT</strong>. Reconciling will record this submission as a rejected claim 
+                            for administrative appeal.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedPayment(null);
-                        setSelectedInvoice(null);
-                      }}
-                      variant="ghost" 
-                      className="text-xs"
-                    >
-                      Cancel Selection
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={handleManualMatch}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4"
-                    >
-                      Link Selected
-                    </Button>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </TabsContent>
           </Tabs>
         </div>
