@@ -20,7 +20,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 import { toast } from "@/hooks/use-toast";
-import { Sliders, Building2, Bed, PlusCircle, Trash2, Edit2, Loader2, ShieldAlert, CheckCircle2, Activity } from 'lucide-react';
+import { Sliders, Building2, Bed, PlusCircle, Trash2, Edit2, Loader2, ShieldAlert, CheckCircle2, Activity, Pill, Globe } from 'lucide-react';
+
+interface PharmacyThreshold {
+  id: string;
+  itemName: string;
+  minStock: number;
+  maxStock: number;
+}
 
 interface Department {
   id: string;
@@ -138,6 +145,10 @@ export default function FacilityConfigurationPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [wards, setWards] = useState<WardSummary[]>([]);
   const [wardDetailsMap, setWardDetailsMap] = useState<Record<string, WardDetails>>({});
+  const [pharmacyThresholds, setPharmacyThresholds] = useState<PharmacyThreshold[]>([]);
+
+  // View Scope
+  const [configLevel, setConfigLevel] = useState<"Facility" | "District" | "Provincial" | "National">("Facility");
 
   // Dialog State
   const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false);
@@ -159,6 +170,13 @@ export default function FacilityConfigurationPage() {
         const storedDepts = await LocalDB.get<Department[]>("facility_departments", []);
         const storedWards = await LocalDB.get<WardSummary[]>("facility_wards", []);
         const storedDetails = await LocalDB.get<Record<string, WardDetails>>("ward_details", {});
+        const storedThresholds = await LocalDB.get<PharmacyThreshold[]>("pharmacy_thresholds", []);
+
+        setPharmacyThresholds(storedThresholds.length ? storedThresholds : [
+          { id: "PT001", itemName: "Amoxicillin 500mg", minStock: 1000, maxStock: 10000 },
+          { id: "PT002", itemName: "Paracetamol 500mg", minStock: 2000, maxStock: 20000 },
+          { id: "PT003", itemName: "Coartem 20/120mg", minStock: 500, maxStock: 5000 },
+        ]);
 
         if (storedDepts.length === 0) {
           await LocalDB.save("facility_departments", DEFAULT_DEPARTMENTS);
@@ -438,9 +456,25 @@ export default function FacilityConfigurationPage() {
               Define the physical and logical blueprint of the health unit. Configure administrative codes, create clinical departments, define ward structures, and scale active bed capacities.
             </p>
           </div>
-          <div className="flex items-center gap-2 self-start md:self-auto bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-sm border border-white/20">
-            <CheckCircle2 className="h-4 w-4 text-green-400" />
-            <span>LAN Authoritative Mode</span>
+          <div className="flex items-center gap-4 self-start md:self-auto bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-sm border border-white/20">
+            <div className="flex items-center gap-2 border-r border-white/20 pr-4">
+              <Globe className="h-4 w-4 text-blue-200" />
+              <Select value={configLevel} onValueChange={(val: any) => setConfigLevel(val)}>
+                <SelectTrigger className="h-8 w-[130px] bg-transparent border-none text-white focus:ring-0 shadow-none">
+                  <SelectValue placeholder="Scope" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Facility">Facility Level</SelectItem>
+                  <SelectItem value="District">District Level</SelectItem>
+                  <SelectItem value="Provincial">Provincial Level</SelectItem>
+                  <SelectItem value="National">National Level</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-400" />
+              <span>LAN Auth</span>
+            </div>
           </div>
         </div>
       </div>
@@ -496,12 +530,15 @@ export default function FacilityConfigurationPage() {
 
       {/* Main Tabbed Interface */}
       <Tabs defaultValue="wards" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="wards" className="flex items-center gap-2">
             <Bed className="h-4 w-4" /> Wards & Beds
           </TabsTrigger>
           <TabsTrigger value="departments" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" /> Departments
+          </TabsTrigger>
+          <TabsTrigger value="pharmacy" className="flex items-center gap-2">
+            <Pill className="h-4 w-4" /> Stock Thresholds
           </TabsTrigger>
         </TabsList>
 
@@ -626,6 +663,49 @@ export default function FacilityConfigurationPage() {
                       </TableRow>
                     ))
                   )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Pharmacy Thresholds Content */}
+        <TabsContent value="pharmacy" className="space-y-4 focus-visible:ring-0">
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Pharmacy Stock Thresholds</CardTitle>
+                <CardDescription>Configure minimum warning limits and maximum stock capacity per item.</CardDescription>
+              </div>
+              <Button className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow" onClick={() => toast({ title: "Development Mode", description: "This feature is mock-only in the current build." })}>
+                <PlusCircle className="h-4 w-4" /> Add Item Threshold
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item ID</TableHead>
+                    <TableHead>Medication/Item Name</TableHead>
+                    <TableHead>Minimum Stock (Alert)</TableHead>
+                    <TableHead>Maximum Capacity</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pharmacyThresholds.map(pt => (
+                    <TableRow key={pt.id} className="hover:bg-muted/30">
+                      <TableCell className="font-mono text-xs">{pt.id}</TableCell>
+                      <TableCell className="font-semibold text-foreground">{pt.itemName}</TableCell>
+                      <TableCell><span className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 px-2 py-0.5 rounded text-xs font-mono">{pt.minStock} Units</span></TableCell>
+                      <TableCell><span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 px-2 py-0.5 rounded text-xs font-mono">{pt.maxStock} Units</span></TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button variant="outline" size="icon">
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>

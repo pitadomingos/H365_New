@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint, Smartphone, Brain, Scissors, Utensils, History, HeartPulse, UserCog, Sliders } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network, ListCollapse, Activity, Package, Fingerprint, Smartphone, Brain, Scissors, Utensils, History, HeartPulse, UserCog, Sliders, Dumbbell } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -23,8 +23,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/appointments', labelKey: 'nav.appointments', icon: CalendarDays },
       { href: '/visiting-patients', labelKey: 'nav.visitingPatients', icon: Users },
       { href: '/treatment-recommendation', labelKey: 'nav.consultationRoom', icon: ClipboardEdit },
-      { href: '/clinical-notes', labelKey: 'nav.clinicalNotes', icon: FileText },
-      { href: '/prescription-management', labelKey: 'nav.prescriptionManagement', icon: Pill },
       { href: '/specializations', labelKey: 'nav.specializations', icon: Star },
       { href: '/maternity-care', labelKey: 'nav.maternityCare', icon: Baby },
       { href: '/pediatrics', labelKey: 'nav.pediatrics', icon: Baby },
@@ -33,6 +31,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/operation-theatre', labelKey: 'nav.operationTheatre', icon: Scissors },
       { href: '/nutrition', labelKey: 'nav.nutrition', icon: Utensils },
       { href: '/ward-management', labelKey: 'nav.wardManagement', icon: BedDouble },
+      { href: '/occupational-therapy', labelKey: 'nav.occupationalTherapy', icon: Dumbbell },
     ]
   },
   {

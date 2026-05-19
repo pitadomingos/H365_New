@@ -636,7 +636,8 @@ ${visitHistoryString || "No recent visit history available."}
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className={cn("grid gap-6 items-start", patientData ? "xl:grid-cols-[1fr_350px]" : "grid-cols-1")}>
+      <div className="flex flex-col gap-6">
       {/* Patient Search - Always visible */}
       <Card className="shadow-sm">
         <CardHeader>
@@ -654,32 +655,7 @@ ${visitHistoryString || "No recent visit history available."}
         </CardContent>
       </Card>
 
-      {/* Persistent Patient Context Header */}
-      {patientData && (
-        <Card className="shadow-sm border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <Image src={patientData.photoUrl} alt={t('consultationForm.patientPhoto.alt')} width={64} height={64} className="rounded-full border-2 border-primary/30 shrink-0" data-ai-hint={getAvatarHint(patientData.gender)} />
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold">{patientData.fullName}</h3>
-                <p className="text-xs text-muted-foreground">{t('consultationForm.patientInfo.id')}: {patientData.nationalId} | {t('consultationForm.patientInfo.age')}: {patientData.age} | {t(`patientRegistration.gender.${patientData.gender.toLowerCase()}` as any)}</p>
-              </div>
-              <div className="flex gap-2 flex-wrap justify-end">
-                {patientData.allergies?.map((a: string) => <Badge key={a} variant="destructive" className="text-[10px]">{a}</Badge>)}
-                {patientData.chronicConditions?.map((c: string) => <Badge key={c} variant="secondary" className="text-[10px]">{c}</Badge>)}
-              </div>
-            </div>
-            {/* Compact Vitals Strip */}
-            {(bmi || form.watch('bloodPressure') || form.watch('bodyTemperature')) && (
-              <div className="flex gap-3 mt-3 pt-3 border-t border-primary/10 flex-wrap">
-                {form.watch('bodyTemperature') && <Badge variant="outline" className="text-xs">🌡️ {form.watch('bodyTemperature')}°C</Badge>}
-                {form.watch('bloodPressure') && <Badge variant="outline" className="text-xs">💓 {form.watch('bloodPressure')} {bpDisplay?.status && bpDisplay.status !== 'N/A' ? `(${bpDisplay.status})` : ''}</Badge>}
-                {bmi && <Badge variant="outline" className="text-xs">⚖️ BMI: {bmi} {bmiDisplay?.status && bmiDisplay.status !== 'N/A' ? `(${bmiDisplay.status})` : ''}</Badge>}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Moved Patient Context to Right Panel */}
 
       {/* Stepper Progress Bar */}
       {patientData && (
@@ -761,27 +737,31 @@ ${visitHistoryString || "No recent visit history available."}
               <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-blue-500" /> Clinical Notes (SOAP Format)</CardTitle>
               <CardDescription>Structured documentation following the SOAP clinical standard.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="symptoms" className="text-base font-semibold text-blue-700 dark:text-blue-400">Subjective (S)</Label>
-                <p className="text-xs text-muted-foreground">Chief complaint, history of present illness, symptoms as described by the patient.</p>
-                <Textarea id="symptoms" placeholder="e.g., Patient reports a 3-day history of sharp chest pain..." {...form.register('symptoms')} className="min-h-[100px]" disabled={isActionDisabled} />
-                {form.formState.errors.symptoms && <p className="text-sm text-destructive">{form.formState.errors.symptoms.message}</p>}
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="symptoms" className="text-base font-semibold text-blue-700 dark:text-blue-400">Subjective (S)</Label>
+                  <p className="text-xs text-muted-foreground">Chief complaint, history of present illness, symptoms as described by the patient.</p>
+                  <Textarea id="symptoms" placeholder="e.g., Patient reports a 3-day history of sharp chest pain..." {...form.register('symptoms')} className="min-h-[100px]" disabled={isActionDisabled} />
+                  {form.formState.errors.symptoms && <p className="text-sm text-destructive">{form.formState.errors.symptoms.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="physicalExamNotes" className="text-base font-semibold text-green-700 dark:text-green-400">Objective (O)</Label>
+                  <p className="text-xs text-muted-foreground">Vital signs, physical examination findings, observable clinical data.</p>
+                  <Textarea id="physicalExamNotes" placeholder="e.g., BP 130/80, HR 88, Lungs clear to auscultation..." {...form.register('physicalExamNotes')} className="min-h-[120px]" disabled={isActionDisabled} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="physicalExamNotes" className="text-base font-semibold text-green-700 dark:text-green-400">Objective (O)</Label>
-                <p className="text-xs text-muted-foreground">Vital signs, physical examination findings, observable clinical data.</p>
-                <Textarea id="physicalExamNotes" placeholder="e.g., BP 130/80, HR 88, Lungs clear to auscultation..." {...form.register('physicalExamNotes')} className="min-h-[120px]" disabled={isActionDisabled} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="doctorComments" className="text-base font-semibold text-orange-700 dark:text-orange-400">Assessment (A)</Label>
-                <p className="text-xs text-muted-foreground">Clinical impression, differential diagnosis, assessment of findings.</p>
-                <Textarea id="doctorComments" placeholder="e.g., Acute bronchitis, rule out pneumonia..." {...form.register('doctorComments')} className="min-h-[100px]" disabled={isActionDisabled} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-base font-semibold text-purple-700 dark:text-purple-400">Plan (P)</Label>
-                <p className="text-xs text-muted-foreground">Treatment plan, follow-up. Detailed prescriptions and orders are in Phase 3 & 4.</p>
-                <Textarea placeholder="e.g., Order chest X-ray, start antibiotics, return in 5 days..." className="min-h-[100px]" disabled={isActionDisabled} />
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="doctorComments" className="text-base font-semibold text-orange-700 dark:text-orange-400">Assessment (A)</Label>
+                  <p className="text-xs text-muted-foreground">Clinical impression, differential diagnosis, assessment of findings.</p>
+                  <Textarea id="doctorComments" placeholder="e.g., Acute bronchitis, rule out pneumonia..." {...form.register('doctorComments')} className="min-h-[100px]" disabled={isActionDisabled} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold text-purple-700 dark:text-purple-400">Plan (P)</Label>
+                  <p className="text-xs text-muted-foreground">Treatment plan, follow-up. Detailed prescriptions and orders are in Phase 3 & 4.</p>
+                  <Textarea placeholder="e.g., Order chest X-ray, start antibiotics, return in 5 days..." className="min-h-[100px]" disabled={isActionDisabled} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1290,36 +1270,84 @@ ${visitHistoryString || "No recent visit history available."}
         </div>
       )}
 
-      {/* Visit History Panel */}
-      {patientData && (
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <History className="h-6 w-6 text-primary" /> {t('consultationForm.visitHistory.title')}
-            </CardTitle>
-            <CardDescription>{t('consultationForm.visitHistory.description')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {mockVisitHistory.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {mockVisitHistory.slice(0, 6).map((visit) => (
-                  <div key={visit.id} className="p-3 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-sm font-semibold flex items-center gap-1.5"><FileClock className="h-4 w-4" />{visit.date}</p>
-                      <Badge variant="outline" className="text-xs">{visit.department}</Badge>
-                    </div>
-                    <p className="text-xs"><strong>{t('consultationForm.visitHistory.doctor')}:</strong> {visit.doctor}</p>
-                    <p className="text-xs mt-0.5"><strong>{t('consultationForm.visitHistory.reason')}:</strong> {visit.reason}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">{t('consultationForm.visitHistory.empty')}</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Moved Visit History to Right Panel */}
+      </div>
 
+      {/* Right Panel: Patient Summary & Visit History */}
+      {patientData && (
+        <div className="flex flex-col gap-6 lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))] max-h-[calc(100vh_-_theme(spacing.16)_-_theme(spacing.12)_-_theme(spacing.2))] overflow-y-auto">
+          {/* Patient Quick Summary */}
+          <Card className="shadow-sm border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardHeader className="pb-2">
+               <CardTitle className="text-lg flex items-center gap-2"><UserCircle className="h-5 w-5 text-primary"/> Patient Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-4">
+              <div className="flex items-center gap-3">
+                <Image src={patientData.photoUrl} alt={t('consultationForm.patientPhoto.alt')} width={50} height={50} className="rounded-full border-2 border-primary/30 shrink-0" data-ai-hint={getAvatarHint(patientData.gender)} />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-md font-bold truncate">{patientData.fullName}</h3>
+                  <p className="text-xs text-muted-foreground">{patientData.nationalId}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="bg-background p-2 rounded-md border">
+                   <p className="text-xs text-muted-foreground">Age / Gender</p>
+                   <p className="font-medium">{patientData.age}y | {patientData.gender}</p>
+                </div>
+                <div className="bg-background p-2 rounded-md border">
+                   <p className="text-xs text-muted-foreground">Specialty</p>
+                   <p className="font-medium">{patientData.assignedSpecialty || "General"}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Allergies</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {patientData.allergies?.map((a: string) => <Badge key={a} variant="destructive" className="text-[10px]">{a}</Badge>)}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Chronic Conditions</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {patientData.chronicConditions?.map((c: string) => <Badge key={c} variant="secondary" className="text-[10px]">{c}</Badge>)}
+                </div>
+              </div>
+              {/* Compact Vitals Strip */}
+              {(bmi || form.watch('bloodPressure') || form.watch('bodyTemperature')) && (
+                <div className="flex gap-2 mt-2 pt-3 border-t border-primary/10 flex-wrap">
+                  {form.watch('bodyTemperature') && <Badge variant="outline" className="text-xs">🌡️ {form.watch('bodyTemperature')}°C</Badge>}
+                  {form.watch('bloodPressure') && <Badge variant="outline" className="text-xs">💓 {form.watch('bloodPressure')}</Badge>}
+                  {bmi && <Badge variant="outline" className="text-xs">⚖️ BMI: {bmi}</Badge>}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Visit History Panel */}
+          <Card className="shadow-sm flex-1">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-md">
+                <History className="h-5 w-5 text-primary" /> {t('consultationForm.visitHistory.title')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {mockVisitHistory.length > 0 ? (
+                mockVisitHistory.slice(0, 5).map((visit) => (
+                  <div key={visit.id} className="p-2.5 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-xs font-semibold flex items-center gap-1.5"><FileClock className="h-3.5 w-3.5" />{visit.date}</p>
+                      <Badge variant="outline" className="text-[10px]">{visit.department}</Badge>
+                    </div>
+                    <p className="text-xs mt-1 text-muted-foreground truncate"><strong className="text-foreground">{t('consultationForm.visitHistory.doctor')}:</strong> {visit.doctor}</p>
+                    <p className="text-xs mt-0.5 text-muted-foreground line-clamp-2"><strong className="text-foreground">{t('consultationForm.visitHistory.reason')}:</strong> {visit.reason}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">{t('consultationForm.visitHistory.empty')}</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,12 +4,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock, Stethoscope, RefreshCw, ShieldCheck, AlertTriangle, Smartphone } from "lucide-react";
+import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, TrendingDown, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock, Stethoscope, RefreshCw, ShieldCheck, AlertTriangle, Smartphone, LineChart as LineChartIcon } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from '@/context/locale-context';
 import { useUser } from '@/context/user-context';
 import { getTranslator, type Locale, defaultLocale } from '@/lib/i18n';
-import { PieChart, Pie, Cell, Legend as RechartsLegend, Tooltip as RechartsTooltip, ResponsiveContainer, Bar, BarChart as RechartsBarChart, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, Legend as RechartsLegend, Tooltip as RechartsTooltip, ResponsiveContainer, Bar, BarChart as RechartsBarChart, XAxis, YAxis, CartesianGrid, LineChart, Line, Area, AreaChart } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { MOCK_RECENT_ACTIVITY, MOCK_DRAFTS } from '@/lib/mock-data';
 import { DashboardModuleBtn, DashboardActivityItem } from '@/components/dashboard-components';
@@ -88,6 +88,43 @@ export default function DashboardPage() {
 
   const [facilityPerformance, setFacilityPerformance] = useState<any[]>([]);
   const [isLoadingPerformance, setIsLoadingPerformance] = useState(true);
+
+  type Period = 'Day' | 'Week' | 'Month' | 'Quarter' | 'Year';
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>('Week');
+  const PERIODS: Period[] = ['Day', 'Week', 'Month', 'Quarter', 'Year'];
+
+  const PERIOD_ATTENDANCE: Record<Period, DailyAttendanceItem[]> = {
+    Day:     [{ day: '00:00', patients: 12 },{ day: '04:00', patients: 8 },{ day: '08:00', patients: 38 },{ day: '12:00', patients: 55 },{ day: '16:00', patients: 42 },{ day: '20:00', patients: 22 }].map(d=>({...d, fill:'hsl(var(--chart-4))'})),
+    Week:    [{ day: 'Mon', patients: 120 },{ day: 'Tue', patients: 155 },{ day: 'Wed', patients: 130 },{ day: 'Thu', patients: 160 },{ day: 'Fri', patients: 140 },{ day: 'Sat', patients: 90 },{ day: 'Sun', patients: 75 }].map(d=>({...d, fill:'hsl(var(--chart-4))'})),
+    Month:   ['W1','W2','W3','W4'].map((w,i)=>({ day: w, patients: [820,910,780,1050][i], fill:'hsl(var(--chart-4))' })),
+    Quarter: ['Jan','Feb','Mar','Apr','May','Jun'].map((m,i)=>({ day: m, patients: [3200,2900,3800,4100,3600,4500][i], fill:'hsl(var(--chart-4))' })),
+    Year:    ['2021','2022','2023','2024','2025','2026'].map((y,i)=>({ day: y, patients: [38000,41000,39500,44200,48000,52000][i], fill:'hsl(var(--chart-4))' })),
+  };
+
+  const PERIOD_PREV: Record<Period, number> = { Day: 176, Week: 870, Month: 3510, Quarter: 21700, Year: 48000 };
+  const PERIOD_CURR: Record<Period, number> = { Day: 177, Week: 870, Month: 3560, Quarter: 22100, Year: 52000 };
+
+  const periodDelta = useMemo(() => {
+    const prev = PERIOD_PREV[selectedPeriod];
+    const curr = PERIOD_CURR[selectedPeriod];
+    const pct = prev > 0 ? (((curr - prev) / prev) * 100).toFixed(1) : '0.0';
+    return { pct, up: curr >= prev };
+  }, [selectedPeriod]);
+
+  const trendData = useMemo(() => [
+    { label: 'Jan', thisYear: 3200, lastYear: 2800 },
+    { label: 'Feb', thisYear: 2900, lastYear: 2600 },
+    { label: 'Mar', thisYear: 3800, lastYear: 3200 },
+    { label: 'Apr', thisYear: 4100, lastYear: 3500 },
+    { label: 'May', thisYear: 3600, lastYear: 3100 },
+    { label: 'Jun', thisYear: 4500, lastYear: 3800 },
+    { label: 'Jul', thisYear: 4800, lastYear: 4100 },
+    { label: 'Aug', thisYear: 4200, lastYear: 3700 },
+    { label: 'Sep', thisYear: 5100, lastYear: 4400 },
+    { label: 'Oct', thisYear: 4700, lastYear: 4000 },
+    { label: 'Nov', thisYear: 5300, lastYear: 4600 },
+    { label: 'Dec', thisYear: 5800, lastYear: 4900 },
+  ], []);
 
   const isManagementView = user?.role !== 'FACILITY_ADMIN';
 
@@ -175,19 +212,10 @@ export default function DashboardPage() {
   useEffect(() => {
     setIsLoadingAttendance(true);
     setTimeout(() => {
-        const fetchedAttendanceData: DailyAttendanceItem[] = [
-            { day: "Mon", patients: 120, fill: "hsl(var(--chart-4))" },
-            { day: "Tue", patients: 155, fill: "hsl(var(--chart-4))" },
-            { day: "Wed", patients: 130, fill: "hsl(var(--chart-4))" },
-            { day: "Thu", patients: 160, fill: "hsl(var(--chart-4))" },
-            { day: "Fri", patients: 140, fill: "hsl(var(--chart-4))" },
-            { day: "Sat", patients: 90, fill: "hsl(var(--chart-4))" },
-            { day: "Sun", patients: 75, fill: "hsl(var(--chart-4))" },
-        ];
-        setDailyAttendanceData(fetchedAttendanceData);
-        setIsLoadingAttendance(false);
-    }, 1600);
-  }, []); // Runs once on mount
+      setDailyAttendanceData(PERIOD_ATTENDANCE[selectedPeriod]);
+      setIsLoadingAttendance(false);
+    }, 400);
+  }, [selectedPeriod]);
 
   useEffect(() => {
     setIsLoadingDraftedConsultations(true);
@@ -212,17 +240,34 @@ export default function DashboardPage() {
 
   return (
       <div className="flex flex-col gap-6">
-        <div className="mb-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {t('dashboard.welcomeMessage')} {user?.role === 'NATIONAL_ADMIN' ? '(National)' : user?.jurisdiction.facility || user?.jurisdiction.district || user?.jurisdiction.province || ''}
-          </h1>
-          <p className="text-muted-foreground">
-            {user?.role === 'NATIONAL_ADMIN' && "Consolidated nationwide healthcare metrics and surveillance."}
-            {user?.role === 'PROVINCIAL_ADMIN' && `Provincial healthcare overview for ${user.jurisdiction.province}.`}
-            {user?.role === 'DISTRICT_ADMIN' && `District healthcare performance for ${user.jurisdiction.district}.`}
-            {user?.role === 'FACILITY_ADMIN' && `Operational dashboard for ${user.jurisdiction.facility}.`}
-            {!user && t('dashboard.tagline')}
-          </p>
+        {/* Header with period selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {t('dashboard.welcomeMessage')} {user?.role === 'NATIONAL_ADMIN' ? '(National)' : user?.jurisdiction.facility || user?.jurisdiction.district || user?.jurisdiction.province || ''}
+            </h1>
+            <p className="text-muted-foreground">
+              {user?.role === 'NATIONAL_ADMIN' && "Consolidated nationwide healthcare metrics and surveillance."}
+              {user?.role === 'PROVINCIAL_ADMIN' && `Provincial healthcare overview for ${user.jurisdiction.province}.`}
+              {user?.role === 'DISTRICT_ADMIN' && `District healthcare performance for ${user.jurisdiction.district}.`}
+              {user?.role === 'FACILITY_ADMIN' && `Operational dashboard for ${user.jurisdiction.facility}.`}
+              {!user && t('dashboard.tagline')}
+            </p>
+          </div>
+          {/* Period Filter Pill */}
+          <div className="flex items-center gap-1 bg-muted rounded-xl p-1 self-start sm:self-auto">
+            {PERIODS.map(p => (
+              <button
+                key={p}
+                onClick={() => setSelectedPeriod(p)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  selectedPeriod === p
+                    ? 'bg-background shadow text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >{p}</button>
+            ))}
+          </div>
         </div>
 
         {isLoadingSummary ? (
@@ -236,9 +281,11 @@ export default function DashboardPage() {
             </div>
         ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {summaryCardsData.map((item) => {
+            {summaryCardsData.map((item, idx) => {
                 const Icon = ICONS_MAP[item.iconName];
                 const isTranslated = item.titleKey.includes('.');
+                // Show delta badge on first card only
+                const showDelta = idx === 0;
 
                 return (
                 <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow">
@@ -247,7 +294,17 @@ export default function DashboardPage() {
                     {Icon && <Icon className={`h-5 w-5 ${item.color}`} />}
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{Array.isArray(item.value) ? item.value.join(', ') : item.value}</div>
+                    <div className="flex items-end gap-2">
+                      <div className="text-2xl font-bold">{Array.isArray(item.value) ? item.value.join(', ') : item.value}</div>
+                      {showDelta && (
+                        <span className={`flex items-center text-xs font-semibold mb-0.5 ${
+                          periodDelta.up ? 'text-green-600' : 'text-red-500'
+                        }`}>
+                          {periodDelta.up ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
+                          {periodDelta.pct}%
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground pt-1">{isTranslated ? t(item.descriptionKey) : item.descriptionKey}</p>
                     {item.link && item.link !== "#" && (
                     <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
@@ -538,11 +595,19 @@ export default function DashboardPage() {
               </Card>
             )}
              <Card className="shadow-sm">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-start justify-between">
+                  <div>
                     <CardTitle className="flex items-center gap-2">
                         <BarChart3 className="h-6 w-6 text-primary" /> {t('dashboard.charts.dailyAttendance.title')}
                     </CardTitle>
-                    <CardDescription>{t('dashboard.charts.dailyAttendance.description')}</CardDescription>
+                    <CardDescription>{selectedPeriod} view · {PERIOD_CURR[selectedPeriod].toLocaleString()} total</CardDescription>
+                  </div>
+                  <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
+                    periodDelta.up ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>
+                    {periodDelta.up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    {periodDelta.pct}% vs prev
+                  </span>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                      {isLoadingAttendance ? (
@@ -556,22 +621,7 @@ export default function DashboardPage() {
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="day" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                                    <RechartsTooltip
-                                        cursor={false}
-                                        content={<ChartTooltipContent indicator="dot" hideLabel />}
-                                    />
-                                    <RechartsLegend
-                                        content={({ payload }) => (
-                                            <div className="flex items-center justify-center gap-2 mt-2">
-                                            {payload?.map((entry: any, index: number) => ( // Added index for key
-                                                <div key={`item-${entry.value}-${index}`} className="flex items-center space-x-1"> {/* Added index to key */}
-                                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                                <span className="text-xs text-muted-foreground">{entry.value}</span>
-                                                </div>
-                                            ))}
-                                            </div>
-                                        )}
-                                        />
+                                    <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" hideLabel />} />
                                     <Bar dataKey="patients" name={t('dashboard.charts.dailyAttendance.patients')} radius={[4, 4, 0, 0]}>
                                       {dailyAttendanceData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill || "hsl(var(--chart-4))"} />
@@ -584,6 +634,52 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
         </div>
+
+        {/* Year-over-Year Trend Chart */}
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <LineChartIcon className="h-6 w-6 text-primary" /> Patient Volume Trend
+              </CardTitle>
+              <CardDescription>Year-over-year monthly comparison (Current vs Previous Year)</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="h-[280px]">
+            <ChartContainer config={{ thisYear: { label: 'This Year', color: 'hsl(var(--chart-1))' }, lastYear: { label: 'Last Year', color: 'hsl(var(--chart-2))' } }} className="w-full h-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="gradThisYear" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradLastYear" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                  <RechartsTooltip content={<ChartTooltipContent />} />
+                  <RechartsLegend content={({ payload }) => (
+                    <div className="flex items-center justify-center gap-4 mt-2">
+                      {payload?.map((e: any, i: number) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <span className="h-2 w-4 rounded-sm" style={{ backgroundColor: e.color }} />
+                          <span className="text-xs text-muted-foreground">{e.value === 'thisYear' ? 'This Year' : 'Last Year'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )} />
+                  <Area type="monotone" dataKey="lastYear" stroke="hsl(var(--chart-2))" strokeWidth={1.5} strokeDasharray="4 2" fill="url(#gradLastYear)" dot={false} />
+                  <Area type="monotone" dataKey="thisYear" stroke="hsl(var(--chart-1))" strokeWidth={2} fill="url(#gradThisYear)" dot={{ r: 3, fill: 'hsl(var(--chart-1))' }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
   );
 }

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, AlertCircle, ShieldCheck, History, Send, WifiOff, RefreshCw, CheckCircle2 } from "lucide-react";
-import { GoogleGenAI } from "@google/genai";
 import { cn } from "@/lib/utils";
 import { addToQueue, getAIQueue, syncQueue, type AIQueueItem } from "@/lib/clinical-ai-queue";
 import { useLocale } from '@/context/locale-context';
@@ -82,30 +81,24 @@ export function AIAssistantPanel({ context, department, patientData, onAcceptSug
     setIsAnalyzing(true);
     setError(null);
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("AI Integration Key Missing. Please configure system environment.");
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const clinicalContext = `
-        You are a Clinical Decision Support Assistant for a public health hospital.
-        Department: ${department || "General"}
-        Role: Assistive only (not autonomous). Your suggestions must be reviewed by a qualified clinician.
-        Patient Data Context: ${JSON.stringify(sanitizedPatient || {})}
-        Instructions: Provide concise, evidence-based clinical reasoning or summaries. 
-        Always include a disclaimer that the final decision rests with the attending provider.
-        IMPORTANT: Your response MUST be in the following language: ${currentLocale === 'pt' ? 'Portuguese' : 'English'}.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: `${clinicalContext}\n\nClinical Inquiry: ${sanitizedPrompt || (currentLocale === 'pt' ? 'Analise os dados atuais do paciente para potenciais anomalias ou otimizações de tratamento.' : 'Analyze the current patient data for potential anomalies or treatment optimizations.')}`,
+      const response = await fetch('/api/clinical-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: sanitizedPrompt || (currentLocale === 'pt' ? 'Analise os dados atuais do paciente para potenciais anomalias ou otimizações de tratamento.' : 'Analyze the current patient data for potential anomalies or treatment optimizations.'),
+          department,
+          patientData: sanitizedPatient,
+          currentLocale,
+          context
+        })
       });
 
-      const resultText = response.text;
-      setResult(resultText || t('ai.assistant.result.noInsight'));
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to analyze data");
+      }
+
+      setResult(data.result || t('ai.assistant.result.noInsight'));
     } catch (err: any) {
       console.error("AI Assistant Error:", err);
       setError(t('ai.assistant.error.connectivity'));

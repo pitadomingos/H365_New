@@ -79,6 +79,8 @@ export default function PharmacyPage() {
   const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
   const [isDispenseDialogOpen, setIsDispenseDialogOpen] = useState(false);
   const [isSubmittingDispense, setIsSubmittingDispense] = useState(false);
+  const [verifiedPatientId, setVerifiedPatientId] = useState("");
+  const [isCancellingRx, setIsCancellingRx] = useState<string | null>(null);
   
   const [isRequisitioning, setIsRequisitioning] = useState<string | null>(null);
   const [isBulkRequisitioning, setIsBulkRequisitioning] = useState(false);
@@ -141,6 +143,7 @@ export default function PharmacyPage() {
 
   const handleDispenseClick = (rx: Prescription) => {
     setSelectedRx(rx);
+    setVerifiedPatientId("");
     setIsDispenseDialogOpen(true);
   };
 
@@ -197,7 +200,19 @@ export default function PharmacyPage() {
 
     setIsDispenseDialogOpen(false);
     setSelectedRx(null);
+    setVerifiedPatientId("");
     setIsSubmittingDispense(false);
+  };
+
+  const handleCancelRx = async (rxId: string) => {
+    setIsCancellingRx(rxId);
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const allRx = await LocalDB.get<Prescription[]>("pharmacy_prescriptions", []);
+    const updated = allRx.map(rx => rx.id === rxId ? { ...rx, status: "Cancelled" as const } : rx);
+    await LocalDB.save("pharmacy_prescriptions", updated);
+    setPrescriptions(updated);
+    toast({ title: "Prescription Cancelled", description: `Rx ${rxId} has been voided.` });
+    setIsCancellingRx(null);
   };
 
   const handleRequisitionSingle = async (item: StockItem) => {
@@ -394,9 +409,12 @@ export default function PharmacyPage() {
                             </Badge>
                           ))}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right space-x-1">
                           <Button size="sm" onClick={() => handleDispenseClick(rx)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                             Verify & Dispense
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => handleCancelRx(rx.id)} disabled={isCancellingRx === rx.id}>
+                            {isCancellingRx === rx.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Cancel"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -564,6 +582,25 @@ export default function PharmacyPage() {
               </div>
 
               <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Patient ID Verification</p>
+                <div className="flex items-center gap-2 p-3 border rounded-lg bg-amber-50/50 dark:bg-amber-950/10 border-amber-200">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs text-amber-700 dark:text-amber-400 font-medium mb-1">Enter patient&apos;s National ID to confirm identity before dispensing.</p>
+                    <Input
+                      placeholder={`Expected: ${selectedRx?.patientId}`}
+                      value={verifiedPatientId}
+                      onChange={e => setVerifiedPatientId(e.target.value)}
+                      className={`text-sm h-8 ${verifiedPatientId === selectedRx?.patientId ? 'border-emerald-400 focus-visible:ring-emerald-400' : ''}`}
+                    />
+                  </div>
+                  {verifiedPatientId === selectedRx?.patientId && (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Prescribed Items</p>
                 {(selectedRx.items || selectedRx.structuredPrescription || []).map((item, idx) => {
                   const drugStock = stockLevels.find(s => s.name.toLowerCase().includes((item.drugName || item.name || "").toLowerCase()));
@@ -591,9 +628,13 @@ export default function PharmacyPage() {
           )}
           <DialogFooter className="gap-2 sm:gap-0 mt-4">
             <Button variant="outline" onClick={() => setIsDispenseDialogOpen(false)} disabled={isSubmittingDispense}>Cancel</Button>
-            <Button onClick={confirmDispense} disabled={isSubmittingDispense} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button
+              onClick={confirmDispense}
+              disabled={isSubmittingDispense || verifiedPatientId !== selectedRx?.patientId}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
               {isSubmittingDispense ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Dispense & Deduct Stock
+              {verifiedPatientId !== selectedRx?.patientId ? 'Confirm Patient ID First' : 'Dispense & Deduct Stock'}
             </Button>
           </DialogFooter>
         </DialogContent>
