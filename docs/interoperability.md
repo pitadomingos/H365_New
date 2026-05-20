@@ -52,3 +52,50 @@ The system utilizes a `mapping-registry.js` fallback mechanism:
      ]
    }
    ```
+
+---
+
+## 5. H365 HL7 FHIR Mapping Standards
+
+H365 guarantees native compliance with international OpenHIE blueprints by modeling patient and epidemiological registers as **HL7 FHIR R4 Resources**:
+
+### A. FHIR Location to DHIS2 OrgUnit Mapping
+FHIR `Location` nodes map recursively via parent references (`partOf`) to build administrative boundaries matching standard DHIS2 Organizational Units:
+* `Location.physicalType: "national"` ──► DHIS2 Level 1 OrgUnit
+* `Location.physicalType: "province"` ──► DHIS2 Level 2 OrgUnit
+* `Location.physicalType: "district"` ──► DHIS2 Level 3 OrgUnit
+* `Location.physicalType: "facility"` ──► DHIS2 Level 4 OrgUnit
+
+### B. FHIR Observation to DHIS2 DataElement Mapping
+Epidemiological metrics recorded in clinic workspaces or mobile field campaigns are formatted as FHIR `Observation` resources, structured with a split-component mapping model:
+
+```json
+{
+  "resourceType": "Observation",
+  "id": "obs-field-dtp3",
+  "status": "final",
+  "category": "immunization",
+  "code": {
+    "coding": [{ "system": "http://who.int/indicators", "code": "DTP3", "display": "Penta3 Cobertura" }]
+  },
+  "subject": {
+    "reference": "Group/DTP3-cohort",
+    "gender": "Female",
+    "ageGroup": "<1y"
+  },
+  "effectiveDateTime": "2026-05-20",
+  "location": { "reference": "LOC-CH-CS" },
+  "component": [
+    {
+      "code": { "coding": [{ "code": "NUMERATOR" }] },
+      "valueQuantity": { "value": 85 }
+    },
+    {
+      "code": { "coding": [{ "code": "DENOMINATOR" }] },
+      "valueQuantity": { "value": 100 }
+    }
+  ]
+}
+```
+
+* **Aggregation Pipeline**: The H365 core aggregates these FHIR records matching target query parameters (e.g. `Observation.code.coding.code === "DTP3"`) and constructs the `DataValueSet` payload for seamless DHIS2/SIS-MA synchronization.

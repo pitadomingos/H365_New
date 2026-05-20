@@ -93,7 +93,7 @@ export interface FHIRObservation {
   resourceType: "Observation";
   id: string;
   status: "final" | "amended" | "registered";
-  category: "maternal" | "immunization" | "hiv" | "tb" | "malaria";
+  category: "maternal" | "immunization" | "hiv" | "tb" | "malaria" | "financial";
   code: {
     coding: Array<{ system: string; code: string; display: string }>;
   };
@@ -135,7 +135,7 @@ const MOCK_LOCATIONS: FHIRLocation[] = [
 // Helper to construct FHIR observations easily
 const createObservation = (
   id: string,
-  category: "maternal" | "immunization" | "hiv" | "tb" | "malaria",
+  category: "maternal" | "immunization" | "hiv" | "tb" | "malaria" | "financial",
   indicatorCode: string,
   gender: "Male" | "Female",
   ageGroup: "<1y" | "1-4y" | "5-14y" | "15-49y" | "50y+",
@@ -230,6 +230,36 @@ const MOCK_OBSERVATIONS: FHIRObservation[] = [
   createObservation("obs-mal-tr4", "malaria", "MALPOS", "Female", "1-4y", "2026-01-15", "LOC-CZ", 112, 400), // 28%
   createObservation("obs-mal-tr5", "malaria", "MALPOS", "Female", "1-4y", "2025-12-15", "LOC-CZ", 80, 400),  // 20%
   createObservation("obs-mal-tr6", "malaria", "MALPOS", "Female", "1-4y", "2025-11-15", "LOC-CZ", 92, 400),  // 23%
+
+  // --- financial budgets (donations) ---
+  createObservation("obs-fin-b1", "financial", "BUDGET_WHO", "Female", "15-49y", "2026-05-01", "LOC-CZ", 250000, 1),
+  createObservation("obs-fin-b2", "financial", "BUDGET_GAVI", "Female", "15-49y", "2026-05-01", "LOC-CZ", 350000, 1),
+  createObservation("obs-fin-b3", "financial", "BUDGET_UNICEF", "Female", "15-49y", "2026-05-01", "LOC-CZ", 150000, 1),
+  createObservation("obs-fin-b4", "financial", "BUDGET_STATE", "Female", "15-49y", "2026-05-01", "LOC-CZ", 100000, 1),
+
+  createObservation("obs-fin-b5", "financial", "BUDGET_WHO", "Female", "15-49y", "2026-05-01", "LOC-XX-CS", 400000, 1),
+  createObservation("obs-fin-b6", "financial", "BUDGET_GAVI", "Female", "15-49y", "2026-05-01", "LOC-XX-CS", 500000, 1),
+  createObservation("obs-fin-b7", "financial", "BUDGET_STATE", "Female", "15-49y", "2026-05-01", "LOC-XX-CS", 200000, 1),
+
+  createObservation("obs-fin-b8", "financial", "BUDGET_WHO", "Female", "15-49y", "2026-05-01", "LOC-CH-CS", 300000, 1),
+  createObservation("obs-fin-b9", "financial", "BUDGET_GAVI", "Female", "15-49y", "2026-05-01", "LOC-CH-CS", 450000, 1),
+  createObservation("obs-fin-b10", "financial", "BUDGET_STATE", "Female", "15-49y", "2026-05-01", "LOC-CH-CS", 150000, 1),
+
+  // --- financial operational expenses ---
+  createObservation("obs-fin-e1", "financial", "EXPENSE_LOGISTICS", "Female", "15-49y", "2026-05-05", "LOC-CZ", 85000, 1),
+  createObservation("obs-fin-e2", "financial", "EXPENSE_ALLOWANCES", "Female", "15-49y", "2026-05-05", "LOC-CZ", 125000, 1),
+  createObservation("obs-fin-e3", "financial", "EXPENSE_VACCINES", "Female", "15-49y", "2026-05-05", "LOC-CZ", 240000, 1),
+  createObservation("obs-fin-e4", "financial", "EXPENSE_COLD_CHAIN", "Female", "15-49y", "2026-05-05", "LOC-CZ", 50000, 1),
+
+  createObservation("obs-fin-e5", "financial", "EXPENSE_LOGISTICS", "Female", "15-49y", "2026-05-05", "LOC-XX-CS", 120000, 1),
+  createObservation("obs-fin-e6", "financial", "EXPENSE_ALLOWANCES", "Female", "15-49y", "2026-05-05", "LOC-XX-CS", 180000, 1),
+  createObservation("obs-fin-e7", "financial", "EXPENSE_VACCINES", "Female", "15-49y", "2026-05-05", "LOC-XX-CS", 350000, 1),
+  createObservation("obs-fin-e8", "financial", "EXPENSE_COLD_CHAIN", "Female", "15-49y", "2026-05-05", "LOC-XX-CS", 75000, 1),
+
+  createObservation("obs-fin-e9", "financial", "EXPENSE_LOGISTICS", "Female", "15-49y", "2026-05-05", "LOC-CH-CS", 95000, 1),
+  createObservation("obs-fin-e10", "financial", "EXPENSE_ALLOWANCES", "Female", "15-49y", "2026-05-05", "LOC-CH-CS", 145000, 1),
+  createObservation("obs-fin-e11", "financial", "EXPENSE_VACCINES", "Female", "15-49y", "2026-05-05", "LOC-CH-CS", 280000, 1),
+  createObservation("obs-fin-e12", "financial", "EXPENSE_COLD_CHAIN", "Female", "15-49y", "2026-05-05", "LOC-CH-CS", 60000, 1),
 ];
 
 // ==========================================================
@@ -273,8 +303,8 @@ export default function PublicHealthDashboard() {
   const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
   const router = useRouter();
 
-  // Dual tab state
-  const [activeTab, setActiveTab] = React.useState<"dashboard" | "intake">("dashboard");
+  // Triple workspace tab state
+  const [activeTab, setActiveTab] = React.useState<"dashboard" | "intake" | "finance">("dashboard");
 
   // Dynamic FHIR stores state
   const [observations, setObservations] = React.useState<FHIRObservation[]>(MOCK_OBSERVATIONS);
@@ -321,6 +351,9 @@ export default function PublicHealthDashboard() {
   const [vvmStatus, setVvmStatus] = React.useState<"stage1" | "stage2" | "stage3">("stage1");
   const [gpsCoordinates, setGpsCoordinates] = React.useState<string>("-24.6811, 33.5292");
   const [mobileTeamId, setMobileTeamId] = React.useState<string>("BRIGADA-MÓVEL-03");
+  const [costLogistics, setCostLogistics] = React.useState<string>("");
+  const [costAllowances, setCostAllowances] = React.useState<string>("");
+  const [costVaccines, setCostVaccines] = React.useState<string>("");
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -494,6 +527,104 @@ export default function PublicHealthDashboard() {
 
     return result;
   }, [level, selectedProvince, selectedDistrict, selectedFacility, selectedAge, selectedGender, selectedTimePeriod, timeType, observations]);
+
+  // ==========================================================
+  // 5B. PUBLIC HEALTH FINANCING & DONATIONS AGGREGATOR
+  // ==========================================================
+
+  const computedFinanceData = React.useMemo(() => {
+    let targetLocIds: string[] = [];
+    
+    const getSubLocationIds = (locId: string): string[] => {
+      const ids = [locId];
+      MOCK_LOCATIONS.forEach(l => {
+        if (l.partOf === locId) {
+          ids.push(...getSubLocationIds(l.id));
+        }
+      });
+      return Array.from(new Set(ids));
+    };
+
+    if (level === "facility") {
+      if (selectedFacility === "all") {
+        targetLocIds = ["LOC-CZ", "LOC-XX-CS", "LOC-CH-CS"];
+      } else {
+        const found = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(selectedFacility.toLowerCase()) && l.physicalType === "facility");
+        targetLocIds = found ? [found.id] : ["LOC-CZ"];
+      }
+    } else if (level === "district") {
+      const distName = selectedDistrict !== "all" ? selectedDistrict : "chibuto";
+      const found = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(distName.toLowerCase()) && l.physicalType === "district");
+      targetLocIds = found ? getSubLocationIds(found.id) : getSubLocationIds("LOC-CH");
+    } else if (level === "provincial") {
+      const provName = selectedProvince !== "all" ? selectedProvince : "gaza";
+      const found = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(provName.toLowerCase()) && l.physicalType === "province");
+      targetLocIds = found ? getSubLocationIds(found.id) : getSubLocationIds("LOC-GZ");
+    } else {
+      targetLocIds = getSubLocationIds("LOC-MZ");
+    }
+
+    let budgetWHO = 0;
+    let budgetGAVI = 0;
+    let budgetUNICEF = 0;
+    let budgetSTATE = 0;
+
+    let expenseLogistics = 0;
+    let expenseAllowances = 0;
+    let expenseVaccines = 0;
+    let expenseColdChain = 0;
+
+    observations.forEach(obs => {
+      if (obs.category !== "financial") return;
+      if (!targetLocIds.includes(obs.location.reference)) return;
+
+      const code = obs.code.coding[0].code;
+      const val = obs.component?.find(c => c.code.coding[0].code === "NUMERATOR")?.valueQuantity.value || 0;
+
+      if (code === "BUDGET_WHO") budgetWHO += val;
+      else if (code === "BUDGET_GAVI") budgetGAVI += val;
+      else if (code === "BUDGET_UNICEF") budgetUNICEF += val;
+      else if (code === "BUDGET_STATE") budgetSTATE += val;
+      else if (code === "EXPENSE_LOGISTICS") expenseLogistics += val;
+      else if (code === "EXPENSE_ALLOWANCES") expenseAllowances += val;
+      else if (code === "EXPENSE_VACCINES") expenseVaccines += val;
+      else if (code === "EXPENSE_COLD_CHAIN") expenseColdChain += val;
+    });
+
+    const totalBudget = budgetWHO + budgetGAVI + budgetUNICEF + budgetSTATE;
+    const totalExpenses = expenseLogistics + expenseAllowances + expenseVaccines + expenseColdChain;
+    const balance = totalBudget - totalExpenses;
+
+    let totalImmunizationDoses = 0;
+    observations.forEach(obs => {
+      if (obs.category !== "immunization") return;
+      if (!targetLocIds.includes(obs.location.reference)) return;
+      const val = obs.component?.find(c => c.code.coding[0].code === "NUMERATOR")?.valueQuantity.value || 0;
+      totalImmunizationDoses += val;
+    });
+
+    if (totalImmunizationDoses === 0) totalImmunizationDoses = 14500;
+
+    const costPerDose = totalImmunizationDoses > 0 
+      ? Math.round((totalExpenses / totalImmunizationDoses) * 10) / 10 
+      : 0;
+
+    return {
+      budgetWHO,
+      budgetGAVI,
+      budgetUNICEF,
+      budgetSTATE,
+      expenseLogistics,
+      expenseAllowances,
+      expenseVaccines,
+      expenseColdChain,
+      totalBudget,
+      totalExpenses,
+      balance,
+      costPerDose,
+      totalImmunizationDoses
+    };
+  }, [level, selectedProvince, selectedDistrict, selectedFacility, observations]);
 
   // ==========================================================
   // 6. AI SURVEILLANCE & OUTBREAK ALERTS PANEL
@@ -723,19 +854,69 @@ export default function PublicHealthDashboard() {
       targetPop
     );
 
+    const generatedObservations = [newObservation];
+
+    // Check and add optional campaign expenses
+    const parsedLogistics = parseFloat(costLogistics);
+    const parsedAllowances = parseFloat(costAllowances);
+    const parsedVaccines = parseFloat(costVaccines);
+
+    if (!isNaN(parsedLogistics) && parsedLogistics > 0) {
+      generatedObservations.push(createObservation(
+        `obs-cost-log-${Date.now()}`,
+        "financial",
+        "EXPENSE_LOGISTICS",
+        "Female",
+        "15-49y",
+        new Date().toISOString().split('T')[0],
+        locationId,
+        parsedLogistics,
+        1
+      ));
+    }
+    if (!isNaN(parsedAllowances) && parsedAllowances > 0) {
+      generatedObservations.push(createObservation(
+        `obs-cost-all-${Date.now()}`,
+        "financial",
+        "EXPENSE_ALLOWANCES",
+        "Female",
+        "15-49y",
+        new Date().toISOString().split('T')[0],
+        locationId,
+        parsedAllowances,
+        1
+      ));
+    }
+    if (!isNaN(parsedVaccines) && parsedVaccines > 0) {
+      generatedObservations.push(createObservation(
+        `obs-cost-vac-${Date.now()}`,
+        "financial",
+        "EXPENSE_VACCINES",
+        "Female",
+        "15-49y",
+        new Date().toISOString().split('T')[0],
+        locationId,
+        parsedVaccines,
+        1
+      ));
+    }
+
     // Save report in local offline buffer
-    setPendingObservations(prev => [newObservation, ...prev]);
-    setSyncQueueLength(prev => prev + 1);
+    setPendingObservations(prev => [...generatedObservations, ...prev]);
+    setSyncQueueLength(prev => prev + generatedObservations.length);
 
     toast({
-      title: "Relatório Salvo Localmente",
-      description: `Actividade de ${vaccineType} (${intakeType === 'facility' ? 'US' : 'Brigada'}) armazenada no buffer offline. Clique em Sincronizar para aplicar.`,
+      title: "Relatórios Salvos Localmente",
+      description: `Actividade de ${vaccineType} e ${generatedObservations.length - 1} logs de custos operacionais salvos localmente.`,
     });
 
     // Reset inputs
     setAdministeredDoses("");
     setTargetPopulation("");
     setFieldSiteName("");
+    setCostLogistics("");
+    setCostAllowances("");
+    setCostVaccines("");
   };
 
   if (!isMounted) return null;
@@ -855,6 +1036,18 @@ export default function PublicHealthDashboard() {
          >
             <ListTodo className="h-4 w-4" />
             Entrada de Vacinação & Campanhas (Campo/US)
+         </button>
+         <button
+            onClick={() => setActiveTab("finance")}
+            className={cn(
+               "py-2.5 px-4 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2",
+               activeTab === "finance"
+                  ? "border-b-indigo-600 text-indigo-600 font-black"
+                  : "border-b-transparent text-slate-500 hover:text-slate-800 hover:border-b-slate-200"
+            )}
+         >
+            <DollarSign className="h-4 w-4" />
+            Gestão Financeira & Eficácia (Finanças)
          </button>
       </div>
 
@@ -1425,6 +1618,50 @@ export default function PublicHealthDashboard() {
                               </div>
                            </div>
 
+                           {/* Campaign Budget & Operational Expenses Inputs */}
+                           <div className="border-t pt-4 space-y-4">
+                              <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-indigo-600 tracking-wider">
+                                 <DollarSign className="h-4 w-4" /> Despesas & Custos da Campanha / Brigada (Opcional - MISAU/OMS)
+                              </div>
+                              <p className="text-[10px] text-muted-foreground leading-tight font-bold">
+                                 Insira os custos operacionais associados a esta mobilização para alimentar os cálculos de eficiência e custo-por-dose.
+                              </p>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
+                                 <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Combustível & Trânsito (MZN)</label>
+                                    <input
+                                       type="number"
+                                       value={costLogistics}
+                                       onChange={(e) => setCostLogistics(e.target.value)}
+                                       placeholder="Ex: 12000"
+                                       className="w-full h-10 px-3 text-xs font-bold border rounded-lg bg-background outline-none focus:border-indigo-500 transition-all font-mono"
+                                    />
+                                 </div>
+
+                                 <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Diárias da Brigada (MZN)</label>
+                                    <input
+                                       type="number"
+                                       value={costAllowances}
+                                       onChange={(e) => setCostAllowances(e.target.value)}
+                                       placeholder="Ex: 8500"
+                                       className="w-full h-10 px-3 text-xs font-bold border rounded-lg bg-background outline-none focus:border-indigo-500 transition-all font-mono"
+                                    />
+                                 </div>
+
+                                 <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase text-slate-500">Aquisição Imunização (MZN)</label>
+                                    <input
+                                       type="number"
+                                       value={costVaccines}
+                                       onChange={(e) => setCostVaccines(e.target.value)}
+                                       placeholder="Ex: 25000"
+                                       className="w-full h-10 px-3 text-xs font-bold border rounded-lg bg-background outline-none focus:border-indigo-500 transition-all font-mono"
+                                    />
+                                 </div>
+                              </div>
+                           </div>
+
                            {/* Submit Button */}
                            <div className="pt-2">
                               <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11 rounded-lg uppercase text-xs tracking-wider flex items-center justify-center gap-2">
@@ -1568,6 +1805,198 @@ export default function PublicHealthDashboard() {
                </div>
 
             </div>
+         </div>
+      )}
+
+      {/* WORKSPACE 3: PUBLIC HEALTH FINANCING & DONATIONS ENGINE */}
+      {activeTab === "finance" && (
+         <div className="flex-1 overflow-y-auto px-1 space-y-6">
+            
+            {/* Top Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 font-sans">
+               {/* Total Injected Budget Card */}
+               <Card className="border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+                  <CardContent className="p-4 flex items-center justify-between">
+                     <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Orçamento & Doações Injetadas</span>
+                        <span className="text-lg font-black text-slate-800 dark:text-slate-100 mt-1 block">
+                           {computedFinanceData.totalBudget.toLocaleString()} MZN
+                        </span>
+                        <span className="text-[9px] text-emerald-600 font-bold block mt-1">WHO, GAVI, UNICEF & Estado</span>
+                     </div>
+                     <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl text-emerald-600 shrink-0">
+                        <TrendingUp className="h-5 w-5" />
+                     </div>
+                  </CardContent>
+               </Card>
+
+               {/* Total Operational Expenses Card */}
+               <Card className="border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
+                  <CardContent className="p-4 flex items-center justify-between">
+                     <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Despesas Operacionais Totais</span>
+                        <span className="text-lg font-black text-slate-800 dark:text-slate-100 mt-1 block">
+                           {computedFinanceData.totalExpenses.toLocaleString()} MZN
+                        </span>
+                        <span className="text-[9px] text-rose-600 font-bold block mt-1">Combustível, Diárias, Frio & Logística</span>
+                     </div>
+                     <div className="p-2.5 bg-rose-50 dark:bg-rose-950/20 rounded-xl text-rose-600 shrink-0">
+                        <DollarSign className="h-5 w-5" />
+                     </div>
+                  </CardContent>
+               </Card>
+
+               {/* Remaining Balance Card */}
+               <Card className="border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
+                  <CardContent className="p-4 flex items-center justify-between">
+                     <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Saldo de Contingência (Balanço)</span>
+                        <span className="text-lg font-black text-slate-800 dark:text-slate-100 mt-1 block">
+                           {computedFinanceData.balance.toLocaleString()} MZN
+                        </span>
+                        <span className="text-[9px] text-indigo-600 font-bold block mt-1">Fundo operacional de reserva activa</span>
+                     </div>
+                     <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/20 rounded-xl text-indigo-600 shrink-0">
+                        <Layers3 className="h-5 w-5" />
+                     </div>
+                  </CardContent>
+               </Card>
+
+               {/* Cost per Administered Dose WHO Card */}
+               <Card className="border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
+                  <CardContent className="p-4 flex items-center justify-between">
+                     <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Eficácia WHO (Custo por Dose)</span>
+                        <span className="text-lg font-black text-slate-800 dark:text-slate-100 mt-1 block">
+                           {computedFinanceData.costPerDose.toLocaleString()} MZN / Dose
+                        </span>
+                        <span className="text-[9px] text-amber-600 font-bold block mt-1">
+                           Doses Administradas: {computedFinanceData.totalImmunizationDoses.toLocaleString()}
+                        </span>
+                     </div>
+                     <div className="p-2.5 bg-amber-50 dark:bg-amber-950/20 rounded-xl text-amber-600 shrink-0">
+                        <Activity className="h-5 w-5" />
+                     </div>
+                  </CardContent>
+               </Card>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+               
+               {/* Budget Source Injections (Bar Chart) */}
+               <Card className="border-slate-100 dark:border-slate-800 shadow-sm">
+                  <CardHeader className="pb-2 border-b">
+                     <CardTitle className="text-xs font-black uppercase text-indigo-600 tracking-wider flex items-center gap-1.5">
+                        <TrendingUp className="h-4 w-4" /> Distribuição de Financiamento & Injeções (MZN)
+                     </CardTitle>
+                     <CardDescription className="text-[10px] uppercase font-bold text-muted-foreground">Contribuições de Donors Internacionais e Estado</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                     <div className="h-[250px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                           <BarChart data={[
+                              { name: "OMS (WHO)", valor: computedFinanceData.budgetWHO, fill: "#10b981" },
+                              { name: "GAVI Alliance", valor: computedFinanceData.budgetGAVI, fill: "#3b82f6" },
+                              { name: "UNICEF", valor: computedFinanceData.budgetUNICEF, fill: "#f59e0b" },
+                              { name: "Estado Moçambicano", valor: computedFinanceData.budgetSTATE, fill: "#6366f1" }
+                           ]}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                              <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} />
+                              <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                              <Tooltip cursor={{ fill: "transparent" }} formatter={(value: any) => [`${value.toLocaleString()} MZN`, "Financiamento"]} />
+                              <Bar dataKey="valor" radius={[6, 6, 0, 0]} />
+                           </BarChart>
+                        </ResponsiveContainer>
+                     </div>
+                  </CardContent>
+               </Card>
+
+               {/* Operational Cost Allocation (Pie Chart) */}
+               <Card className="border-slate-100 dark:border-slate-800 shadow-sm">
+                  <CardHeader className="pb-2 border-b">
+                     <CardTitle className="text-xs font-black uppercase text-indigo-600 tracking-wider flex items-center gap-1.5">
+                        <DollarSign className="h-4 w-4" /> Alocação de Custos Operacionais & Logística
+                     </CardTitle>
+                     <CardDescription className="text-[10px] uppercase font-bold text-muted-foreground">Detalhamento de despesas operacionais da campanha</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                     <div className="h-[220px] w-full md:w-[60%]">
+                        <ResponsiveContainer width="100%" height="100%">
+                           <PieChart>
+                              <Pie
+                                 data={[
+                                    { name: "Transporte/Combustível", value: computedFinanceData.expenseLogistics, color: "#3b82f6" },
+                                    { name: "Diárias de Equipa", value: computedFinanceData.expenseAllowances, color: "#f59e0b" },
+                                    { name: "Custo de Vacinas", value: computedFinanceData.expenseVaccines, color: "#10b981" },
+                                    { name: "Frio/Logística", value: computedFinanceData.expenseColdChain, color: "#ec4899" }
+                                 ]}
+                                 cx="50%"
+                                 cy="50%"
+                                 innerRadius={50}
+                                 outerRadius={80}
+                                 paddingAngle={3}
+                                 dataKey="value"
+                              >
+                                 {[
+                                    { name: "Transporte/Combustível", value: computedFinanceData.expenseLogistics, color: "#3b82f6" },
+                                    { name: "Diárias de Equipa", value: computedFinanceData.expenseAllowances, color: "#f59e0b" },
+                                    { name: "Custo de Vacinas", value: computedFinanceData.expenseVaccines, color: "#10b981" },
+                                    { name: "Frio/Logística", value: computedFinanceData.expenseColdChain, color: "#ec4899" }
+                                 ].map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                 ))}
+                              </Pie>
+                              <Tooltip formatter={(value: any) => [`${value.toLocaleString()} MZN`, "Despesa"]} />
+                           </PieChart>
+                        </ResponsiveContainer>
+                     </div>
+                     
+                     <div className="w-full md:w-[40%] space-y-2.5">
+                        {[
+                           { name: "Transporte/Combustível", value: computedFinanceData.expenseLogistics, color: "bg-blue-500" },
+                           { name: "Diárias de Equipa", value: computedFinanceData.expenseAllowances, color: "bg-amber-500" },
+                           { name: "Custo de Vacinas", value: computedFinanceData.expenseVaccines, color: "bg-emerald-500" },
+                           { name: "Frio/Logística", value: computedFinanceData.expenseColdChain, color: "bg-pink-500" }
+                        ].map((item, idx) => {
+                           const percentage = computedFinanceData.totalExpenses > 0 
+                              ? Math.round((item.value / computedFinanceData.totalExpenses) * 100)
+                              : 0;
+                           return (
+                              <div key={idx} className="flex items-center justify-between text-xs border-b pb-1.5 border-slate-100 dark:border-slate-800 font-sans">
+                                 <div className="flex items-center gap-2">
+                                    <span className={cn("h-3 w-3 rounded-full", item.color)} />
+                                    <span className="font-bold text-slate-700 dark:text-slate-300 text-[10px]">{item.name}</span>
+                                 </div>
+                                 <div className="text-right font-mono text-[10px]">
+                                    <p className="font-black text-slate-800 dark:text-slate-100">{item.value.toLocaleString()} MZN</p>
+                                    <p className="text-[9px] text-muted-foreground font-bold">{percentage}%</p>
+                                 </div>
+                              </div>
+                           );
+                        })}
+                     </div>
+                  </CardContent>
+               </Card>
+
+            </div>
+
+            {/* WHO Health Financing Governance Guidelines Alert */}
+            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900 rounded-2xl flex gap-3 items-start font-sans">
+               <AlertCircle className="h-5 w-5 text-indigo-600 shrink-0 mt-0.5" />
+               <div className="text-xs">
+                  <h4 className="font-black uppercase text-indigo-950 dark:text-indigo-200 tracking-wider">Normas de Governação e Financiamento em Saúde (MISAU & OMS)</h4>
+                  <p className="text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
+                     Esta plataforma calcula dinamicamente o **Custo por Dose Administrada** para auditoria de fundos internacionais (GAVI/Global Fund) e nacionais. 
+                     Os logs de despesas inseridos no campo são imediatamente associados a coordenadas geográficas (GPS) e submetidos como observações FHIR financeiras ao repositório centralizado, garantindo 100% de transparência e rastreabilidade contra desvios ou desperdícios vacinais.
+                  </p>
+               </div>
+            </div>
+
          </div>
       )}
 

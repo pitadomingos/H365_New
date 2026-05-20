@@ -30,3 +30,26 @@ A React Context that wraps the entire application. It:
 ## Clinical Safety & Reliability
 - **Restart Resilience**: Since we use `LocalDB`, a mechanical failure or reboot will not result in data loss for already-committed entries.
 - **Auditability**: All local transformations are queued with timestamps, ensuring the server can reconstruct the clinical timeline accurately once synced.
+
+---
+
+## 4. H365 Public Health & Campaign Offline Buffering
+
+H365 extends the offline-first framework with dedicated support for **mobile outreach campaigns and vaccination brigades** operating in remote environments with zero network access:
+
+### A. Mobile Brigade Local Observation Cache
+When mobile teams record a vaccination or mosquito net distribution report in the field, H365:
+1. Validates quantities locally (ensuring absolute doses do not conflict with expected target populations).
+2. Formats the local entry into a standard **HL7 FHIR Observation** on-the-fly.
+3. Automatically queues the payload in an in-memory queue, incrementing the pending synchronization queue counter shown in the top header.
+
+### B. Cold Chain Efficacy Verification Locks
+Because biological vaccine stocks are highly sensitive to thermal shocks, H365 locks all offline entry submissions through a **Cold Chain Quality Assurance Checker**:
+* **Thermometer Audit**: Verifies vaccine carriers remain within the safe $+2^\circ\text{C}$ to $+8^\circ\text{C}$ window.
+* **Ice Pack Checks**: Monitors freezer blocks within active carriers.
+* **Vial Monitor (VVM) Guard**: Blocks data entries if a degraded **Stage 3 VVM (Rejected)** is selected, preventing the administration and logging of inactive or compromised vaccine doses.
+
+### C. Forced Sync & Dynamic Dashboard Aggregation
+When the field team returns to network boundaries, clicking the **"Sincronizar"** icon merges the buffered observations directly into the stateful database:
+* The dashboard recalculates and aggregates all charts (CPN4 retention funnels, measles coverages, TB cures, and malaria cases) instantly.
+* The synchronized data is immediately translated into the global D2A framework and logged in the district SIS-MA (DHIS2) schema.
