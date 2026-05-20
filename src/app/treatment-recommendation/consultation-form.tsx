@@ -275,6 +275,53 @@ export function ConsultationForm({ getRecommendationAction, getPatientContextAct
     return "patient avatar";
   };
 
+  const FallbackAvatar = ({ name, photoUrl, gender, className, size = 32 }: { name: string; photoUrl: string; gender?: "Male" | "Female" | "Other"; className?: string; size?: number }) => {
+    const isPlaceholder = !photoUrl || photoUrl.includes("placehold.co");
+
+    if (!isPlaceholder) {
+      return (
+        <Image
+          src={photoUrl}
+          alt={name}
+          width={size}
+          height={size}
+          className={cn("rounded-full object-cover", className)}
+          data-ai-hint={gender ? (gender === "Male" ? "male avatar" : gender === "Female" ? "female avatar" : "patient avatar") : undefined}
+        />
+      );
+    }
+
+    const initials = name
+      ? name
+          .split(' ')
+          .map(n => n[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase()
+      : '?';
+
+    const gradients = [
+      'from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 text-white',
+      'from-teal-500 to-emerald-600 dark:from-teal-600 dark:to-emerald-700 text-white',
+      'from-sky-500 to-blue-600 dark:from-sky-600 dark:to-blue-700 text-white',
+      'from-amber-500 to-rose-600 dark:from-amber-600 dark:to-rose-700 text-white',
+      'from-violet-500 to-fuchsia-600 dark:from-violet-600 dark:to-fuchsia-700 text-white',
+      'from-emerald-500 to-cyan-600 dark:from-emerald-600 dark:to-cyan-700 text-white'
+    ];
+
+    const charCodeSum = name ? name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) : 0;
+    const gradientClass = gradients[charCodeSum % gradients.length];
+
+    return (
+      <div 
+        className={cn("rounded-full flex items-center justify-center font-bold shrink-0 select-none bg-gradient-to-br shadow-sm border border-black/10 dark:border-white/10", gradientClass, className)}
+        style={{ width: size, height: size, fontSize: size > 24 ? '0.75rem' : '0.65rem' }}
+      >
+        {initials}
+      </div>
+    );
+  };
+
   const handlePatientSearch = async () => {
     const nationalId = form.getValues("nationalIdSearch");
     if (!nationalId) {
@@ -1283,7 +1330,13 @@ ${visitHistoryString || "No recent visit history available."}
             </CardHeader>
             <CardContent className="p-4 pt-0 space-y-4">
               <div className="flex items-center gap-3">
-                <Image src={patientData.photoUrl} alt={t('consultationForm.patientPhoto.alt')} width={50} height={50} className="rounded-full border-2 border-primary/30 shrink-0" data-ai-hint={getAvatarHint(patientData.gender)} />
+                <FallbackAvatar
+                  name={patientData.fullName}
+                  photoUrl={patientData.photoUrl}
+                  gender={patientData.gender}
+                  size={50}
+                  className="border-2 border-primary/30"
+                />
                 <div className="flex-1 min-w-0">
                   <h3 className="text-md font-bold truncate">{patientData.fullName}</h3>
                   <p className="text-xs text-muted-foreground">{patientData.nationalId}</p>

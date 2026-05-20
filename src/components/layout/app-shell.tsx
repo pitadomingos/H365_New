@@ -5,7 +5,7 @@ import * as React from "react";
 import Link from "next/link"; // Still needed for H365 logo link
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation"; // useRouter for programmatic navigation
-import { Stethoscope, Menu } from "lucide-react";
+import { Stethoscope, Menu, Activity } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { NAV_GROUPS, BOTTOM_NAV_ITEMS, type NavItem } from "@/lib/constants";
@@ -182,6 +182,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4">
             <LocaleToggle />
             <ThemeToggle />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/public-health-dashboard")}
+              className="hidden md:flex items-center gap-1.5 border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-black text-xs uppercase"
+            >
+              <Activity className="h-4 w-4 text-indigo-600 animate-pulse" />
+              {t('nav.publicDashboard')}
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-fit px-2 gap-2 rounded-full border border-primary/20">

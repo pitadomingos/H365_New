@@ -698,6 +698,8 @@ export const translations: Record<Locale, Record<string, any>> = {
     'consultationRoom.notifications.description': "Updates on lab and imaging results.",
     'consultationRoom.notifications.empty': "No new notifications.",
     'consultationRoom.notifications.loading': "Loading notifications...",
+    'consultationRoom.notifications.mock.resultsReady': "Lab results are ready: malaria panel.",
+    'consultationRoom.notifications.mock.imagingReady': "Imaging results are ready: chest X-ray.",
     'consultationRoom.drafts.title': "Incomplete Consultations",
     'consultationRoom.drafts.description': "Consultations awaiting results or further action.",
     'consultationRoom.drafts.empty': "No incomplete consultations.",
@@ -2747,6 +2749,8 @@ export const translations: Record<Locale, Record<string, any>> = {
     'consultationRoom.waitingList.description': "Pacientes aguardando consulta.",
     'consultationRoom.waitingList.empty': "A lista de espera está vazia.",
     'consultationRoom.notifications.title': "Notificações de Lab/Imagem",
+    'consultationRoom.notifications.mock.resultsReady': "Resultados de laboratório prontos: painel de malária.",
+    'consultationRoom.notifications.mock.imagingReady': "Resultados de imagem prontos: raio-X do tórax.",
     'consultationRoom.drafts.title': "Consultas Incompletas",
     'consultationRoom.drafts.resumeButton': "Retomar Consulta",
 

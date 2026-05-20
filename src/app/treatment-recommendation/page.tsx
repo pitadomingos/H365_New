@@ -40,6 +40,53 @@ const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   return "patient avatar";
 };
 
+const FallbackAvatar = ({ name, photoUrl, gender, className, size = 32 }: { name: string; photoUrl: string; gender?: "Male" | "Female" | "Other"; className?: string; size?: number }) => {
+  const isPlaceholder = !photoUrl || photoUrl.includes("placehold.co");
+
+  if (!isPlaceholder) {
+    return (
+      <Image
+        src={photoUrl}
+        alt={name}
+        width={size}
+        height={size}
+        className={cn("rounded-full object-cover", className)}
+        data-ai-hint={gender ? (gender === "Male" ? "male avatar" : gender === "Female" ? "female avatar" : "patient avatar") : undefined}
+      />
+    );
+  }
+
+  const initials = name
+    ? name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : '?';
+
+  const gradients = [
+    'from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-700 text-white',
+    'from-teal-500 to-emerald-600 dark:from-teal-600 dark:to-emerald-700 text-white',
+    'from-sky-500 to-blue-600 dark:from-sky-600 dark:to-blue-700 text-white',
+    'from-amber-500 to-rose-600 dark:from-amber-600 dark:to-rose-700 text-white',
+    'from-violet-500 to-fuchsia-600 dark:from-violet-600 dark:to-fuchsia-700 text-white',
+    'from-emerald-500 to-cyan-600 dark:from-emerald-600 dark:to-cyan-700 text-white'
+  ];
+
+  const charCodeSum = name ? name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) : 0;
+  const gradientClass = gradients[charCodeSum % gradients.length];
+
+  return (
+    <div 
+      className={cn("rounded-full flex items-center justify-center font-bold shrink-0 select-none bg-gradient-to-br shadow-sm border border-black/10 dark:border-white/10", gradientClass, className)}
+      style={{ width: size, height: size, fontSize: size > 24 ? '0.75rem' : '0.65rem' }}
+    >
+      {initials}
+    </div>
+  );
+};
+
 const MOCK_FULL_DRAFT_DETAILS: Record<string, ConsultationInitialData> = {
     "DRAFT001": {
         patientData: { nationalId: "DRF001_NID", fullName: "Edward Scissorhands", age: 30, gender: "Male", address: "1 Gothic Lane", homeClinic: "Suburbia Clinic", photoUrl: "https://placehold.co/120x120.png", allergies: ["Sunlight"], chronicConditions: ["Arthritis"] },
@@ -99,13 +146,11 @@ function WaitingListInternal({ t, waitingList, isLoading, onSelectPatient }: Wai
                 className="p-2.5 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-center gap-3 cursor-pointer transition-all hover:border-primary/50 group"
                 onClick={() => onSelectPatient(patient.nationalId)}
               >
-                <Image
-                  src={patient.photoUrl}
-                  alt={patient.patientName}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                  data-ai-hint={getAvatarHint(patient.gender)}
+                <FallbackAvatar
+                  name={patient.patientName}
+                  photoUrl={patient.photoUrl}
+                  gender={patient.gender}
+                  size={32}
                 />
                 <div className="flex-1">
                   <p className="font-semibold text-sm group-hover:text-primary transition-colors">{patient.patientName}</p>
@@ -150,13 +195,12 @@ function LabNotificationsInternal({ t, labNotifications, isLoading }: LabNotific
           <ul className="space-y-2.5">
             {labNotifications.map((notif) => (
               <li key={notif.id} className={cn("p-2.5 border rounded-md text-xs flex items-start gap-2", notif.read ? 'bg-muted/40' : 'bg-accent/20 dark:bg-accent/10 border-accent/50')}>
-                <Image
-                  src={notif.photoUrl}
-                  alt={notif.patientName}
-                  width={24}
-                  height={24}
-                  className="rounded-full mt-0.5"
-                  data-ai-hint={getAvatarHint(notif.gender)}
+                <FallbackAvatar
+                  name={notif.patientName}
+                  photoUrl={notif.photoUrl}
+                  gender={notif.gender}
+                  size={24}
+                  className="mt-0.5"
                 />
                 <div className="flex-1">
                   <p className={cn(notif.read ? 'text-muted-foreground' : 'font-medium')}>
@@ -205,13 +249,11 @@ function IncompleteConsultationsInternal({ t, draftedConsultations, isLoading, o
             {draftedConsultations.map((consult) => (
               <li key={consult.id} className="p-2.5 border rounded-md shadow-sm bg-background hover:bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <Image
-                    src={consult.photoUrl}
-                    alt={consult.patientName}
-                    width={32}
-                    height={32}
-                    className="rounded-full"
-                    data-ai-hint={getAvatarHint(consult.gender)}
+                  <FallbackAvatar
+                    name={consult.patientName}
+                    photoUrl={consult.photoUrl}
+                    gender={consult.gender}
+                    size={32}
                   />
                   <div className="flex-1">
                     <p className="font-semibold text-sm">{consult.patientName}</p>
