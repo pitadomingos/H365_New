@@ -21,11 +21,12 @@ export default function TelemedicinePage() {
   
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
-  const [activeSession, setActiveSession] = useState<{ name: string; age: string, complaint: string, diagnosis: string, prescription: string } | null>({
+  const [activeSession, setActiveSession] = useState<{ name: string; age: string, complaint: string, diagnosis: string, icd10Code: string, prescription: string } | null>({
     name: "John Doe",
     age: "45",
     complaint: "Persistent cough and low-grade fever for 3 days.",
     diagnosis: "",
+    icd10Code: "",
     prescription: ""
   });
 
@@ -182,6 +183,16 @@ export default function TelemedicinePage() {
                             className="text-xs bg-background"
                             value={activeSession?.diagnosis || ""}
                             onChange={(e) => setActiveSession(prev => prev ? ({...prev, diagnosis: e.target.value}) : null)}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="tele-icd10" className="text-xs font-bold">{t('clinical.icd10.label')}</Label>
+                        <Input 
+                            id="tele-icd10" 
+                            placeholder={t('clinical.icd10.placeholder.tele')} 
+                            className="text-xs bg-background"
+                            value={activeSession?.icd10Code || ""}
+                            onChange={(e) => setActiveSession(prev => prev ? ({...prev, icd10Code: e.target.value}) : null)}
                         />
                     </div>
                     <div className="space-y-1">

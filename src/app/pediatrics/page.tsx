@@ -59,64 +59,28 @@ const DEFAULT_PEDIATRIC_PATIENTS: PediatricPatient[] = [
     motherName: "Alice Mwamba",
     motherId: "1029384756",
     vaccinations: [
-      // Birth doses (0 weeks)
-      { id: "v1", name: "BCG (Tuberculosis)", dueDate: "2026-02-15", administeredDate: "2026-02-15", status: "Administered", batchNumber: "B123-X" },
-      { id: "v2", name: "OPV 0 (Birth Polio)", dueDate: "2026-02-15", administeredDate: "2026-02-15", status: "Administered", batchNumber: "O-998" },
-      { id: "v3", name: "Hepatitis B (Birth Dose)", dueDate: "2026-02-15", administeredDate: "2026-02-15", status: "Administered", batchNumber: "H-445" },
-      // 6 weeks
-      { id: "v4", name: "DTP-HepB-Hib 1 (Pentavalent 1)", dueDate: "2026-03-29", status: "Due" },
-      { id: "v5", name: "OPV 1", dueDate: "2026-03-29", status: "Due" },
-      { id: "v6", name: "Rotavirus 1", dueDate: "2026-03-29", status: "Due" },
-      { id: "v7", name: "PCV 1 (Pneumococcal 1)", dueDate: "2026-03-29", status: "Due" },
-      // 10 weeks
-      { id: "v8", name: "DTP-HepB-Hib 2 (Pentavalent 2)", dueDate: "2026-04-26", status: "Due" },
-      { id: "v9", name: "OPV 2", dueDate: "2026-04-26", status: "Due" },
-      { id: "v10", name: "Rotavirus 2", dueDate: "2026-04-26", status: "Due" },
-      { id: "v10a", name: "PCV 2 (Pneumococcal 2)", dueDate: "2026-04-26", status: "Due" },
-      // 14 weeks
-      { id: "v11", name: "DTP-HepB-Hib 3 (Pentavalent 3)", dueDate: "2026-05-24", status: "Due" },
-      { id: "v12", name: "OPV 3", dueDate: "2026-05-24", status: "Due" },
-      { id: "v13", name: "PCV 3 (Pneumococcal 3)", dueDate: "2026-05-24", status: "Due" },
-      { id: "v14", name: "IPV (Inactivated Polio)", dueDate: "2026-05-24", status: "Due" },
-      // 6 months
-      { id: "v15", name: "Vitamin A (1st dose)", dueDate: "2026-08-15", status: "Due" },
-      { id: "v15a", name: "Influenza 1", dueDate: "2026-08-15", status: "Due" },
-      // 7 months
-      { id: "v15b", name: "Influenza 2", dueDate: "2026-09-15", status: "Due" },
-      // 9 months
-      { id: "v16", name: "Measles-Rubella 1 (MR1)", dueDate: "2026-11-15", status: "Due" },
-      { id: "v16a", name: "Yellow Fever", dueDate: "2026-11-15", status: "Due" },
-      { id: "v17", name: "Typhoid Conjugate Vaccine", dueDate: "2026-11-15", status: "Due" },
-      // 12 months
-      { id: "v18", name: "Vitamin A (2nd dose)", dueDate: "2027-02-15", status: "Due" },
-      { id: "v19", name: "Deworming (Mebendazole 1st dose)", dueDate: "2027-02-15", status: "Due" },
-      { id: "v19a", name: "PCV Booster", dueDate: "2027-02-15", status: "Due" },
-      // 15 months
-      { id: "v20", name: "Measles-Rubella 2 (MR2)", dueDate: "2027-05-15", status: "Due" },
-      // 18 months
-      { id: "v21", name: "DTP Booster 1", dueDate: "2027-08-15", status: "Due" },
-      { id: "v22", name: "OPV Booster 1", dueDate: "2027-08-15", status: "Due" },
-      { id: "v22a", name: "Vitamin A (3rd dose)", dueDate: "2027-08-15", status: "Due" },
-      { id: "v22b", name: "Deworming (Mebendazole 2nd dose)", dueDate: "2027-08-15", status: "Due" },
-      // 2 years (24 months)
-      { id: "v23", name: "Vitamin A (4th dose)", dueDate: "2028-02-15", status: "Due" },
-      { id: "v23a", name: "Deworming (Mebendazole 3rd dose)", dueDate: "2028-02-15", status: "Due" },
-      { id: "v23b", name: "Meningococcal A", dueDate: "2028-02-15", status: "Due" },
-      // 30 months
-      { id: "v24", name: "Vitamin A (5th dose)", dueDate: "2028-08-15", status: "Due" },
-      { id: "v24a", name: "Deworming (Mebendazole 4th dose)", dueDate: "2028-08-15", status: "Due" },
-      // 3 years (36 months)
-      { id: "v25", name: "Vitamin A (6th dose)", dueDate: "2029-02-15", status: "Due" },
-      { id: "v25a", name: "Deworming (Mebendazole 5th dose)", dueDate: "2029-02-15", status: "Due" },
-      // 4 years (48 months)
-      { id: "v26", name: "Vitamin A (8th dose)", dueDate: "2030-02-15", status: "Due" },
-      { id: "v26a", name: "Deworming (Mebendazole 7th dose)", dueDate: "2030-02-15", status: "Due" },
-      // 5 years (60 months)
-      { id: "v27", name: "DTP Booster 2", dueDate: "2031-02-15", status: "Due" },
-      { id: "v27a", name: "OPV Booster 2", dueDate: "2031-02-15", status: "Due" },
-      { id: "v27b", name: "Measles-Rubella 3", dueDate: "2031-02-15", status: "Due" },
-      { id: "v28", name: "Vitamin A (10th dose)", dueDate: "2031-02-15", status: "Due" },
-      { id: "v28a", name: "Deworming (Mebendazole 9th dose)", dueDate: "2031-02-15", status: "Due" },
+      { id: "v1", name: "BCG", dueDate: "2026-02-15", administeredDate: "2026-02-15", status: "Administered", batchNumber: "B123-X" },
+      { id: "v2", name: "VPO 0", dueDate: "2026-02-15", administeredDate: "2026-02-15", status: "Administered", batchNumber: "O-998" },
+      { id: "v3", name: "HepB", dueDate: "2026-02-15", administeredDate: "2026-02-15", status: "Administered", batchNumber: "H-445" },
+      { id: "v4", name: "Penta 1", dueDate: "2026-03-29", status: "Due" },
+      { id: "v5", name: "VPO 1", dueDate: "2026-03-29", status: "Due" },
+      { id: "v6", name: "Rota 1", dueDate: "2026-03-29", status: "Due" },
+      { id: "v7", name: "VPC 1", dueDate: "2026-03-29", status: "Due" },
+      { id: "v8", name: "Penta 2", dueDate: "2026-04-26", status: "Due" },
+      { id: "v9", name: "VPO 2", dueDate: "2026-04-26", status: "Due" },
+      { id: "v10", name: "Rota 2", dueDate: "2026-04-26", status: "Due" },
+      { id: "v11", name: "Penta 3", dueDate: "2026-05-24", status: "Due" },
+      { id: "v12", name: "VPO 3", dueDate: "2026-05-24", status: "Due" },
+      { id: "v13", name: "VPC 2", dueDate: "2026-05-24", status: "Due" },
+      { id: "v14", name: "IPV", dueDate: "2026-05-24", status: "Due" },
+      { id: "v15", name: "Malária 1", dueDate: "2026-06-15", status: "Due" },
+      { id: "v16", name: "Malária 2", dueDate: "2026-07-15", status: "Due" },
+      { id: "v17", name: "Malária 3", dueDate: "2026-08-15", status: "Due" },
+      { id: "v18", name: "Sarampo/Rubéola 1", dueDate: "2026-11-15", status: "Due" },
+      { id: "v19", name: "Febre Amarela", dueDate: "2026-11-15", status: "Due" },
+      { id: "v20", name: "Malária 4", dueDate: "2027-02-15", status: "Due" },
+      { id: "v21", name: "Sarampo/Rubéola 2", dueDate: "2027-05-15", status: "Due" },
+      { id: "v22", name: "Reforço DTP", dueDate: "2027-08-15", status: "Due" },
     ],
     growthHistory: [
       { id: "g1", date: "2026-02-15", ageInMonths: 0, weightKg: 3.2, heightCm: 50, muacCm: 10.5 },
@@ -134,58 +98,26 @@ const DEFAULT_PEDIATRIC_PATIENTS: PediatricPatient[] = [
     motherName: "Maria Ndlovu",
     motherId: "5566778899",
     vaccinations: [
-      // Birth doses (0 weeks)
-      { id: "s1", name: "BCG (Tuberculosis)", dueDate: "2025-03-10", administeredDate: "2025-03-10", status: "Administered", batchNumber: "B-778" },
-      { id: "s2", name: "OPV 0 (Birth Polio)", dueDate: "2025-03-10", administeredDate: "2025-03-10", status: "Administered", batchNumber: "O-221" },
-      { id: "s3", name: "Hepatitis B (Birth Dose)", dueDate: "2025-03-10", administeredDate: "2025-03-10", status: "Administered", batchNumber: "H-990" },
-      // 6 weeks
-      { id: "s4", name: "DTP-HepB-Hib 1 (Pentavalent 1)", dueDate: "2025-04-21", administeredDate: "2025-04-22", status: "Administered", batchNumber: "P1-33" },
-      { id: "s5", name: "OPV 1", dueDate: "2025-04-21", administeredDate: "2025-04-22", status: "Administered", batchNumber: "O1-44" },
-      { id: "s6", name: "Rotavirus 1", dueDate: "2025-04-21", administeredDate: "2025-04-22", status: "Administered", batchNumber: "R1-55" },
-      { id: "s7", name: "PCV 1 (Pneumococcal 1)", dueDate: "2025-04-21", administeredDate: "2025-04-22", status: "Administered", batchNumber: "PC1-66" },
-      // 10 weeks
-      { id: "s8", name: "DTP-HepB-Hib 2 (Pentavalent 2)", dueDate: "2025-05-19", administeredDate: "2025-05-20", status: "Administered", batchNumber: "P2-77" },
-      { id: "s9", name: "OPV 2", dueDate: "2025-05-19", administeredDate: "2025-05-20", status: "Administered", batchNumber: "O2-88" },
-      { id: "s10", name: "Rotavirus 2", dueDate: "2025-05-19", administeredDate: "2025-05-20", status: "Administered", batchNumber: "R2-99" },
-      // 14 weeks
-      { id: "s11", name: "DTP-HepB-Hib 3 (Pentavalent 3)", dueDate: "2025-06-16", administeredDate: "2025-06-18", status: "Administered", batchNumber: "P3-11" },
-      { id: "s12", name: "OPV 3", dueDate: "2025-06-16", administeredDate: "2025-06-18", status: "Administered", batchNumber: "O3-22" },
-      { id: "s13", name: "PCV 2 (Pneumococcal 2)", dueDate: "2025-06-16", administeredDate: "2025-06-18", status: "Administered", batchNumber: "PC2-33" },
-      { id: "s14", name: "IPV (Inactivated Polio)", dueDate: "2025-06-16", administeredDate: "2025-06-18", status: "Administered", batchNumber: "IP-44" },
-      // 6 months
-      { id: "s15", name: "Vitamin A (1st dose)", dueDate: "2025-09-10", administeredDate: "2025-09-12", status: "Administered", batchNumber: "VA1-55" },
-      // 9 months
-      { id: "s16", name: "Measles-Rubella 1 (MR1)", dueDate: "2025-12-10", administeredDate: "2025-12-12", status: "Administered", batchNumber: "MR1-66" },
-      { id: "s17", name: "PCV 3 (Pneumococcal 3)", dueDate: "2025-12-10", administeredDate: "2025-12-12", status: "Administered", batchNumber: "PC3-77" },
-      // 12 months
-      { id: "s18", name: "Vitamin A (2nd dose)", dueDate: "2026-03-10", status: "Overdue" },
-      { id: "s19", name: "Deworming (Mebendazole 1st dose)", dueDate: "2026-03-10", status: "Overdue" },
-      // 15 months (Due shortly)
-      { id: "s20", name: "Measles-Rubella 2 (MR2)", dueDate: "2026-06-10", status: "Due" },
-      // 18 months
-      { id: "s21", name: "DTP Booster 1", dueDate: "2026-09-10", status: "Due" },
-      { id: "s22", name: "OPV Booster 1", dueDate: "2026-09-10", status: "Due" },
-      { id: "s22a", name: "Vitamin A (3rd dose)", dueDate: "2026-09-10", status: "Due" },
-      { id: "s22b", name: "Deworming (Mebendazole 2nd dose)", dueDate: "2026-09-10", status: "Due" },
-      // 2 years (24 months)
-      { id: "s23", name: "Vitamin A (4th dose)", dueDate: "2027-03-10", status: "Due" },
-      { id: "s23a", name: "Deworming (Mebendazole 3rd dose)", dueDate: "2027-03-10", status: "Due" },
-      { id: "s23b", name: "Meningococcal A", dueDate: "2027-03-10", status: "Due" },
-      // 30 months
-      { id: "s24", name: "Vitamin A (5th dose)", dueDate: "2027-09-10", status: "Due" },
-      { id: "s24a", name: "Deworming (Mebendazole 4th dose)", dueDate: "2027-09-10", status: "Due" },
-      // 3 years (36 months)
-      { id: "s25", name: "Vitamin A (6th dose)", dueDate: "2028-03-10", status: "Due" },
-      { id: "s25a", name: "Deworming (Mebendazole 5th dose)", dueDate: "2028-03-10", status: "Due" },
-      // 4 years (48 months)
-      { id: "s26", name: "Vitamin A (8th dose)", dueDate: "2029-03-10", status: "Due" },
-      { id: "s26a", name: "Deworming (Mebendazole 7th dose)", dueDate: "2029-03-10", status: "Due" },
-      // 5 years (60 months)
-      { id: "s27", name: "DTP Booster 2", dueDate: "2030-03-10", status: "Due" },
-      { id: "s27a", name: "OPV Booster 2", dueDate: "2030-03-10", status: "Due" },
-      { id: "s27b", name: "Measles-Rubella 3", dueDate: "2030-03-10", status: "Due" },
-      { id: "s28", name: "Vitamin A (10th dose)", dueDate: "2030-03-10", status: "Due" },
-      { id: "s28a", name: "Deworming (Mebendazole 9th dose)", dueDate: "2030-03-10", status: "Due" },
+      { id: "s1", name: "BCG", dueDate: "2025-03-10", administeredDate: "2025-03-10", status: "Administered", batchNumber: "B-778" },
+      { id: "s2", name: "VPO 0", dueDate: "2025-03-10", administeredDate: "2025-03-10", status: "Administered", batchNumber: "O-221" },
+      { id: "s3", name: "HepB", dueDate: "2025-03-10", administeredDate: "2025-03-10", status: "Administered", batchNumber: "H-990" },
+      { id: "s4", name: "Penta 1", dueDate: "2025-04-21", administeredDate: "2025-04-22", status: "Administered", batchNumber: "P1-33" },
+      { id: "s5", name: "VPO 1", dueDate: "2025-04-21", administeredDate: "2025-04-22", status: "Administered", batchNumber: "O1-44" },
+      { id: "s6", name: "Rota 1", dueDate: "2025-04-21", administeredDate: "2025-04-22", status: "Administered", batchNumber: "R1-55" },
+      { id: "s7", name: "VPC 1", dueDate: "2025-04-21", administeredDate: "2025-04-22", status: "Administered", batchNumber: "PC1-66" },
+      { id: "s8", name: "Penta 2", dueDate: "2025-05-19", administeredDate: "2025-05-20", status: "Administered", batchNumber: "P2-77" },
+      { id: "s9", name: "VPO 2", dueDate: "2025-05-19", administeredDate: "2025-05-20", status: "Administered", batchNumber: "O2-88" },
+      { id: "s10", name: "Rota 2", dueDate: "2025-05-19", administeredDate: "2025-05-20", status: "Administered", batchNumber: "R2-99" },
+      { id: "s11", name: "Penta 3", dueDate: "2025-06-16", administeredDate: "2025-06-18", status: "Administered", batchNumber: "P3-11" },
+      { id: "s12", name: "VPO 3", dueDate: "2025-06-16", administeredDate: "2025-06-18", status: "Administered", batchNumber: "O3-22" },
+      { id: "s13", name: "VPC 2", dueDate: "2025-06-16", administeredDate: "2025-06-18", status: "Administered", batchNumber: "PC2-33" },
+      { id: "s14", name: "IPV", dueDate: "2025-06-16", administeredDate: "2025-06-18", status: "Administered", batchNumber: "IP-44" },
+      { id: "s15", name: "Malária 1", dueDate: "2025-09-10", administeredDate: "2025-09-12", status: "Administered", batchNumber: "M1-55" },
+      { id: "s16", name: "Malária 2", dueDate: "2025-10-10", administeredDate: "2025-10-12", status: "Administered", batchNumber: "M2-66" },
+      { id: "s17", name: "Malária 3", dueDate: "2025-11-10", administeredDate: "2025-11-12", status: "Administered", batchNumber: "M3-77" },
+      { id: "s18", name: "Sarampo/Rubéola 1", dueDate: "2025-12-10", status: "Administered" },
+      { id: "s19", name: "Febre Amarela", dueDate: "2025-12-10", status: "Administered" },
+      { id: "s20", name: "Malária 4", dueDate: "2026-03-10", status: "Overdue" },
     ],
     growthHistory: [
       { id: "sg1", date: "2025-03-10", ageInMonths: 0, weightKg: 3.0, heightCm: 49, muacCm: 10.2 },
@@ -271,10 +203,10 @@ export default function PediatricsPage() {
     const found = patientsList.find(p => p.nationalId === searchId || p.motherId === searchId || p.id === searchId);
     if (found) {
       setSelectedPatient(found);
-      toast({ title: "Patient Found", description: `Loaded record for ${found.fullName}` });
+      toast({ title: t('pediatrics.toast.found'), description: t('pediatrics.toast.foundDesc', { name: found.fullName }) });
     } else {
       setSelectedPatient(null);
-      toast({ variant: "destructive", title: "Not Found", description: "No pediatric record matches this ID." });
+      toast({ variant: "destructive", title: t('pediatrics.toast.notFound'), description: t('pediatrics.toast.notFoundDesc') });
     }
     setIsLoadingSearch(false);
   };
@@ -306,7 +238,7 @@ export default function PediatricsPage() {
     };
     await LocalDB.save("system_activity_logs", [newLog, ...logs]);
 
-    toast({ title: "Vaccination Recorded", description: `${selectedVax.name} administered successfully.` });
+    toast({ title: t('pediatrics.toast.vaxSuccess'), description: t('pediatrics.toast.vaxSuccessDesc', { name: selectedVax.name }) });
     setIsAdministering(false);
     setIsVaxModalOpen(false);
     setSelectedVax(null);
@@ -341,7 +273,7 @@ export default function PediatricsPage() {
     setPatientsList(updatedList);
     setSelectedPatient(updatedPatient);
 
-    toast({ title: "Growth Data Saved", description: "Weight, height and age records updated successfully." });
+    toast({ title: t('pediatrics.toast.growthSuccess'), description: t('pediatrics.toast.growthSuccessDesc') });
     setIsSavingGrowth(false);
     setNewWeight("");
     setNewHeight("");
@@ -375,9 +307,9 @@ export default function PediatricsPage() {
   // MUAC Severity Checker
   const getMuacStatus = (muac?: number) => {
     if (!muac) return null;
-    if (muac < 11.5) return { label: "Severe Malnutrition (SAM)", color: "text-red-500 border-red-200 bg-red-50 dark:bg-red-950/20" };
-    if (muac < 12.5) return { label: "Moderate Malnutrition (MAM)", color: "text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-950/20" };
-    return { label: "Well Nourished", color: "text-green-500 border-green-200 bg-green-50 dark:bg-green-950/20" };
+    if (muac < 11.5) return { label: t('pediatrics.nutrition.severe'), color: "text-red-500 border-red-200 bg-red-50 dark:bg-red-950/20" };
+    if (muac < 12.5) return { label: t('pediatrics.nutrition.moderate'), color: "text-amber-500 border-amber-200 bg-amber-50 dark:bg-amber-950/20" };
+    return { label: t('pediatrics.nutrition.well'), color: "text-green-500 border-green-200 bg-green-50 dark:bg-green-950/20" };
   };
 
   const latestGrowth = selectedPatient?.growthHistory[selectedPatient.growthHistory.length - 1];
@@ -388,10 +320,10 @@ export default function PediatricsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Baby className="h-8 w-8 text-indigo-600" /> Pediatrics & Child Wellness (PAV)
+            <Baby className="h-8 w-8 text-indigo-600" /> {t('pediatrics.pageTitle')}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Integrated Expanded Program on Immunization (EPI), WHO growth standards reference, and developmental metrics.
+            {t('pediatrics.pageSubtitle')}
           </p>
         </div>
       </div>
@@ -399,13 +331,13 @@ export default function PediatricsPage() {
       {/* Search Bar */}
       <Card className="shadow-sm border-indigo-100 bg-indigo-50/10 dark:bg-indigo-950/5 dark:border-slate-800">
         <CardHeader className="py-3">
-          <CardTitle className="text-sm font-medium">Child Record Finder</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('pediatrics.finder.title')}</CardTitle>
         </CardHeader>
         <CardContent className="flex gap-2 pb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by Mother's ID or Child ID (Try: P-88776655)..." 
+              placeholder={t('pediatrics.finder.placeholder')} 
               className="pl-9"
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
@@ -413,7 +345,7 @@ export default function PediatricsPage() {
             />
           </div>
           <Button onClick={handleSearch} disabled={isLoadingSearch} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            {isLoadingSearch ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load Child Profile"}
+            {isLoadingSearch ? <Loader2 className="h-4 w-4 animate-spin" /> : t('pediatrics.finder.button')}
           </Button>
         </CardContent>
       </Card>
@@ -423,25 +355,25 @@ export default function PediatricsPage() {
           <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="vaccinations" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="vaccinations" className="gap-2"><Syringe className="h-4 w-4" /> Immunization (EPI)</TabsTrigger>
-                <TabsTrigger value="growth" className="gap-2"><Activity className="h-4 w-4" /> Growth Monitoring</TabsTrigger>
-                <TabsTrigger value="charts" className="gap-2"><TrendingUp className="h-4 w-4" /> Percentile Charts</TabsTrigger>
+                <TabsTrigger value="vaccinations" className="gap-2"><Syringe className="h-4 w-4" /> {t('pediatrics.tabs.immunization')}</TabsTrigger>
+                <TabsTrigger value="growth" className="gap-2"><Activity className="h-4 w-4" /> {t('pediatrics.tabs.growth')}</TabsTrigger>
+                <TabsTrigger value="charts" className="gap-2"><TrendingUp className="h-4 w-4" /> {t('pediatrics.tabs.charts')}</TabsTrigger>
               </TabsList>
               
               {/* Immunization Tab */}
               <TabsContent value="vaccinations" className="mt-4">
                 <Card className="shadow-sm border-slate-100 dark:border-slate-800">
                   <CardHeader>
-                    <CardTitle className="text-lg">Expanded Program on Immunization (EPI)</CardTitle>
-                    <CardDescription>Verify completed doses and record administered pediatric vaccines.</CardDescription>
+                    <CardTitle className="text-lg">{t('pediatrics.epi.title')}</CardTitle>
+                    <CardDescription>{t('pediatrics.epi.desc')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {overdueCount > 0 && (
                       <Alert variant="destructive" className="mb-4">
                         <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Vaccination Delay</AlertTitle>
+                        <AlertTitle>{t('pediatrics.summary.nextAction')}</AlertTitle>
                         <AlertDescription>
-                          This child has {overdueCount} overdue vaccine dose(s) that need immediate administration.
+                          {t('pediatrics.epi.delayAlert', { count: overdueCount })}
                         </AlertDescription>
                       </Alert>
                     )}
@@ -449,12 +381,12 @@ export default function PediatricsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Vaccine Dose</TableHead>
-                          <TableHead>Target Due Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Administered Date</TableHead>
-                          <TableHead>Batch Lot</TableHead>
-                          <TableHead className="text-right font-bold text-slate-500">Action</TableHead>
+                          <TableHead>{t('pediatrics.epi.table.dose')}</TableHead>
+                          <TableHead>{t('pediatrics.epi.table.dueDate')}</TableHead>
+                          <TableHead>{t('pediatrics.epi.table.status')}</TableHead>
+                          <TableHead>{t('pediatrics.epi.table.administeredDate')}</TableHead>
+                          <TableHead>{t('pediatrics.epi.table.batch')}</TableHead>
+                          <TableHead className="text-right font-bold text-slate-500">{t('pediatrics.epi.table.action')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -464,7 +396,7 @@ export default function PediatricsPage() {
                             <TableCell className="text-xs text-muted-foreground">{v.dueDate}</TableCell>
                             <TableCell>
                               <Badge variant={v.status === "Administered" ? "default" : v.status === "Overdue" ? "destructive" : "outline"} className={v.status === "Administered" ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-emerald-200" : ""}>
-                                {v.status}
+                                {v.status === "Administered" ? t('pediatrics.epi.table.status.administered') : v.status === "Overdue" ? t('pediatrics.epi.table.status.overdue') : t('pediatrics.epi.table.status.due')}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-xs">{v.administeredDate || "-"}</TableCell>
@@ -472,7 +404,7 @@ export default function PediatricsPage() {
                             <TableCell className="text-right">
                               {v.status !== "Administered" ? (
                                 <Button size="sm" onClick={() => { setSelectedVax(v); setIsVaxModalOpen(true); }} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs">
-                                  Record Dose
+                                  {t('pediatrics.epi.table.recordDose')}
                                 </Button>
                               ) : (
                                 <CheckCircle2 className="h-5 w-5 text-emerald-500 ml-auto" />
@@ -490,42 +422,42 @@ export default function PediatricsPage() {
               <TabsContent value="growth" className="mt-4">
                 <Card className="shadow-sm border-slate-100 dark:border-slate-800">
                   <CardHeader>
-                    <CardTitle className="text-lg">Growth Tracking History</CardTitle>
-                    <CardDescription>Log physical metrics to audit development and flag childhood malnutrition levels.</CardDescription>
+                    <CardTitle className="text-lg">{t('pediatrics.growth.title')}</CardTitle>
+                    <CardDescription>{t('pediatrics.growth.desc')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border">
                       <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Age (Months) <span className="text-red-500">*</span></Label>
+                        <Label className="text-xs font-semibold">{t('pediatrics.growth.form.age')} <span className="text-red-500">*</span></Label>
                         <Input type="number" placeholder="e.g. 4" value={newAgeMonths} onChange={(e) => setNewAgeMonths(e.target.value)} />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Weight (kg) <span className="text-red-500">*</span></Label>
+                        <Label className="text-xs font-semibold">{t('pediatrics.growth.form.weight')} <span className="text-red-500">*</span></Label>
                         <Input type="number" placeholder="0.0" value={newWeight} onChange={(e) => setNewWeight(e.target.value)} />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Height (cm) <span className="text-red-500">*</span></Label>
+                        <Label className="text-xs font-semibold">{t('pediatrics.growth.form.height')} <span className="text-red-500">*</span></Label>
                         <Input type="number" placeholder="0.0" value={newHeight} onChange={(e) => setNewHeight(e.target.value)} />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs font-semibold">MUAC (cm)</Label>
+                        <Label className="text-xs font-semibold">{t('pediatrics.growth.form.muac')}</Label>
                         <Input type="number" placeholder="Optional" value={newMuac} onChange={(e) => setNewMuac(e.target.value)} />
                       </div>
                       <Button className="col-span-4 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white gap-2" disabled={isSavingGrowth || !newWeight || !newHeight || !newAgeMonths} onClick={handleSaveGrowth}>
                         {isSavingGrowth ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Save Child Growth Metrics
+                        {t('pediatrics.growth.form.save')}
                       </Button>
                     </div>
 
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Check date</TableHead>
-                          <TableHead>Age (Months)</TableHead>
-                          <TableHead>Weight (kg)</TableHead>
-                          <TableHead>Height (cm)</TableHead>
-                          <TableHead>MUAC (cm)</TableHead>
-                          <TableHead>Nutritional Assessment</TableHead>
+                          <TableHead>{t('pediatrics.growth.table.checkDate')}</TableHead>
+                          <TableHead>{t('pediatrics.growth.form.age')}</TableHead>
+                          <TableHead>{t('pediatrics.growth.form.weight')}</TableHead>
+                          <TableHead>{t('pediatrics.growth.form.height')}</TableHead>
+                          <TableHead>{t('pediatrics.growth.form.muac')}</TableHead>
+                          <TableHead>{t('pediatrics.growth.table.assessment')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -561,35 +493,35 @@ export default function PediatricsPage() {
                 <Card className="shadow-sm border-slate-100 dark:border-slate-800">
                   <CardHeader className="flex flex-row justify-between items-center pb-2">
                     <div>
-                      <CardTitle className="text-lg">Child Development vs WHO Medians</CardTitle>
-                      <CardDescription>Visual growth curves comparing patient stats against standard pediatric standards.</CardDescription>
+                      <CardTitle className="text-lg">{t('pediatrics.charts.title')}</CardTitle>
+                      <CardDescription>{t('pediatrics.charts.desc')}</CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" variant={chartType === "weight" ? "default" : "outline"} onClick={() => setChartType("weight")} className={chartType === "weight" ? "bg-indigo-600 hover:bg-indigo-700" : ""}>Weight</Button>
-                      <Button size="sm" variant={chartType === "height" ? "default" : "outline"} onClick={() => setChartType("height")} className={chartType === "height" ? "bg-indigo-600 hover:bg-indigo-700" : ""}>Height</Button>
+                      <Button size="sm" variant={chartType === "weight" ? "default" : "outline"} onClick={() => setChartType("weight")} className={chartType === "weight" ? "bg-indigo-600 hover:bg-indigo-700" : ""}>{t('pediatrics.charts.weight')}</Button>
+                      <Button size="sm" variant={chartType === "height" ? "default" : "outline"} onClick={() => setChartType("height")} className={chartType === "height" ? "bg-indigo-600 hover:bg-indigo-700" : ""}>{t('pediatrics.charts.height')}</Button>
                     </div>
                   </CardHeader>
                   <CardContent className="h-[380px] pt-4">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={currentChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                        <XAxis dataKey="age" label={{ value: 'Age (Months)', position: 'insideBottom', offset: -5 }} stroke="rgba(150, 150, 150, 0.8)" />
-                        <YAxis label={{ value: chartType === "weight" ? 'Weight (kg)' : 'Height (cm)', angle: -90, position: 'insideLeft' }} stroke="rgba(150, 150, 150, 0.8)" />
+                        <XAxis dataKey="age" label={{ value: t('pediatrics.growth.form.age'), position: 'insideBottom', offset: -5 }} stroke="rgba(150, 150, 150, 0.8)" />
+                        <YAxis label={{ value: chartType === "weight" ? t('pediatrics.growth.form.weight') : t('pediatrics.growth.form.height'), angle: -90, position: 'insideLeft' }} stroke="rgba(150, 150, 150, 0.8)" />
                         <Tooltip formatter={(value: number, name: string) => [value !== null ? value : 'N/A', name]} />
                         <Legend verticalAlign="top" height={36} />
                         {chartType === "weight" ? (
                           <>
                             <Area type="monotone" dataKey="weightPlus2SD" stackId="zband" stroke="none" fill="#e0e7ff" fillOpacity={0.4} name="+2 SD" />
-                            <Area type="monotone" dataKey="weightMinus2SD" stackId="zband-low" stroke="none" fill="#fef3c7" fillOpacity={0.3} name="-2 SD (Underweight)" />
-                            <Line type="monotone" dataKey="weightWho" name="WHO Median" stroke="#94a3b8" strokeDasharray="5 5" strokeWidth={2} dot={false} />
-                            <Line type="monotone" dataKey="weightChild" name="Patient Weight (kg)" stroke="#6366f1" strokeWidth={3} activeDot={{ r: 8 }} connectNulls />
+                            <Area type="monotone" dataKey="weightMinus2SD" stackId="zband-low" stroke="none" fill="#fef3c7" fillOpacity={0.3} name={t('pediatrics.charts.underweight')} />
+                            <Line type="monotone" dataKey="weightWho" name={t('pediatrics.charts.median')} stroke="#94a3b8" strokeDasharray="5 5" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="weightChild" name={t('pediatrics.charts.patientWeight')} stroke="#6366f1" strokeWidth={3} activeDot={{ r: 8 }} connectNulls />
                           </>
                         ) : (
                           <>
                             <Area type="monotone" dataKey="heightPlus2SD" stackId="zband" stroke="none" fill="#fce7f3" fillOpacity={0.4} name="+2 SD" />
-                            <Area type="monotone" dataKey="heightMinus2SD" stackId="zband-low" stroke="none" fill="#fef3c7" fillOpacity={0.3} name="-2 SD (Stunted)" />
-                            <Line type="monotone" dataKey="heightWho" name="WHO Median" stroke="#94a3b8" strokeDasharray="5 5" strokeWidth={2} dot={false} />
-                            <Line type="monotone" dataKey="heightChild" name="Patient Height (cm)" stroke="#ec4899" strokeWidth={3} activeDot={{ r: 8 }} connectNulls />
+                            <Area type="monotone" dataKey="heightMinus2SD" stackId="zband-low" stroke="none" fill="#fef3c7" fillOpacity={0.3} name={t('pediatrics.charts.stunted')} />
+                            <Line type="monotone" dataKey="heightWho" name={t('pediatrics.charts.median')} stroke="#94a3b8" strokeDasharray="5 5" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="heightChild" name={t('pediatrics.charts.patientHeight')} stroke="#ec4899" strokeWidth={3} activeDot={{ r: 8 }} connectNulls />
                           </>
                         )}
                       </ComposedChart>
@@ -605,28 +537,28 @@ export default function PediatricsPage() {
             <Card className="shadow-sm overflow-hidden border-t-4 border-t-indigo-600">
               <CardHeader className="bg-indigo-50/20 dark:bg-indigo-950/10 pb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-indigo-600" /> Child Wellness Record
+                  <FileText className="h-5 w-5 text-indigo-600" /> {t('pediatrics.summary.title')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 space-y-4 text-sm">
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Full Name:</span>
+                  <span className="text-muted-foreground">{t('pediatrics.summary.name')}:</span>
                   <span className="font-semibold">{selectedPatient.fullName}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">DOB:</span>
+                  <span className="text-muted-foreground">{t('pediatrics.summary.dob')}:</span>
                   <span>{selectedPatient.dob}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Age:</span>
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400">{selectedPatient.age} Months</span>
+                  <span className="text-muted-foreground">{t('pediatrics.summary.age')}:</span>
+                  <span className="font-bold text-indigo-600 dark:text-indigo-400">{t('pediatrics.summary.ageMonths', { months: selectedPatient.age })}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Mother Name:</span>
+                  <span className="text-muted-foreground">{t('pediatrics.summary.motherName')}:</span>
                   <span>{selectedPatient.motherName}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Mother NID:</span>
+                  <span className="text-muted-foreground">{t('pediatrics.summary.motherId')}:</span>
                   <span className="font-mono text-xs">{selectedPatient.motherId}</span>
                 </div>
 
@@ -634,8 +566,8 @@ export default function PediatricsPage() {
                   <div className={`p-3 rounded-lg border text-xs flex gap-2 items-start ${muacAlert.color}`}>
                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Nutrition Advisory</p>
-                      <p>{muacAlert.label} based on latest MUAC tape measurement.</p>
+                      <p className="font-bold">{t('pediatrics.summary.nutritionAdvisory')}</p>
+                      <p>{t('pediatrics.summary.nutritionAlert', { label: muacAlert.label })}</p>
                     </div>
                   </div>
                 )}
@@ -644,16 +576,16 @@ export default function PediatricsPage() {
                   <div className="p-3 bg-indigo-50/50 dark:bg-indigo-950/15 rounded-lg text-xs flex gap-2 items-start border border-indigo-100 dark:border-indigo-950">
                     <Syringe className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold text-indigo-700 dark:text-indigo-400">Next Action Required</p>
+                      <p className="font-bold text-indigo-700 dark:text-indigo-400">{t('pediatrics.summary.nextAction')}</p>
                       <p className="text-slate-600 dark:text-slate-300">
-                        {nextVax.name} dose is target scheduled for <strong>{nextVax.dueDate}</strong> ({nextVax.status}).
+                        {t('pediatrics.summary.nextVaxAlert', { vaxName: nextVax.name, date: nextVax.dueDate, status: nextVax.status === "Due" ? t('pediatrics.epi.table.status.due') : t('pediatrics.epi.table.status.overdue') })}
                       </p>
                     </div>
                   </div>
                 ) : (
                   <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs flex gap-2 items-center">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    <p className="font-medium">All immunization guidelines fully completed for current schedule.</p>
+                    <p className="font-medium">{t('pediatrics.summary.allCompleted')}</p>
                   </div>
                 )}
               </CardContent>
@@ -668,13 +600,13 @@ export default function PediatricsPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 border border-dashed rounded-2xl">
-          <div className="h-20 w-20 bg-indigo-50 dark:bg-indigo-950/50 rounded-full flex items-center justify-center">
+          <div className="h-20 w-20 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center">
             <Baby className="h-10 w-10 text-indigo-600" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-semibold">No Pediatric Record Loaded</h3>
+            <h3 className="text-xl font-semibold">{t('pediatrics.summary.empty')}</h3>
             <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-              Search by Child ID (e.g. <strong>PED001</strong>) or Mother's ID to check immunization schedules, weight metrics and WHO percentiles.
+              {t('pediatrics.summary.emptyDesc')}
             </p>
           </div>
         </div>
@@ -684,20 +616,20 @@ export default function PediatricsPage() {
       <Dialog open={isVaxModalOpen} onOpenChange={setIsVaxModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Administer Pediatric Vaccine</DialogTitle>
+            <DialogTitle>{t('pediatrics.dialog.title')}</DialogTitle>
             <DialogDescription>
-              Submit the dose administration logs to record vaccine inventory details.
+              {t('pediatrics.dialog.desc')}
             </DialogDescription>
           </DialogHeader>
           {selectedVax && (
             <div className="space-y-4 py-2">
               <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg text-sm">
-                <p><strong>Vaccine:</strong> {selectedVax.name}</p>
-                <p><strong>Scheduled target:</strong> {selectedVax.dueDate}</p>
+                <p><strong>{t('pediatrics.dialog.vaccine')}:</strong> {selectedVax.name}</p>
+                <p><strong>{t('pediatrics.dialog.scheduled')}:</strong> {selectedVax.dueDate}</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="batch" className="font-semibold text-xs">Vial Batch Number <span className="text-red-500">*</span></Label>
+                <Label htmlFor="batch" className="font-semibold text-xs">{t('pediatrics.dialog.batch')} <span className="text-red-500">*</span></Label>
                 <Input 
                   id="batch" 
                   placeholder="e.g. LOT-A3258-B" 
@@ -708,15 +640,15 @@ export default function PediatricsPage() {
               
               <div className="p-3 bg-amber-500/10 text-amber-800 dark:text-amber-300 rounded-lg flex gap-2 text-xs border border-amber-200">
                 <AlertCircle className="h-4 w-4 shrink-0" />
-                <p>Ensure expiration date and storage temperature logs are verified before patient administration.</p>
+                <p>{t('pediatrics.dialog.warning')}</p>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsVaxModalOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsVaxModalOpen(false)}>{t('pediatrics.dialog.cancel')}</Button>
             <Button onClick={handleAdministerVax} disabled={!vaxBatch || isAdministering} className="bg-indigo-600 hover:bg-indigo-700 text-white">
               {isAdministering && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Dose Delivery
+              {t('pediatrics.dialog.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

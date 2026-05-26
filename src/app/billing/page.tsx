@@ -295,7 +295,7 @@ export default function BillingPage() {
       </div>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {quickStats.map((stat, i) => (
           <motion.div
             key={i}
@@ -379,7 +379,7 @@ export default function BillingPage() {
                </div>
 
                <Card className="border-none shadow-sm overflow-hidden">
-                 <div className="overflow-x-auto">
+                 <div className="overflow-x-auto hidden md:block">
                     <table className="w-full text-left font-sans">
                        <thead className="bg-muted/30 border-b">
                           <tr>
@@ -423,6 +423,35 @@ export default function BillingPage() {
                           ))}
                        </tbody>
                     </table>
+                 </div>
+                 {/* Mobile Invoice Cards */}
+                 <div className="block md:hidden divide-y">
+                   {RECENT_INVOICES.map((inv) => (
+                     <div key={inv.id} className="p-4 space-y-2">
+                       <div className="flex items-center justify-between">
+                         <span className="font-mono text-[10px] font-bold text-indigo-600">{inv.id}</span>
+                         <Badge className={cn(
+                           "text-[9px] font-black uppercase px-2 py-0.5",
+                           inv.status === 'Paid' ? "bg-green-100 text-green-700 border-none" :
+                           inv.status === 'Pending' ? "bg-amber-100 text-amber-700 border-none" : "bg-red-100 text-red-700 border-none"
+                         )}>
+                           {inv.status}
+                         </Badge>
+                       </div>
+                       <div className="flex items-center justify-between">
+                         <div>
+                           <p className="text-xs font-black">{inv.patient}</p>
+                           <p className="text-[9px] text-muted-foreground">{inv.date}</p>
+                         </div>
+                         <div className="text-right">
+                           <p className="text-sm font-black tracking-tight">{inv.amount}</p>
+                           <Badge variant="outline" className="text-[9px] font-black border-slate-200 bg-white">
+                             {inv.method}
+                           </Badge>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
                  </div>
                  <CardFooter className="bg-muted/10 border-t p-4 flex justify-between items-center">
                     <p className="text-[10px] text-muted-foreground font-black uppercase">Recent Transaction Log</p>

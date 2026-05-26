@@ -48,6 +48,7 @@ const FormSchema = z.object({
   doctorComments: z.string().optional(),
   physicalExamNotes: z.string().optional(),
   finalDiagnosis: z.string().min(1, "Final Diagnosis is required for completion."),
+  icd10Code: z.string().optional(),
   finalPrescription: z.string().optional(),
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
     message: "At least one of symptoms, lab results summary, or imaging data summary must be provided for AI recommendation.",
@@ -462,6 +463,7 @@ ${visitHistoryString || "No recent visit history available."}
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.doctorComments,
       finalDiagnosis: currentFormData.finalDiagnosis,
+      icd10Code: currentFormData.icd10Code,
       prescription: currentFormData.finalPrescription,
       structuredPrescription: prescribedDrugs,
       outcome: outcome,
@@ -617,6 +619,7 @@ ${visitHistoryString || "No recent visit history available."}
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.doctorComments,
       finalDiagnosis: currentFormData.finalDiagnosis,
+      icd10Code: currentFormData.icd10Code,
       finalPrescription: currentFormData.finalPrescription,
       status: "DRAFT"
     };
@@ -1151,6 +1154,15 @@ ${visitHistoryString || "No recent visit history available."}
                         {form.formState.errors.finalDiagnosis && (
                             <p className="text-xs text-destructive">{form.formState.errors.finalDiagnosis.message}</p>
                         )}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="icd10Code" className="font-bold">{t('clinical.icd10.label')}</Label>
+                        <Input
+                            id="icd10Code"
+                            placeholder={t('clinical.icd10.placeholder.default')}
+                            {...form.register('icd10Code')}
+                            disabled={isActionDisabled}
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="finalPrescription" className="font-bold">Final Prescription <span className="text-destructive">*</span></Label>

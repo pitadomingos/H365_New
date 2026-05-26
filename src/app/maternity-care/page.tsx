@@ -55,6 +55,7 @@ interface AntenatalVisit {
   fundalHeightCm: string;
   notes: string;
   diagnosis?: string;
+  icd10Code?: string;
   prescription?: string;
   nextAppointment?: string;
   bodyTemperature?: string;
@@ -62,6 +63,13 @@ interface AntenatalVisit {
   bmi?: string;
   bmiStatus?: string;
   bpStatus?: string;
+  iptDoses?: string;
+  ttDoses?: string;
+  ironFolicAcid?: boolean;
+  hivStatus?: string;
+  syphilisResult?: string;
+  llinProvided?: boolean;
+  urineProtein?: string;
 }
 
 interface MaternityPatient {
@@ -82,6 +90,8 @@ interface MaternityPatient {
   chronicConditions: string[]; 
   riskFactors: string[];
   antenatalVisits: AntenatalVisit[];
+  pmtctStatus?: "Not Enrolled" | "Option B+" | "Negative" | "Unknown";
+  pmtctArtId?: string; // Link to chronic_patients record
 }
 
 const mockPatientsList: MaternityPatient[] = [
@@ -139,10 +149,18 @@ interface NewVisitFormState {
   fundalHeightCm: string;
   notes: string;
   diagnosis: string;
+  icd10Code: string;
   prescription: string;
   nextAppointmentDate?: Date;
   bodyTemperature?: string;
   heightCm?: string;
+  iptDoses: string;
+  ttDoses: string;
+  ironFolicAcid: boolean;
+  hivStatus: string;
+  syphilisResult: string;
+  llinProvided: boolean;
+  urineProtein: string;
 }
 
 interface MaternityIntakeFormState {
@@ -220,7 +238,8 @@ export default function MaternityCarePage() {
   const [isNewVisitModalOpen, setIsNewVisitModalOpen] = useState(false);
   const [isLoggingVisit, setIsLoggingVisit] = useState(false);
   const [newVisitForm, setNewVisitForm] = useState<NewVisitFormState>({
-    gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", prescription: "", bodyTemperature: "", heightCm: ""
+    gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", icd10Code: "", prescription: "", bodyTemperature: "", heightCm: "",
+    iptDoses: "", ttDoses: "", ironFolicAcid: false, hivStatus: "", syphilisResult: "", llinProvided: false, urineProtein: ""
   });
   const [newVisitBmi, setNewVisitBmi] = useState<string | null>(null);
   const [newVisitBmiDisplay, setNewVisitBmiDisplay] = useState<{ status: string; colorClass: string; textColorClass: string; } | null>(null);
@@ -386,6 +405,13 @@ export default function MaternityCarePage() {
         bmi: newVisitBmi,
         bmiStatus: newVisitBmiDisplay?.status || undefined,
         bpStatus: newVisitBpDisplay?.status || undefined,
+        iptDoses: newVisitForm.iptDoses,
+        ttDoses: newVisitForm.ttDoses,
+        ironFolicAcid: newVisitForm.ironFolicAcid,
+        hivStatus: newVisitForm.hivStatus,
+        syphilisResult: newVisitForm.syphilisResult,
+        llinProvided: newVisitForm.llinProvided,
+        urineProtein: newVisitForm.urineProtein,
     };
     console.log("Submitting new antenatal visit (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -399,6 +425,7 @@ export default function MaternityCarePage() {
         fundalHeightCm: payload.fundalHeightCm,
         notes: payload.notes,
         diagnosis: newVisitForm.diagnosis,
+        icd10Code: newVisitForm.icd10Code,
         prescription: newVisitForm.prescription,
         nextAppointment: payload.nextAppointmentDate,
         bodyTemperature: payload.bodyTemperature,
@@ -406,15 +433,55 @@ export default function MaternityCarePage() {
         bmi: payload.bmi || undefined,
         bmiStatus: payload.bmiStatus || "N/A", // Ensure these have default values
         bpStatus: payload.bpStatus || "N/A",   // Ensure these have default values
+        iptDoses: payload.iptDoses,
+        ttDoses: payload.ttDoses,
+        ironFolicAcid: payload.ironFolicAcid,
+        hivStatus: payload.hivStatus,
+        syphilisResult: payload.syphilisResult,
+        llinProvided: payload.llinProvided,
+        urineProtein: payload.urineProtein,
     };
 
     setSelectedPatient(prev => prev ? ({ ...prev, antenatalVisits: [savedVisit, ...prev.antenatalVisits].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
     setAllMaternityPatients(prevPatients => prevPatients.map(p => p.id === selectedPatient.id ? {...p, antenatalVisits: [savedVisit, ...(p.antenatalVisits || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())} : p));
 
+    // GAP-08: PMTCT Option B+ auto-enrollment — if HIV+ at ANC, enroll in ART module
+    if (payload.hivStatus === "Positive") {
+      try {
+        const existingChronicPatients = await LocalDB.get<any[]>("chronic_patients", []);
+        const alreadyEnrolled = existingChronicPatients.find((p: any) => p.nationalId === selectedPatient.nationalId);
+        if (!alreadyEnrolled) {
+          const pmtctRecord = {
+            id: `PMTCT-${selectedPatient.nationalId}`,
+            nationalId: selectedPatient.nationalId,
+            fullName: selectedPatient.fullName,
+            condition: "HIV (PMTCT Option B+)",
+            regimen: "TLD (Tenofovir/Lamivudine/Dolutegravir)",
+            artLineCode: "1ª Linha",
+            regimenCode: "TDF+3TC+DTG",
+            iptStatus: "Not Started",
+            pmtctOptionB: true,
+            enrollmentDate: payload.visitDate,
+            adherenceRate: 100,
+            whoStage: 1,
+            lastRefill: payload.visitDate,
+            nextRefill: "",
+            status: "Stable",
+            labHistory: [],
+            dotsHistory: [],
+            regimenSwitchHistory: [],
+          };
+          await LocalDB.save("chronic_patients", [...existingChronicPatients, pmtctRecord]);
+          toast({ title: "PMTCT Option B+ Enrolled", description: `${selectedPatient.fullName} has been automatically enrolled in the ART module under PMTCT Option B+.` });
+        }
+      } catch (err) {
+        console.error("[GAP-08] Failed to create PMTCT chronic care link:", err);
+      }
+    }
 
     toast({ title: t('maternity.toast.newVisit.logged'), description: t('maternity.toast.newVisit.logged.desc', {date: savedVisit.date, patientName: selectedPatient.fullName})});
     setIsNewVisitModalOpen(false);
-    setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", prescription: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); 
+    setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", icd10Code: "", prescription: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined, iptDoses: "", ttDoses: "", ironFolicAcid: false, hivStatus: "", syphilisResult: "", llinProvided: false, urineProtein: "" }); 
     setNewVisitBmi(null);
     setNewVisitBmiDisplay(null);
     setNewVisitBpDisplay(null);
@@ -785,7 +852,7 @@ export default function MaternityCarePage() {
                   )}
                 </CardContent>
                 <CardFooter>
-                    <Dialog open={isNewVisitModalOpen} onOpenChange={(open) => { if(!open) { setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", prescription: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); setNewVisitBmi(null); setNewVisitBmiDisplay(null); setNewVisitBpDisplay(null); } setIsNewVisitModalOpen(open);}}>
+                    <Dialog open={isNewVisitModalOpen} onOpenChange={(open) => { if(!open) { setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", diagnosis: "", icd10Code: "", prescription: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined, iptDoses: "", ttDoses: "", ironFolicAcid: false, hivStatus: "", syphilisResult: "", llinProvided: false, urineProtein: "" }); setNewVisitBmi(null); setNewVisitBmiDisplay(null); setNewVisitBpDisplay(null); } setIsNewVisitModalOpen(open);}}>
                         <DialogTrigger asChild>
                             <Button disabled={!selectedPatient || isLoggingVisit}>
                                 {isLoggingVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CalendarPlus className="mr-2 h-4 w-4" />}
@@ -869,17 +936,86 @@ export default function MaternityCarePage() {
                                         <Label htmlFor="fundalHeightCm">{t('maternity.newVisitModal.fundalHeight.label')}</Label>
                                         <Input id="fundalHeightCm" name="fundalHeightCm" type="number" value={newVisitForm.fundalHeightCm} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.fundalHeight.placeholder')} disabled={isLoggingVisit}/>
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border mt-4">
+                                        <div className="col-span-2">
+                                            <h4 className="text-sm font-semibold text-primary">{t('maternity.newVisitModal.misauTracking.title')}</h4>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="iptDoses">{t('maternity.newVisitModal.iptDoses.label')}</Label>
+                                            <select id="iptDoses" name="iptDoses" value={newVisitForm.iptDoses} onChange={(e) => setNewVisitForm({...newVisitForm, iptDoses: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={isLoggingVisit}>
+                                                <option value="">{t('maternity.newVisitModal.iptDoses.placeholder')}</option>
+                                                <option value="Dose 1">{t('maternity.newVisitModal.iptDoses.dose1')}</option>
+                                                <option value="Dose 2">{t('maternity.newVisitModal.iptDoses.dose2')}</option>
+                                                <option value="Dose 3">{t('maternity.newVisitModal.iptDoses.dose3')}</option>
+                                                <option value="Dose 4+">{t('maternity.newVisitModal.iptDoses.dose4plus')}</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="ttDoses">{t('maternity.newVisitModal.ttDoses.label')}</Label>
+                                            <select id="ttDoses" name="ttDoses" value={newVisitForm.ttDoses} onChange={(e) => setNewVisitForm({...newVisitForm, ttDoses: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={isLoggingVisit}>
+                                                <option value="">{t('maternity.newVisitModal.ttDoses.placeholder')}</option>
+                                                <option value="TT1">TT1</option>
+                                                <option value="TT2">TT2</option>
+                                                <option value="TT3">TT3</option>
+                                                <option value="TT4">TT4</option>
+                                                <option value="TT5">TT5</option>
+                                                <option value="Fully Immunized">{t('maternity.newVisitModal.ttDoses.fullyImmunized')}</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="ironFolicAcid">{t('maternity.newVisitModal.ironFolic.label')}</Label>
+                                            <select id="ironFolicAcid" name="ironFolicAcid" value={newVisitForm.ironFolicAcid ? "true" : "false"} onChange={(e) => setNewVisitForm({...newVisitForm, ironFolicAcid: e.target.value === "true"})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={isLoggingVisit}>
+                                                <option value="false">{t('common.no')}</option>
+                                                <option value="true">{t('common.yes')}</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="llinProvided">{t('maternity.newVisitModal.llin.label')}</Label>
+                                            <select id="llinProvided" name="llinProvided" value={newVisitForm.llinProvided ? "true" : "false"} onChange={(e) => setNewVisitForm({...newVisitForm, llinProvided: e.target.value === "true"})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={isLoggingVisit}>
+                                                <option value="false">{t('common.no')}</option>
+                                                <option value="true">{t('common.yes')}</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="hivStatus">{t('maternity.newVisitModal.hivStatus.label')}</Label>
+                                            <select id="hivStatus" name="hivStatus" value={newVisitForm.hivStatus} onChange={(e) => setNewVisitForm({...newVisitForm, hivStatus: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={isLoggingVisit}>
+                                                <option value="">{t('maternity.newVisitModal.ttDoses.placeholder')}</option>
+                                                <option value="Negative (Tested Today)">{t('maternity.newVisitModal.hivStatus.negativeTested')}</option>
+                                                <option value="Positive (Tested Today)">{t('maternity.newVisitModal.hivStatus.positiveTested')}</option>
+                                                <option value="Known Positive (On ART)">{t('maternity.newVisitModal.hivStatus.knownPositive')}</option>
+                                                <option value="Unknown/Refused">{t('maternity.newVisitModal.hivStatus.unknownRefused')}</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="syphilisResult">{t('maternity.newVisitModal.syphilis.label')}</Label>
+                                            <select id="syphilisResult" name="syphilisResult" value={newVisitForm.syphilisResult} onChange={(e) => setNewVisitForm({...newVisitForm, syphilisResult: e.target.value})} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" disabled={isLoggingVisit}>
+                                                <option value="">{t('maternity.newVisitModal.syphilis.placeholder')}</option>
+                                                <option value="Non-Reactive">{t('maternity.newVisitModal.syphilis.nonReactive')}</option>
+                                                <option value="Reactive (Treated)">{t('maternity.newVisitModal.syphilis.reactiveTreated')}</option>
+                                                <option value="Reactive (Not Treated)">{t('maternity.newVisitModal.syphilis.reactiveNotTreated')}</option>
+                                                <option value="Not Done">{t('maternity.newVisitModal.syphilis.notDone')}</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="urineProtein">{t('maternity.newVisitModal.urineProtein.label')}</Label>
+                                            <Input id="urineProtein" name="urineProtein" value={newVisitForm.urineProtein} onChange={(e) => setNewVisitForm({...newVisitForm, urineProtein: e.target.value})} placeholder={t('maternity.newVisitModal.urineProtein.placeholder')} disabled={isLoggingVisit}/>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 pt-4 border-t border-border mt-4">
                                         <Label htmlFor="notes">{t('maternity.newVisitModal.notes.label')}</Label>
                                         <Textarea id="notes" name="notes" value={newVisitForm.notes} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.notes.placeholder')} disabled={isLoggingVisit}/>
                                     </div>
                                     <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                                        <Label htmlFor="diagnosis" className="font-bold text-primary">Clinician&apos;s Diagnosis <span className="text-destructive">*</span></Label>
-                                        <Textarea id="diagnosis" name="diagnosis" value={newVisitForm.diagnosis} onChange={handleNewVisitFormChange} placeholder="Enter formal clinical diagnosis..." disabled={isLoggingVisit} className="bg-background"/>
+                                        <Label htmlFor="diagnosis" className="font-bold text-primary">{t('maternity.newVisitModal.diagnosis.label')} <span className="text-destructive">*</span></Label>
+                                        <Textarea id="diagnosis" name="diagnosis" value={newVisitForm.diagnosis} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.diagnosis.placeholder')} disabled={isLoggingVisit} className="bg-background"/>
                                     </div>
                                     <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                                        <Label htmlFor="prescription" className="font-bold text-primary">Clinical Prescription <span className="text-destructive">*</span></Label>
-                                        <Textarea id="prescription" name="prescription" value={newVisitForm.prescription} onChange={handleNewVisitFormChange} placeholder="Enter formal prescription or treatment plan..." disabled={isLoggingVisit} className="bg-background"/>
+                                        <Label htmlFor="icd10Code" className="font-bold text-primary">{t('clinical.icd10.label')}</Label>
+                                        <Input id="icd10Code" name="icd10Code" value={newVisitForm.icd10Code} onChange={handleNewVisitFormChange} placeholder={t('clinical.icd10.placeholder.maternity')} disabled={isLoggingVisit} className="bg-background"/>
+                                    </div>
+                                    <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                                        <Label htmlFor="prescription" className="font-bold text-primary">{t('maternity.newVisitModal.prescription.label')} <span className="text-destructive">*</span></Label>
+                                        <Textarea id="prescription" name="prescription" value={newVisitForm.prescription} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.prescription.placeholder')} disabled={isLoggingVisit} className="bg-background"/>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="nextAppointmentDate">{t('maternity.newVisitModal.nextAppointment.label')}</Label>

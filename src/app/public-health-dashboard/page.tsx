@@ -203,6 +203,22 @@ const MOCK_OBSERVATIONS: FHIRObservation[] = [
   createObservation("obs-17", "immunization", "DTP3", "Female", "<1y", "2026-05-02", "LOC-CZ", 82, 105),
   createObservation("obs-18", "immunization", "MCV", "Female", "<1y", "2026-05-03", "LOC-CZ", 92, 105),
 
+  createObservation("obs-19", "immunization", "DTP1", "Male", "<1y", "2026-05-01", "LOC-XX-CS", 140, 150),
+  createObservation("obs-20", "immunization", "DTP3", "Male", "<1y", "2026-05-02", "LOC-XX-CS", 120, 150),
+  createObservation("obs-21", "immunization", "MCV", "Male", "<1y", "2026-05-03", "LOC-XX-CS", 130, 150),
+
+  createObservation("obs-19f", "immunization", "DTP1", "Female", "<1y", "2026-05-01", "LOC-XX-CS", 145, 155),
+  createObservation("obs-20f", "immunization", "DTP3", "Female", "<1y", "2026-05-02", "LOC-XX-CS", 125, 155),
+  createObservation("obs-21f", "immunization", "MCV", "Female", "<1y", "2026-05-03", "LOC-XX-CS", 135, 155),
+
+  createObservation("obs-22", "immunization", "DTP1", "Male", "<1y", "2026-05-01", "LOC-CH-CS", 110, 120),
+  createObservation("obs-22a", "immunization", "DTP3", "Male", "<1y", "2026-05-02", "LOC-CH-CS", 95, 120),
+  createObservation("obs-22b", "immunization", "MCV", "Male", "<1y", "2026-05-03", "LOC-CH-CS", 100, 120),
+
+  createObservation("obs-22f", "immunization", "DTP1", "Female", "<1y", "2026-05-01", "LOC-CH-CS", 115, 125),
+  createObservation("obs-22fa", "immunization", "DTP3", "Female", "<1y", "2026-05-02", "LOC-CH-CS", 98, 125),
+  createObservation("obs-22fb", "immunization", "MCV", "Female", "<1y", "2026-05-03", "LOC-CH-CS", 105, 125),
+
   // --- hiv ---
   createObservation("obs-23", "hiv", "ART", "Female", "15-49y", "2026-05-05", "LOC-CZ", 880, 950),
   createObservation("obs-24", "hiv", "VLS", "Female", "15-49y", "2026-05-06", "LOC-CZ", 810, 880),
@@ -444,9 +460,17 @@ export default function PublicHealthDashboard() {
     if (level === "facility") {
       if (selectedFacility !== "all") {
         const found = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(selectedFacility.toLowerCase()) && l.physicalType === "facility");
-        targetLocIds = found ? [found.id] : ["LOC-CZ"];
+        if (found) {
+          targetLocIds = [found.id];
+        } else {
+          const distName = selectedDistrict !== "all" ? selectedDistrict : "chibuto";
+          const distFound = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(distName.toLowerCase()) && l.physicalType === "district");
+          targetLocIds = distFound ? getSubLocationIds(distFound.id) : [];
+        }
       } else {
-        targetLocIds = ["LOC-CZ", "LOC-XX-CS", "LOC-CH-CS"];
+        const distName = selectedDistrict !== "all" ? selectedDistrict : "chibuto";
+        const distFound = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(distName.toLowerCase()) && l.physicalType === "district");
+        targetLocIds = distFound ? getSubLocationIds(distFound.id) : [];
       }
     } else if (level === "district") {
       const distName = selectedDistrict !== "all" ? selectedDistrict : "chibuto";
@@ -547,10 +571,18 @@ export default function PublicHealthDashboard() {
 
     if (level === "facility") {
       if (selectedFacility === "all") {
-        targetLocIds = ["LOC-CZ", "LOC-XX-CS", "LOC-CH-CS"];
+        const distName = selectedDistrict !== "all" ? selectedDistrict : "chibuto";
+        const distFound = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(distName.toLowerCase()) && l.physicalType === "district");
+        targetLocIds = distFound ? getSubLocationIds(distFound.id) : [];
       } else {
         const found = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(selectedFacility.toLowerCase()) && l.physicalType === "facility");
-        targetLocIds = found ? [found.id] : ["LOC-CZ"];
+        if (found) {
+          targetLocIds = [found.id];
+        } else {
+          const distName = selectedDistrict !== "all" ? selectedDistrict : "chibuto";
+          const distFound = MOCK_LOCATIONS.find(l => l.name.toLowerCase().includes(distName.toLowerCase()) && l.physicalType === "district");
+          targetLocIds = distFound ? getSubLocationIds(distFound.id) : [];
+        }
       }
     } else if (level === "district") {
       const distName = selectedDistrict !== "all" ? selectedDistrict : "chibuto";

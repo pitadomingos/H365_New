@@ -84,6 +84,7 @@ export default function VisitingPatientsPage() {
   const [reasonForVisit, setReasonForVisit] = useState("");
   const [assignedDoctor, setAssignedDoctor] = useState("");
   const [verifiedDiagnosis, setVerifiedDiagnosis] = useState("");
+  const [icd10Code, setIcd10Code] = useState("");
   const [verifiedPrescription, setVerifiedPrescription] = useState("");
   const [isAddingToWaitingList, setIsAddingToWaitingList] = useState(false);
   const [vitalsData, setVitalsData] = useState<any>(null);
@@ -241,6 +242,7 @@ export default function VisitingPatientsPage() {
       reasonForVisit: reasonForVisit,
       assignedDoctor: assignedDoctor || null,
       diagnosis: verifiedDiagnosis,
+      icd10Code: icd10Code,
       prescription: verifiedPrescription,
       visitDate: new Date().toISOString()
     };
@@ -301,6 +303,7 @@ export default function VisitingPatientsPage() {
       setPatientNotFound(false);
       setVitalsData(null);
       setVerifiedDiagnosis("");
+      setIcd10Code("");
       setVerifiedPrescription("");
     } catch (error: any) {
         console.error("Error adding to waiting list:", error);
@@ -580,6 +583,17 @@ export default function VisitingPatientsPage() {
                             className="min-h-[100px] bg-background"
                             value={verifiedDiagnosis}
                             onChange={(e) => setVerifiedDiagnosis(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="icd10Code">{t('clinical.icd10.label')}</Label>
+                          <Input 
+                            id="icd10Code"
+                            placeholder={t('clinical.icd10.placeholder.visiting')}
+                            className="bg-background"
+                            value={icd10Code}
+                            onChange={(e) => setIcd10Code(e.target.value)}
                           />
                         </div>
 

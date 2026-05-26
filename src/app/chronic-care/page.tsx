@@ -51,7 +51,13 @@ interface ChronicPatient {
   tbSputumHistory?: SputumTest[];
   lastRefill: string;
   nextRefill: string;
-  status: "Stable" | "Unstable" | "Lacking Adherence";
+  status: "Stable" | "At Risk" | "Lacking Adherence";
+  artLineCode?: "1ª Linha" | "2ª Linha" | "3ª Linha";
+  regimenCode?: string;
+  regimenSwitchHistory?: Array<{ date: string; from: string; to: string; reason: string }>;
+  iptStatus?: "Not Started" | "On IPT" | "Completed" | "Discontinued";
+  pmtctOptionB?: boolean;  // GAP-08: PMTCT Option B+ flag for HIV+ pregnant women
+  enrollmentDate?: string;
   labHistory: LabMarker[];
   dotsHistory: DotsLog[];
 }
@@ -62,7 +68,11 @@ const DEFAULT_CHRONIC_PATIENTS: ChronicPatient[] = [
     nationalId: "ART-887722",
     fullName: "Josefa Lobo",
     condition: "HIV / TB Co-infection",
-    regimen: "TLD (Tenofovir/Lamivudine/Dolutegravir) + RHZE (Tuberculosis DOTS)",
+    regimen: "TLD + RHZE",
+    artLineCode: "1ª Linha",
+    regimenCode: "TDF+3TC+DTG",
+    iptStatus: "Not Started",
+    regimenSwitchHistory: [],
     adherenceRate: 93,
     whoStage: 3,
     tbTreatmentOutcome: "On Treatment",
@@ -73,7 +83,7 @@ const DEFAULT_CHRONIC_PATIENTS: ChronicPatient[] = [
     ],
     lastRefill: "2026-05-02",
     nextRefill: "2026-06-02",
-    status: "Stable",
+    status: "At Risk",
     labHistory: [
       { date: "2025-12", viralLoad: 450, cd4: 320 },
       { date: "2026-01", viralLoad: 300, cd4: 350 },
@@ -115,6 +125,7 @@ export default function ChronicCarePage() {
   const [logDate, setLogDate] = useState("");
   const [logVL, setLogVL] = useState("");
   const [logCD4, setLogCD4] = useState("");
+  const [logIcd10, setLogIcd10] = useState("");
   const [isSavingLab, setIsSavingLab] = useState(false);
 
   // New Sputum Log form state
@@ -181,7 +192,7 @@ export default function ChronicCarePage() {
       ...selectedPatient,
       dotsHistory: updatedDots,
       adherenceRate: newAdherence,
-      status: newAdherence > 95 ? "Stable" : newAdherence > 85 ? "Stable" : "Lacking Adherence"
+      status: newAdherence >= 95 ? "Stable" : newAdherence >= 85 ? "At Risk" : "Lacking Adherence"
     };
 
     const updatedList = patientsList.map(p => p.id === selectedPatient.id ? updatedPatient : p);
@@ -218,15 +229,12 @@ export default function ChronicCarePage() {
     setPatientsList(updatedList);
     setSelectedPatient(updatedPatient);
 
-    toast({
-      title: "Lab Marker Logged",
-      description: "Viral load and CD4 trends have been updated."
-    });
-
+    toast({ title: t('chronic.toast.saved'), description: t('chronic.toast.saved.desc', { date: logDate, icd10: logIcd10 || "N/A" }) });
     setIsSavingLab(false);
     setLogDate("");
     setLogVL("");
     setLogCD4("");
+    setLogIcd10("");
   };
 
   const handleAddSputumRecord = async () => {
@@ -368,11 +376,11 @@ export default function ChronicCarePage() {
                 </CardContent>
               </Card>
 
-              <Card className={selectedPatient.status === "Lacking Adherence" ? "bg-rose-50 dark:bg-rose-950/10 border-rose-100" : "bg-slate-50 dark:bg-slate-900/10 border-slate-100"}>
+              <Card className={selectedPatient.status === "Lacking Adherence" ? "bg-rose-50 dark:bg-rose-950/10 border-rose-100" : selectedPatient.status === "At Risk" ? "bg-amber-50 dark:bg-amber-950/10 border-amber-100" : "bg-slate-50 dark:bg-slate-900/10 border-slate-100"}>
                 <CardContent className="pt-4 flex justify-between items-center">
                   <div>
                     <p className="text-xs text-muted-foreground">Clinical Status</p>
-                    <p className={`text-sm font-black mt-2 ${selectedPatient.status === "Lacking Adherence" ? "text-rose-600" : "text-slate-700 dark:text-slate-300"}`}>{selectedPatient.status}</p>
+                    <p className={`text-sm font-black mt-2 ${selectedPatient.status === "Lacking Adherence" ? "text-rose-600" : selectedPatient.status === "At Risk" ? "text-amber-600" : "text-slate-700 dark:text-slate-300"}`}>{selectedPatient.status}</p>
                   </div>
                   <div className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg">
                     <HeartPulse className="h-5 w-5" />
@@ -414,25 +422,29 @@ export default function ChronicCarePage() {
                 {/* Log new value panel */}
                 <Card className="shadow-sm border-slate-100 dark:border-slate-800">
                   <CardHeader>
-                    <CardTitle className="text-sm font-semibold">Log Lab Biomarkers</CardTitle>
-                    <CardDescription>Input new laboratory test values for viral load and CD4 count.</CardDescription>
+                    <CardTitle className="text-sm font-semibold">{t('chronic.encounter.card.title')}</CardTitle>
+                    <CardDescription>{t('chronic.encounter.card.description')}</CardDescription>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-4 gap-4 items-end">
+                  <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
                     <div className="space-y-1">
-                      <Label className="text-xs">Date (YYYY-MM)</Label>
+                      <Label className="text-xs">{t('chronic.encounter.form.date')}</Label>
                       <Input type="text" placeholder="2026-05" value={logDate} onChange={e => setLogDate(e.target.value)} />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Viral Load (copies/mL)</Label>
-                      <Input type="number" placeholder="copies/mL" value={logVL} onChange={e => setLogVL(e.target.value)} />
+                      <Label className="text-xs">{t('chronic.encounter.form.viralLoad')}</Label>
+                      <Input type="number" placeholder="cp/mL" value={logVL} onChange={e => setLogVL(e.target.value)} />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">CD4 (cells/mm³)</Label>
+                      <Label className="text-xs">{t('chronic.encounter.form.cd4')}</Label>
                       <Input type="number" placeholder="cells/mm³" value={logCD4} onChange={e => setLogCD4(e.target.value)} />
                     </div>
-                    <Button onClick={handleAddLabRecord} disabled={isSavingLab || !logDate || !logVL || !logCD4} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t('clinical.icd10.label')}</Label>
+                      <Input type="text" placeholder={t('clinical.icd10.placeholder.chronic')} value={logIcd10} onChange={e => setLogIcd10(e.target.value)} />
+                    </div>
+                    <Button onClick={handleAddLabRecord} disabled={isSavingLab || !logDate} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 w-full">
                       {isSavingLab ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                      Add Record
+                      {t('chronic.encounter.form.addButton')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -735,6 +747,16 @@ export default function ChronicCarePage() {
                   <div className="p-3 bg-rose-500/10 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-semibold flex items-center gap-2 border border-rose-200">
                     <AlertTriangle className="h-4 w-4 shrink-0" />
                     <span>Adherence counsel checklist recommended.</span>
+                  </div>
+                )}
+
+                {(selectedPatient as any).pmtctOptionB && (
+                  <div className="p-3 bg-pink-500/10 text-pink-700 dark:text-pink-300 rounded-lg text-xs font-semibold flex items-start gap-2 border border-pink-200 dark:border-pink-900">
+                    <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">{t('chronic.pmtct.active')}</p>
+                      <p className="font-normal text-pink-600 dark:text-pink-400 mt-0.5">{t('chronic.pmtct.description')}</p>
+                    </div>
                   </div>
                 )}
               </CardContent>

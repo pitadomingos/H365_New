@@ -152,6 +152,7 @@ export function SpecialistConsultationForm({ getRecommendationAction, initialDat
   
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
   const [verifiedDiagnosis, setVerifiedDiagnosis] = useState("");
+  const [icd10Code, setIcd10Code] = useState("");
   const [verifiedPrescription, setVerifiedPrescription] = useState("");
   
   const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
@@ -373,6 +374,7 @@ ${visitHistoryString || "No recent visit history available."}
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.specialistComments, 
       finalDiagnosis: verifiedDiagnosis,
+      icd10Code: icd10Code,
       prescription: verifiedPrescription,
       outcome: outcome,
     };
@@ -398,6 +400,7 @@ ${visitHistoryString || "No recent visit history available."}
     setRecommendation(null);
     setError(null);
     setVerifiedDiagnosis("");
+    setIcd10Code("");
     setVerifiedPrescription("");
     setBmi(null);
     setBmiDisplay(getBmiStatusAndColor(null, t));
@@ -433,6 +436,7 @@ ${visitHistoryString || "No recent visit history available."}
       aiPrescription: recommendation?.prescription,
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.specialistComments, 
+      icd10Code: icd10Code,
       status: "DRAFT"
     };
     
@@ -885,6 +889,21 @@ ${visitHistoryString || "No recent visit history available."}
                           value={verifiedDiagnosis}
                           onChange={(e) => setVerifiedDiagnosis(e.target.value)}
                           className="min-h-[120px] bg-background"
+                          disabled={isActionDisabled}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="icd10Code" className="flex items-center gap-2">
+                        <ClipboardList className="h-4 w-4" />
+                        {t('clinical.icd10.label')}
+                      </Label>
+                      <Input
+                          id="icd10Code"
+                          placeholder={t('clinical.icd10.placeholder.default')}
+                          value={icd10Code}
+                          onChange={(e) => setIcd10Code(e.target.value)}
+                          className="bg-background"
                           disabled={isActionDisabled}
                       />
                     </div>

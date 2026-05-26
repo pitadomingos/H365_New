@@ -416,6 +416,14 @@ export default function EmergencyRoomPage() {
                                                 onChange={(e) => setActiveTriage({...activeTriage, chiefComplaint: e.target.value})}
                                             />
                                         </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">{t('clinical.icd10.label')}</Label>
+                                            <Input 
+                                                placeholder={t('clinical.icd10.placeholder.er')} 
+                                                value={activeTriage.icd10Code || ""} 
+                                                onChange={(e) => setActiveTriage({...activeTriage, icd10Code: e.target.value})}
+                                            />
+                                        </div>
                                     </div>
 
                                     <VitalsForm 

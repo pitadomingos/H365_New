@@ -98,7 +98,7 @@ export default function InventoryManagementPage() {
       </div>
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <motion.div
             key={i}
@@ -154,46 +154,77 @@ export default function InventoryManagementPage() {
                 </div>
               </CardHeader>
               <TabsContent value="stock" className="m-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 pointer-events-none">
-                      <TableHead className="text-xs uppercase tracking-wider">{t('inventory.table.item')}</TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider">{t('inventory.table.category')}</TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider">{t('inventory.table.quantity')}</TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider text-right">{t('inventory.table.minLevel')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {MOCK_STOCK.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase())).map((item) => (
-                      <TableRow key={item.id} className="group">
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-sm">{item.name}</span>
-                            <span className="text-[10px] text-muted-foreground font-mono">{item.id}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                {/* Mobile Card List */}
+                <div className="block md:hidden divide-y">
+                  {MOCK_STOCK.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase())).map((item) => (
+                    <div key={item.id} className="p-4 flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{item.name}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] text-muted-foreground font-mono">{item.id}</span>
+                          <span className="text-muted-foreground text-[10px]">•</span>
                           <Badge variant="outline" className="font-normal text-[10px] uppercase">{item.category}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              "font-bold",
-                              item.status === "Critical" ? "text-red-600" : 
-                              item.status === "Low Stock" ? "text-amber-600" : ""
-                            )}>
-                              {item.qty} {item.unit}s
-                            </span>
-                            {item.status !== "Healthy" && (
-                              <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">{item.min}</TableCell>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={cn(
+                          "text-sm font-bold",
+                          item.status === "Critical" ? "text-red-600" :
+                          item.status === "Low Stock" ? "text-amber-600" : ""
+                        )}>
+                          {item.qty} {item.unit}s
+                        </p>
+                        <p className="text-[9px] text-muted-foreground">Min: {item.min}</p>
+                        {item.status !== "Healthy" && (
+                          <Badge variant="destructive" className="text-[8px] mt-1">{item.status}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop Table */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/50 dark:bg-slate-800/50 pointer-events-none">
+                        <TableHead className="text-xs uppercase tracking-wider">{t('inventory.table.item')}</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider">{t('inventory.table.category')}</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider">{t('inventory.table.quantity')}</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-right">{t('inventory.table.minLevel')}</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {MOCK_STOCK.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase())).map((item) => (
+                        <TableRow key={item.id} className="group">
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-sm">{item.name}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">{item.id}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-normal text-[10px] uppercase">{item.category}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className={cn(
+                                "font-bold",
+                                item.status === "Critical" ? "text-red-600" : 
+                                item.status === "Low Stock" ? "text-amber-600" : ""
+                              )}>
+                                {item.qty} {item.unit}s
+                              </span>
+                              {item.status !== "Healthy" && (
+                                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{item.min}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </TabsContent>
               <TabsContent value="requisitions" className="p-6">
                  <div className="grid gap-4">

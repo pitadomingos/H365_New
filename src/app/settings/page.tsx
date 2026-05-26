@@ -200,7 +200,6 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap gap-2">
                   <Button variant={currentLocale === 'en' ? 'default' : 'outline'} size="sm" onClick={() => setCurrentLocale('en')}>English</Button>
                   <Button variant={currentLocale === 'pt' ? 'default' : 'outline'} size="sm" onClick={() => setCurrentLocale('pt')}>Português</Button>
-                  <Button variant={currentLocale === 'it' ? 'default' : 'outline'} size="sm" disabled className="opacity-50">Italiano (Coming Soon)</Button>
                   <Button variant={currentLocale === 'es' ? 'default' : 'outline'} size="sm" disabled className="opacity-50">Español (Coming Soon)</Button>
                 </div>
               </div>
