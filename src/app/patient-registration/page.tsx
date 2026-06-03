@@ -325,15 +325,21 @@ export default function PatientRegistrationPage() {
       const currentPatients = await LocalDB.get("patients", MOCK_PATIENTS);
       await LocalDB.save("patients", [newPatient, ...currentPatients]);
 
-      // Attempt to sync (Simulated API call)
-      console.log("Syncing with cloud...");
-      
-      // We simulate a fetch that might fail if offline
+      // Attempt to sync (Real API call if online)
       const isOnline = navigator.onLine;
       
       if (isOnline) {
-        // Mock successful sync
-        await new Promise(r => setTimeout(r, 1000));
+        console.log("Syncing patient registration with backend...");
+        const response = await fetch('/api/patients/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newPatient),
+        });
+        if (!response.ok) {
+          throw new Error('Server registration failed');
+        }
         console.log("Cloud Sync Successful");
       } else {
         console.warn(t('patientRegistration.toast.syncQueued'));

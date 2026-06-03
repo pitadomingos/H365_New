@@ -1,0 +1,45 @@
+import { NextResponse } from 'next/server';
+import { registerPatient } from '@/lib/server-db';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
+export async function POST(req: Request) {
+  try {
+    const patientData = await req.json();
+
+    if (!patientData.nationalId || !patientData.fullName) {
+      return NextResponse.json(
+        { error: 'National ID and Full Name are required.' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    const registered = registerPatient(patientData);
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Patient registered successfully on SaaS backend.',
+        patient: registered,
+      },
+      { status: 201, headers: corsHeaders }
+    );
+  } catch (error: any) {
+    console.error('Patient registration API error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal Server Error' },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
