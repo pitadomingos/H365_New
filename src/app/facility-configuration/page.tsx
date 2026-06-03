@@ -530,7 +530,7 @@ export default function FacilityConfigurationPage() {
 
       {/* Main Tabbed Interface */}
       <Tabs defaultValue="wards" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+        <TabsList className="grid w-full grid-cols-4 max-w-3xl">
           <TabsTrigger value="wards" className="flex items-center gap-2">
             <Bed className="h-4 w-4" /> Wards & Beds
           </TabsTrigger>
@@ -539,6 +539,9 @@ export default function FacilityConfigurationPage() {
           </TabsTrigger>
           <TabsTrigger value="pharmacy" className="flex items-center gap-2">
             <Pill className="h-4 w-4" /> Stock Thresholds
+          </TabsTrigger>
+          <TabsTrigger value="d2a" className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4" /> D2A & Alertas
           </TabsTrigger>
         </TabsList>
 
@@ -706,6 +709,57 @@ export default function FacilityConfigurationPage() {
                       </TableCell>
                     </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* D2A & Alertas Content */}
+        <TabsContent value="d2a" className="space-y-4 focus-visible:ring-0">
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Indicadores D2A & Alertas</CardTitle>
+                <CardDescription>Configure os alvos WHO e limites de alerta para despoletar acções operacionais (Data-to-Action).</CardDescription>
+              </div>
+              <Button className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow" onClick={() => toast({ title: "Modo Desenvolvimento", description: "Configuração mock para o Protótipo D2A." })}>
+                <CheckCircle2 className="h-4 w-4" /> Guardar Alvos
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Indicador</TableHead>
+                    <TableHead>Alvo WHO</TableHead>
+                    <TableHead>Alerta Âmbar</TableHead>
+                    <TableHead>Alerta Vermelho</TableHead>
+                    <TableHead>Unidade</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow className="hover:bg-muted/30">
+                    <TableCell className="font-semibold">ANC4 - Cobertura de CPN 4+</TableCell>
+                    <TableCell><Input type="number" defaultValue={90} className="w-20 h-8" /></TableCell>
+                    <TableCell><Input type="number" defaultValue={85} className="w-20 h-8 border-amber-500 text-amber-600" /></TableCell>
+                    <TableCell><Input type="number" defaultValue={80} className="w-20 h-8 border-red-500 text-red-600" /></TableCell>
+                    <TableCell>%</TableCell>
+                  </TableRow>
+                  <TableRow className="hover:bg-muted/30">
+                    <TableCell className="font-semibold">MALPOS - Positividade Malária</TableCell>
+                    <TableCell><Input type="number" defaultValue={25} className="w-20 h-8" /></TableCell>
+                    <TableCell><Input type="number" defaultValue={35} className="w-20 h-8 border-amber-500 text-amber-600" /></TableCell>
+                    <TableCell><Input type="number" defaultValue={45} className="w-20 h-8 border-red-500 text-red-600" /></TableCell>
+                    <TableCell>%</TableCell>
+                  </TableRow>
+                  <TableRow className="hover:bg-muted/30">
+                    <TableCell className="font-semibold">DTP3 - Cobertura Vacinal</TableCell>
+                    <TableCell><Input type="number" defaultValue={90} className="w-20 h-8" /></TableCell>
+                    <TableCell><Input type="number" defaultValue={80} className="w-20 h-8 border-amber-500 text-amber-600" /></TableCell>
+                    <TableCell><Input type="number" defaultValue={70} className="w-20 h-8 border-red-500 text-red-600" /></TableCell>
+                    <TableCell>%</TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </CardContent>

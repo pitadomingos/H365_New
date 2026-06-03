@@ -281,7 +281,7 @@ export default function EpidemicControlPage() {
             className="space-y-6"
           >
             {/* Surveillance Overview Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: t('epidemicControl.stats.activeOutbreaks'), value: '4', sub: '+1 this week', icon: ShieldAlert, color: 'text-red-600', bg: 'bg-red-50' },
                 { label: t('epidemicControl.stats.suspectedCases'), value: '289', sub: 'Last 24h: 32', icon: Activity, color: 'text-orange-600', bg: 'bg-orange-50' },

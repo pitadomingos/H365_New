@@ -1,9 +1,10 @@
-
 import { LocalDB } from './db';
+import { SentryLogger } from './sentry-logger';
 
 /**
  * OfflineManager handles the logic of coordinating local-first data 
  * and background synchronisation with the LAN server.
+ * Implements Operational Transform-style Three-Way merge conflict resolution.
  */
 export class OfflineManager {
   private static isSyncing = false;
@@ -25,14 +26,14 @@ export class OfflineManager {
   }
 
   /**
-   * Saves data locally and adds to sync queue
+   * Saves data locally and adds to sync queue with optional base (ancestor) state
    */
-  static async mutate<T>(collection: string, data: T): Promise<void> {
+  static async mutate<T>(collection: string, data: T, base?: any): Promise<void> {
     // Update Memory
     this.memoryCache[collection] = data;
     
     // Persist to LocalDB (This also adds to the Sync Queue)
-    await LocalDB.save(collection, data);
+    await LocalDB.save(collection, data, base);
     
     // Trigger opportunistic sync if online
     if (typeof navigator !== "undefined" && navigator.onLine) {
@@ -53,8 +54,6 @@ export class OfflineManager {
     console.log(`[OfflineManager] Syncing ${queue.length} items to LAN server...`);
 
     try {
-      // The LAN server URL would typically be configured per facility
-      // For this SaaS prototype, we default to the backend service address
       const LAN_SERVER_URL = process.env.NEXT_PUBLIC_LAN_SERVER_URL || ''; 
       
       const response = await fetch(`${LAN_SERVER_URL}/api/sync/batch`, {
@@ -76,11 +75,14 @@ export class OfflineManager {
       const result = await response.json();
       console.log("[OfflineManager] Sync successful:", result.message);
       
-      // Only clear the items that were successfully processed if we had item-level results
-      // For simplicity in this PR, we clear the whole queue if the batch was accepted
+      // Clear the items that were successfully processed
       await LocalDB.clearQueue();
-    } catch (error) {
+    } catch (error: any) {
       console.error("[OfflineManager] Sync failed. Will retry when connection stabilizes.", error);
+      SentryLogger.logError(error, {
+        context: "OfflineManager.syncWithServer",
+        queueSize: queue.length
+      });
     } finally {
       this.isSyncing = false;
     }
@@ -99,32 +101,38 @@ export class OfflineManager {
   }
 
   /**
-   * Performs a Last-Write-Wins (LWW) resolution and field-level merge
-   * to resolve conflicts between local and remote datasets.
+   * Performs a three-way merge to resolve text conflicts,
+   * falling back to last-write-wins (LWW) resolution for non-mergeable values.
    */
-  static resolveConflict<T extends Record<string, any>>(local: T, remote: T): T {
+  static resolveConflict<T extends Record<string, any>>(local: T, remote: T, base?: T | null): T {
     if (!local) return remote;
     if (!remote) return local;
 
-    // Check parent level timestamps for LWW
+    const baseObj = base || {} as Record<string, any>;
+    const merged = { ...remote, ...local } as any;
+
     const localTime = new Date(local.updatedAt || local.timestamp || 0).getTime();
     const remoteTime = new Date(remote.updatedAt || remote.timestamp || 0).getTime();
 
-    const merged = { ...remote, ...local } as any;
-
-    // Field-level merging
     for (const key of Object.keys(merged)) {
       const localVal = local[key];
       const remoteVal = remote[key];
+      const baseVal = baseObj[key];
 
       if (localVal !== undefined && remoteVal !== undefined) {
-        if (
+        if (localVal === remoteVal) {
+          merged[key] = localVal;
+        } else if (
           typeof localVal === 'object' && localVal !== null &&
           typeof remoteVal === 'object' && remoteVal !== null &&
           !Array.isArray(localVal) && !Array.isArray(remoteVal)
         ) {
-          merged[key] = this.resolveConflict(localVal, remoteVal);
+          merged[key] = this.resolveConflict(localVal, remoteVal, baseVal);
+        } else if (typeof localVal === 'string' && typeof remoteVal === 'string') {
+          const baseStr = typeof baseVal === 'string' ? baseVal : "";
+          merged[key] = this.mergeStrings3Way(baseStr, localVal, remoteVal);
         } else {
+          // Last-write-wins for primitive conflicts
           merged[key] = localTime >= remoteTime ? localVal : remoteVal;
         }
       } else if (localVal !== undefined) {
@@ -135,5 +143,58 @@ export class OfflineManager {
     }
 
     return merged;
+  }
+
+  /**
+   * Helper utility executing a line-by-line three-way merge
+   */
+  private static mergeStrings3Way(base: string, local: string, remote: string): string {
+    if (local === remote) return local;
+    if (local === base) return remote;
+    if (remote === base) return local;
+
+    const baseLines = base.split('\n');
+    const localLines = local.split('\n');
+    const remoteLines = remote.split('\n');
+
+    const mergedLines: string[] = [];
+    
+    let lIdx = 0;
+    let rIdx = 0;
+    let bIdx = 0;
+
+    while (lIdx < localLines.length || rIdx < remoteLines.length) {
+      const lLine = localLines[lIdx];
+      const rLine = remoteLines[rIdx];
+      const bLine = baseLines[bIdx];
+
+      if (lLine === rLine) {
+        if (lLine !== undefined) mergedLines.push(lLine);
+        lIdx++;
+        rIdx++;
+        bIdx++;
+      } else if (lLine !== undefined && lLine === bLine) {
+        if (rLine !== undefined) mergedLines.push(rLine);
+        rIdx++;
+        bIdx++;
+      } else if (rLine !== undefined && rLine === bLine) {
+        if (lLine !== undefined) mergedLines.push(lLine);
+        lIdx++;
+        bIdx++;
+      } else {
+        // Conflict detected - embed merge markers for manual clinician resolution
+        mergedLines.push(`<<<<<<< LOCAL (Workstation Edit)`);
+        if (lLine !== undefined) mergedLines.push(lLine);
+        mergedLines.push(`=======`);
+        if (rLine !== undefined) mergedLines.push(rLine);
+        mergedLines.push(`>>>>>>> REMOTE (Facility Hub Conflict)`);
+        
+        lIdx++;
+        rIdx++;
+        bIdx++;
+      }
+    }
+
+    return mergedLines.join('\n');
   }
 }

@@ -32,6 +32,26 @@ function getLocalFallbackSuggestion(department?: string, patientData?: any, curr
     : `**Local Offline Suggestion (General Protocol)**:\n1. Review clinical history, active allergies, and medications.\n2. Perform physical examination targeted to chief complaint.\n3. Order basic screening tests (CBC, CRP) as indicated.`;
 }
 
+// Client-side session caching for AI recommendations to prevent redundant LLM generation overhead
+const getAICacheKey = (prompt: string, department?: string, patientData?: any) => {
+  const patientHash = patientData ? `${patientData.id || ''}-${patientData.chiefComplaint || ''}-${JSON.stringify(patientData.vitals || {})}` : '';
+  return `ai_cache_${department || 'general'}_${prompt.trim()}_${patientHash}`;
+};
+
+const getCachedAIResult = (key: string): string | null => {
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem(key);
+};
+
+const setCachedAIResult = (key: string, value: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(key, value);
+  } catch (e) {
+    console.warn("AI cache write failed:", e);
+  }
+};
+
 interface AIAssistantPanelProps {
   context?: string;
   department?: string;
@@ -80,6 +100,17 @@ export function AIAssistantPanel({ context, department, patientData, onAcceptSug
 
     setIsAnalyzing(true);
     setError(null);
+    setResult(""); // Clear previous result to prepare for incoming stream
+
+    const cacheKey = getAICacheKey(sanitizedPrompt, department, sanitizedPatient);
+    const cachedResult = getCachedAIResult(cacheKey);
+
+    if (cachedResult) {
+      setResult(cachedResult);
+      setIsAnalyzing(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/clinical-ai', {
         method: 'POST',
@@ -93,12 +124,32 @@ export function AIAssistantPanel({ context, department, patientData, onAcceptSug
         })
       });
 
-      const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to analyze data");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to analyze data");
       }
 
-      setResult(data.result || t('ai.assistant.result.noInsight'));
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Unable to read streaming response from AI assistant API");
+      }
+
+      const decoder = new TextDecoder("utf-8");
+      let done = false;
+      let streamedResult = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          const chunk = decoder.decode(value);
+          streamedResult += chunk;
+          setResult(streamedResult);
+        }
+      }
+
+      // Save streamed result in memory cache
+      setCachedAIResult(cacheKey, streamedResult);
     } catch (err: any) {
       console.error("AI Assistant Error:", err);
       setError(t('ai.assistant.error.connectivity'));

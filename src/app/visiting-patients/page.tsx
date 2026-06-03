@@ -549,7 +549,7 @@ export default function VisitingPatientsPage() {
                            setVerifiedDiagnosis(prev => prev ? `${prev}\n\nAI Suggestion:\n${suggestion}` : suggestion);
                            toast({
                              title: t('consultationForm.toast.ai.success'),
-                             description: "Suggestion appended to clinician's record."
+                             description: t('visitingPatients.clinician.aiSuggestionAppended')
                            });
                          }}
                        />
@@ -558,8 +558,8 @@ export default function VisitingPatientsPage() {
                     <Separator />
                     
                     <VitalsForm 
-                        title="Outpatient Intake Vitals"
-                        description="Record patient vitals for initial screening."
+                        title={t('visitingPatients.vitals.title')}
+                        description={t('visitingPatients.vitals.description')}
                         onVitalsChange={setVitalsData}
                     />
 
@@ -568,18 +568,18 @@ export default function VisitingPatientsPage() {
                     <div className="space-y-4 border-2 border-primary/20 p-4 rounded-lg bg-primary/5">
                       <div className="flex items-center gap-2 text-primary font-semibold">
                         <Stethoscope className="h-5 w-5" />
-                        <h3>Clinician&apos;s Verified Record</h3>
+                        <h3>{t('visitingPatients.clinician.sectionTitle')}</h3>
                       </div>
                       
                       <div className="grid gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="verifiedDiagnosis" className="flex items-center gap-2">
                             <ClipboardList className="h-4 w-4" />
-                            Final Clinical Diagnosis / Assessment
+                            {t('visitingPatients.clinician.diagnosis.label')}
                           </Label>
                           <Textarea 
                             id="verifiedDiagnosis"
-                            placeholder="Type final diagnosis or accept AI suggestions..."
+                            placeholder={t('visitingPatients.clinician.diagnosis.placeholder')}
                             className="min-h-[100px] bg-background"
                             value={verifiedDiagnosis}
                             onChange={(e) => setVerifiedDiagnosis(e.target.value)}
@@ -598,10 +598,10 @@ export default function VisitingPatientsPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="verifiedPrescription">Prescription / Orders</Label>
+                          <Label htmlFor="verifiedPrescription">{t('visitingPatients.clinician.prescription.label')}</Label>
                           <Textarea 
                             id="verifiedPrescription"
-                            placeholder="Specify medications, labs, or follow-up instructions..."
+                            placeholder={t('visitingPatients.clinician.prescription.placeholder')}
                             className="min-h-[80px] bg-background"
                             value={verifiedPrescription}
                             onChange={(e) => setVerifiedPrescription(e.target.value)}

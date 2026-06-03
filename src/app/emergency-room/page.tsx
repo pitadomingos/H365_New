@@ -44,6 +44,7 @@ interface TriagePatient {
     gender: string;
     chiefComplaint: string;
     diagnosis?: string;
+    icd10Code?: string;
     triageLevel: "Critical" | "Urgent" | "Stable" | "Non-Urgent";
     arrivalType: "Ambulance" | "Walk-in";
     waitTime: string;
@@ -140,7 +141,7 @@ export default function EmergencyRoomPage() {
             </header>
 
             {/* Metrics Dashboard */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                {[
                  { label: t('emergencyRoom.triage.title'), value: stats.waiting, sub: t('emergencyRoom.triage.description'), icon: ClipboardList, color: "text-amber-600", trend: "Normal flow" },
                  { label: t('emergencyRoom.bedManagement.title'), value: `${stats.occupancy}%`, sub: `${MOCK_BEDS.filter(b => b.status === 'Available').length} beds available`, icon: Bed, color: "text-blue-600", trend: "+5% last hour" },

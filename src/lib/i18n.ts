@@ -2119,6 +2119,16 @@ export const translations: Record<Locale, Record<string, any>> = {
     'maternity.newVisitModal.prescription.label': 'Clinical Prescription',
     'maternity.newVisitModal.prescription.placeholder': 'Enter formal prescription or treatment plan...',
 
+    // Visiting Patients - Clinician Record
+    'visitingPatients.vitals.title': 'Outpatient Intake Vitals',
+    'visitingPatients.vitals.description': 'Record patient vitals for initial screening.',
+    'visitingPatients.clinician.sectionTitle': "Clinician's Verified Record",
+    'visitingPatients.clinician.diagnosis.label': 'Final Clinical Diagnosis / Assessment',
+    'visitingPatients.clinician.diagnosis.placeholder': 'Type final diagnosis or accept AI suggestions...',
+    'visitingPatients.clinician.prescription.label': 'Prescription / Orders',
+    'visitingPatients.clinician.prescription.placeholder': 'Specify medications, labs, or follow-up instructions...',
+    'visitingPatients.clinician.aiSuggestionAppended': "Suggestion appended to clinician's record.",
+
     // Common elements
     'common.yes': 'Yes',
     'common.no': 'No',
@@ -3300,6 +3310,16 @@ export const translations: Record<Locale, Record<string, any>> = {
     'maternity.newVisitModal.diagnosis.placeholder': 'Introduza o diagnóstico clínico formal...',
     'maternity.newVisitModal.prescription.label': 'Prescrição Clínica',
     'maternity.newVisitModal.prescription.placeholder': 'Introduza a prescrição ou plano de tratamento...',
+
+    // Pacientes Visitantes - Registo Clínico
+    'visitingPatients.vitals.title': 'Sinais Vitais de Admissão Ambulatória',
+    'visitingPatients.vitals.description': 'Registar sinais vitais para triagem inicial.',
+    'visitingPatients.clinician.sectionTitle': 'Registo Verificado do Clínico',
+    'visitingPatients.clinician.diagnosis.label': 'Diagnóstico Clínico Final / Avaliação',
+    'visitingPatients.clinician.diagnosis.placeholder': 'Escreva o diagnóstico final ou aceite sugestões da IA...',
+    'visitingPatients.clinician.prescription.label': 'Prescrição / Ordens',
+    'visitingPatients.clinician.prescription.placeholder': 'Especifique medicamentos, exames ou instruções de acompanhamento...',
+    'visitingPatients.clinician.aiSuggestionAppended': 'Sugestão adicionada ao registo do clínico.',
 
     // Elementos comuns
     'common.yes': 'Sim',

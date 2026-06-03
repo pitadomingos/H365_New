@@ -47,7 +47,7 @@ const FormSchema = z.object({
   imagingDataSummary: z.string().optional(),
   doctorComments: z.string().optional(),
   physicalExamNotes: z.string().optional(),
-  finalDiagnosis: z.string().min(1, "Final Diagnosis is required for completion."),
+  finalDiagnosis: z.string().optional(),
   icd10Code: z.string().optional(),
   finalPrescription: z.string().optional(),
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
@@ -1284,46 +1284,19 @@ ${visitHistoryString || "No recent visit history available."}
       {/* Navigation Buttons */}
       {patientData && (
         <div className="flex items-center justify-between border-t pt-4">
-          <Button variant="outline" onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1 || isActionDisabled}>
+          <Button type="button" variant="outline" onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1 || isActionDisabled}>
             <ChevronLeft className="mr-2 h-4 w-4" /> Back
           </Button>
           <span className="text-sm text-muted-foreground font-medium">Step {currentStep} of 4</span>
           <div className="flex gap-2">
             {currentStep < 4 ? (
-              <Button onClick={() => setCurrentStep(Math.min(4, currentStep + 1))} disabled={isActionDisabled}>
+              <Button type="button" onClick={() => setCurrentStep(Math.min(4, currentStep + 1))} disabled={isActionDisabled}>
                 Next <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="default" disabled={isActionDisabled} size="lg" className="bg-green-600 hover:bg-green-700">
-                    <Send className="mr-2 h-4 w-4" /> Finalize Consultation
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>{t('consultationForm.outcomeModal.title', {patientName: patientData?.fullName || ""})}</DialogTitle>
-                    <DialogDescription>{t('consultationForm.outcomeModal.description')}</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
-                    {[
-                      { label: t('consultationForm.outcomeModal.options.sendHome'), value: "Send Home", icon: Home },
-                      { label: t('consultationForm.outcomeModal.options.sendToPharmacy'), value: "Send to Pharmacy", icon: ArrowRightToLine },
-                      { label: t('consultationForm.outcomeModal.options.admit'), value: "Send to Inpatient (Ward)", icon: BedDouble },
-                      { label: t('consultationForm.outcomeModal.options.referSpecialist'), value: "Refer to Specialist", icon: Users2 },
-                      { label: t('consultationForm.outcomeModal.options.deceased'), value: "Deceased", icon: Skull }
-                    ].map(opt => (
-                      <Button key={opt.value} variant="outline" onClick={() => handleOutcome(opt.value)} disabled={isSubmittingOutcome}>
-                        {isSubmittingOutcome ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <opt.icon className="mr-2 h-4 w-4"/>}
-                        {isSubmittingOutcome ? t('consultationForm.outcomeModal.processing') : opt.label}
-                      </Button>
-                    ))}
-                    <DialogClose asChild>
-                      <Button type="button" variant="ghost" disabled={isSubmittingOutcome}>{t('consultationForm.outcomeModal.cancelButton')}</Button>
-                    </DialogClose>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button type="button" variant="default" disabled={isActionDisabled} size="lg" className="bg-green-600 hover:bg-green-700" onClick={() => setIsOutcomeModalOpen(true)}>
+                <Send className="mr-2 h-4 w-4" /> Finalize Consultation
+              </Button>
             )}
           </div>
         </div>

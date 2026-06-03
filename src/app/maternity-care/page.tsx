@@ -43,6 +43,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, defaultLocale } from '@/lib/i18n';
 import { MOCK_MATERNITY_PATIENTS } from '@/lib/mock-data';
+import { LocalDB } from '@/lib/db';
 
 
 interface AntenatalVisit {
