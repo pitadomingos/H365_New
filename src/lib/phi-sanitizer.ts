@@ -68,8 +68,8 @@ export function sanitizeText(text: string): string {
   const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
   cleaned = cleaned.replace(phoneRegex, "[REDACTED_PHONE]");
   
-  // Simple National ID pattern regex
-  const idRegex = /\b\d{9,12}[A-Za-z]?\b/g;
+  // Simple National ID pattern regex (Alphanumeric)
+  const idRegex = /\b[A-Za-z0-9]{6,15}\b/g;
   cleaned = cleaned.replace(idRegex, "[REDACTED_ID]");
   
   return cleaned;

@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, defaultLocale } from '@/lib/i18n';
 import { ptBR } from 'date-fns/locale';
+import { LocalDB } from '@/lib/db';
 
 interface Patient {
   id: string;
@@ -205,13 +206,46 @@ export default function VisitingPatientsPage() {
       // const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
       
-      // Mock response logic
-      if (searchNationalId.trim() === "12345") { // Mock found patient
-          const data: Patient = { id: "P001", nationalId: "12345", fullName: "Demo Patient Visit", dob: "1990-01-01", gender: "Male", chronicConditions: "Hypertension" };
-          setSearchedPatient(data);
+      // Check LocalDB first (offline first)
+      const localPatients = await LocalDB.get<any[]>("patients", []);
+      const localMatch = localPatients.find((p) => p.nationalId === searchNationalId.trim());
+      
+      let patientData = null;
+
+      if (localMatch) {
+          patientData = { 
+              id: localMatch.id, 
+              nationalId: localMatch.nationalId, 
+              fullName: localMatch.fullName, 
+              dob: localMatch.dateOfBirth, 
+              gender: localMatch.gender, 
+              chronicConditions: localMatch.chronicConditions?.join(', ') || '' 
+          };
+      } else {
+          // Fallback to server search
+          try {
+              const res = await fetch(`/api/patient-portal/patients/${searchNationalId.trim()}`);
+              if (res.ok) {
+                  const serverMatch = await res.json();
+                  patientData = {
+                      id: serverMatch.id,
+                      nationalId: serverMatch.nationalId,
+                      fullName: serverMatch.fullName,
+                      dob: serverMatch.dateOfBirth,
+                      gender: serverMatch.gender,
+                      chronicConditions: serverMatch.chronicConditions?.join(', ') || ''
+                  };
+              }
+          } catch (e) {
+              console.log("Server search failed or offline", e);
+          }
+      }
+      
+      if (patientData) {
+          setSearchedPatient(patientData);
           setPatientNotFound(false);
-          toast({ title: t('visitingPatients.toast.patientFound'), description: t('visitingPatients.toast.patientFound.desc', { fullName: data.fullName }) });
-      } else { // Mock not found or other errors
+          toast({ title: t('visitingPatients.toast.patientFound'), description: t('visitingPatients.toast.patientFound.desc', { fullName: patientData.fullName }) });
+      } else {
           setPatientNotFound(true);
           setSearchedPatient(null);
           toast({ variant: "default", title: t('visitingPatients.toast.notFound'), description: t('visitingPatients.toast.notFound.desc', { searchNationalId: searchNationalId.trim() }) });

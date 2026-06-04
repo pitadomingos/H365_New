@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useLocale } from '@/context/locale-context';
+import { getTranslator } from '@/lib/i18n';
 import { 
   ShieldCheck, 
   ArrowRight, 
@@ -105,6 +107,10 @@ interface ToastMessage {
 }
 
 export default function App() {
+  // i18n
+  const { currentLocale, toggleLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   // Navigation & Session State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentView, setCurrentView] = useState<'home' | 'records' | 'medications' | 'profile'>('home');
@@ -428,8 +434,8 @@ export default function App() {
                 <ChevronLeft className="h-4 w-4 text-slate-600 dark:text-slate-300" />
               </button>
               <div className="flex-1">
-                <h2 className="text-base font-bold text-slate-800 dark:text-white leading-none">Create Health Record</h2>
-                <p className="text-[10px] text-slate-400 mt-0.5">Step {regStep} of 3</p>
+                <h2 className="text-base font-bold text-slate-800 dark:text-white leading-none">{currentLocale === 'pt' ? 'Criar Registo de Saúde' : 'Create Health Record'}</h2>
+                <p className="text-[10px] text-slate-400 mt-0.5">{currentLocale === 'pt' ? `Passo ${regStep} de 3` : `Step ${regStep} of 3`}</p>
               </div>
               <div className="flex gap-1.5">
                 {[1,2,3].map(s => (
@@ -457,12 +463,12 @@ export default function App() {
 
                   <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">National ID Number <span className="text-rose-500">*</span></label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">{t('patientPortal.login.idLabel')} <span className="text-rose-500">*</span></label>
                       <input
                         type="text"
-                        placeholder="e.g. 1234567890"
+                        placeholder={t('patientPortal.login.idPlaceholder')}
                         value={registerForm.nationalId}
-                        onChange={e => setRegisterForm(p => ({ ...p, nationalId: e.target.value.replace(/\D/g,'') }))}
+                        onChange={e => setRegisterForm(p => ({ ...p, nationalId: e.target.value }))}
                         className="w-full h-11 px-4 text-center font-mono tracking-[0.2em] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary dark:text-white transition-all"
                         required
                       />
@@ -711,7 +717,13 @@ export default function App() {
         <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
           
           {/* Header Controls */}
-          <div className="absolute top-4 right-4">
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <button
+              onClick={toggleLocale}
+              className="px-3 py-1.5 bg-white dark:bg-slate-800 rounded-full shadow-md border dark:border-slate-700 text-xs font-black text-slate-500 dark:text-slate-300 hover:scale-105 transition-transform tracking-widest uppercase"
+            >
+              {currentLocale === 'en' ? 'PT' : 'EN'}
+            </button>
             <button 
               onClick={toggleTheme}
               className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-md border dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:scale-105 transition-transform"
@@ -726,10 +738,10 @@ export default function App() {
                  <ShieldCheck className="h-10 w-10 text-white" />
               </div>
               <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">
-                H365 Patient Hub
+                {t('patientPortal.login.title')}
               </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 px-4">
-                Access your clinical node profile, treatment updates, and track medications.
+                {t('patientPortal.login.subtitle')}
               </p>
             </div>
 
@@ -745,12 +757,12 @@ export default function App() {
 
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block ml-1">National ID Number</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block ml-1">{t('patientPortal.login.idLabel')}</label>
                   <input
                     type="text"
-                    placeholder="Enter National ID"
+                    placeholder={t('patientPortal.login.idPlaceholder')}
                     value={loginNid}
-                    onChange={(e) => setLoginNid(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => setLoginNid(e.target.value)}
                     className="w-full h-12 text-lg text-center tracking-[0.2em] font-mono border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-850 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:text-white"
                   />
                 </div>
@@ -764,7 +776,7 @@ export default function App() {
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <>
-                      Verify and Authenticate
+                      {t('patientPortal.login.button')}
                       <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
@@ -773,14 +785,14 @@ export default function App() {
 
               {/* Register CTA */}
               <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
-                <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-3">First time here? No facility visit needed.</p>
+                <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-3">{currentLocale === 'pt' ? 'Primeira vez aqui? Sem necessidade de visita.' : 'First time here? No facility visit needed.'}</p>
                 <button
                   type="button"
                   onClick={openRegistration}
                   className="w-full h-11 border-2 border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all group"
                 >
                   <UserPlus className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                  Create New Health Record
+                  {currentLocale === 'pt' ? 'Criar Novo Registo de Saúde' : 'Create New Health Record'}
                 </button>
               </div>
 
@@ -788,7 +800,7 @@ export default function App() {
               <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-2 text-xs">
                 <div className="flex gap-2 text-primary font-bold items-center uppercase tracking-wider">
                   <Info className="h-4 w-4 shrink-0" />
-                  <span>Seeded Mock Logins</span>
+                  <span>{t('patientPortal.login.demoCredentials')}</span>
                 </div>
                 <div className="mt-1 space-y-1.5 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                   <div className="flex justify-between">
@@ -841,6 +853,13 @@ export default function App() {
               >
                 <Activity className="h-4 w-4" />
               </button>
+              <button
+                onClick={toggleLocale}
+                className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300"
+                title="Toggle Language"
+              >
+                {currentLocale === 'en' ? 'PT' : 'EN'}
+              </button>
               <button 
                 onClick={toggleTheme}
                 className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300"
@@ -868,7 +887,7 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white leading-tight">
-                      Olá, {patient.fullName.split(' ')[0]}
+                      {t('patientPortal.dashboard.welcome', { name: patient.fullName.split(' ')[0] })}
                     </h2>
                     <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
                       <Clock className="h-3 w-3 text-slate-400" />
@@ -933,7 +952,7 @@ export default function App() {
                 {/* Health Summary Sections */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">
-                    System Health Alerts
+                    {currentLocale === 'pt' ? 'Alertas de Saúde' : 'System Health Alerts'}
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-rose-50/50 dark:bg-rose-950/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/50 space-y-2 flex flex-col justify-between">
@@ -967,7 +986,7 @@ export default function App() {
                 {/* Nutrition and Treatment Recommendations */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 ml-1">
-                    Clinical Guidance & Diet
+                    {currentLocale === 'pt' ? 'Orientação Clínica & Dieta' : 'Clinical Guidance & Diet'}
                   </h3>
                   
                   <div className="space-y-3">
@@ -1030,9 +1049,9 @@ export default function App() {
             {currentView === 'medications' && (
               <div className="space-y-6">
                 <div className="space-y-1">
-                  <h2 className="text-2xl font-black text-slate-800 dark:text-white font-heading">Active Medications</h2>
+                  <h2 className="text-2xl font-black text-slate-800 dark:text-white font-heading">{t('patientPortal.meds.title')}</h2>
                   <p className="text-xs text-slate-400 flex items-center gap-1">
-                     <Bell className="h-3.5 w-3.5 text-primary" /> Track and record daily prescription compliance.
+                     <Bell className="h-3.5 w-3.5 text-primary" /> {currentLocale === 'pt' ? 'Registe a conformidade diária com a prescrição.' : 'Track and record daily prescription compliance.'}
                   </p>
                 </div>
 
@@ -1121,8 +1140,8 @@ export default function App() {
             {currentView === 'records' && (
               <div className="space-y-6">
                 <div className="space-y-1">
-                  <h2 className="text-2xl font-black text-slate-800 dark:text-white font-heading">Clinical Records</h2>
-                  <p className="text-xs text-slate-400">View visit summaries, laboratory analyses, and status packets.</p>
+                  <h2 className="text-2xl font-black text-slate-800 dark:text-white font-heading">{t('patientPortal.records.title')}</h2>
+                  <p className="text-xs text-slate-400">{currentLocale === 'pt' ? 'Veja resumos de visitas, análises laboratoriais e pacotes de estado.' : 'View visit summaries, laboratory analyses, and status packets.'}</p>
                 </div>
 
                 {/* Sub-tabs Component */}
@@ -1134,14 +1153,14 @@ export default function App() {
             {currentView === 'profile' && patient && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-black text-slate-800 dark:text-white font-heading">Profile Settings</h2>
+                  <h2 className="text-2xl font-black text-slate-800 dark:text-white font-heading">{currentLocale === 'pt' ? 'Definições de Perfil' : 'Profile Settings'}</h2>
                   {!isEditing && (
                     <button 
                       onClick={() => setIsEditing(true)}
                       className="px-4 py-2 border dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-bold rounded-2xl flex items-center gap-1.5 transition-colors shadow-sm"
                     >
                        <Edit className="h-3.5 w-3.5 text-primary" />
-                       Edit Profile
+                       {t('patientPortal.profile.edit')}
                     </button>
                   )}
                 </div>
@@ -1150,11 +1169,11 @@ export default function App() {
                   /* PROFILE EDIT FORM */
                   <form onSubmit={handleProfileSave} className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="space-y-4">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 block ml-1">Personal Contact Details</h3>
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 block ml-1">{t('patientPortal.profile.contactInfo')}</h3>
                       
                       <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4">
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Email Address</label>
+                           <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">{t('patientPortal.profile.email')}</label>
                           <input 
                             type="email"
                             value={editForm.email} 
@@ -1165,7 +1184,7 @@ export default function App() {
                         </div>
                         
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Mobile Phone</label>
+                           <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">{t('patientPortal.profile.phone')}</label>
                           <input 
                             type="text"
                             value={editForm.phone} 
@@ -1176,7 +1195,7 @@ export default function App() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Physical Address</label>
+                           <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">{t('patientPortal.profile.address')}</label>
                           <textarea 
                             value={editForm.address} 
                             onChange={(e) => setEditForm({...editForm, address: e.target.value})}
@@ -1188,7 +1207,7 @@ export default function App() {
                     </div>
 
                     <div className="space-y-4">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 block ml-1">Next of Kin Information</h3>
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 block ml-1">{t('patientPortal.profile.nextOfKin')}</h3>
                       
                       <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4">
                         <div className="space-y-1.5">
@@ -1230,7 +1249,7 @@ export default function App() {
                         className="flex-1 h-12 border dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
                         onClick={() => setIsEditing(false)}
                       >
-                        Cancel
+                        {t('patientPortal.profile.cancel')}
                       </button>
                       <button 
                         type="submit" 
@@ -1238,7 +1257,7 @@ export default function App() {
                         disabled={isLoading}
                       >
                         {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Save Changes
+                        {t('patientPortal.profile.save')}
                       </button>
                     </div>
                   </form>
@@ -1338,10 +1357,10 @@ export default function App() {
           {/* Bottom Tab Navigation Bar */}
           <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200/60 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg px-2 py-2 safe-area-bottom shadow-[0_-2px_15px_rgba(0,0,0,0.05)] max-w-md mx-auto rounded-t-3xl">
             {[
-              { id: 'home', icon: Home, label: 'Dashboard' },
-              { id: 'records', icon: ClipboardList, label: 'Records' },
-              { id: 'medications', icon: Pill, label: 'Meds' },
-              { id: 'profile', icon: User, label: 'Profile' },
+              { id: 'home', icon: Home, label: t('patientPortal.nav.home') },
+              { id: 'records', icon: ClipboardList, label: t('patientPortal.nav.records') },
+              { id: 'medications', icon: Pill, label: t('patientPortal.nav.meds') },
+              { id: 'profile', icon: User, label: t('patientPortal.nav.profile') },
             ].map((item) => {
               const isActive = currentView === item.id;
               return (

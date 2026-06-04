@@ -1,5 +1,101 @@
 [
   {
+    "id": "P-KROLTY",
+    "nationalId": "50100731234C",
+    "fullName": "Pita Domingos",
+    "gender": "Female",
+    "age": 52,
+    "dateOfBirth": "1974-05-28",
+    "photoUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+    "district": "Tete",
+    "province": "Tete",
+    "lastVisit": "2026-06-03",
+    "status": "Registered - Offline",
+    "location": "Outpatient",
+    "timeAdded": "01:15 PM",
+    "allergies": [],
+    "chronicConditions": [],
+    "email": "pita.domingos@jachris.com",
+    "phone": "845479481",
+    "address": "Bairro CHingodzi",
+    "nextOfKinName": "Pita Domingos",
+    "nextOfKinRelation": "Spouse",
+    "nextOfKinPhone": "",
+    "medications": [
+      {
+        "id": 1,
+        "name": "Lisinopril",
+        "dosage": "10mg",
+        "frequency": "Once daily (Morning)",
+        "reason": "Hypertension",
+        "reminders": "08:00 AM",
+        "instructions": "Take with water before breakfast.",
+        "pillColor": "bg-blue-400",
+        "adherenceLog": [
+          "2026-06-03T11:17:34.448Z"
+        ]
+      }
+    ],
+    "visits": [
+      {
+        "id": 1,
+        "date": "2026-06-03",
+        "dept": "General Practice",
+        "reason": "Registration Consultation",
+        "doctor": "Dr. Auto",
+        "facility": "Central General Hospital"
+      }
+    ],
+    "labs": []
+  },
+  {
+    "id": "P-ZRM4BS",
+    "nationalId": "50100731234C",
+    "fullName": "Pita Domingos",
+    "gender": "Male",
+    "age": 52,
+    "dateOfBirth": "1974-05-28",
+    "photoUrl": "https://api.dicebear.com/7.x/initials/svg?seed=Pita%20Domingos",
+    "district": "Tete",
+    "province": "tete",
+    "lastVisit": "2026-06-03",
+    "status": "Self-Registered",
+    "location": "Outpatient",
+    "timeAdded": "13:11",
+    "allergies": [],
+    "chronicConditions": [],
+    "email": "pita.domingos@jachris.com",
+    "phone": "+258845479481",
+    "address": "",
+    "nextOfKinName": "Pita Domingos",
+    "nextOfKinRelation": "Parent",
+    "nextOfKinPhone": "+258845479481",
+    "medications": [
+      {
+        "id": 1,
+        "name": "Lisinopril",
+        "dosage": "10mg",
+        "frequency": "Once daily (Morning)",
+        "reason": "Hypertension",
+        "reminders": "08:00 AM",
+        "instructions": "Take with water before breakfast.",
+        "pillColor": "bg-blue-400",
+        "adherenceLog": []
+      }
+    ],
+    "visits": [
+      {
+        "id": 1,
+        "date": "2026-06-03",
+        "dept": "General Practice",
+        "reason": "Registration Consultation",
+        "doctor": "Dr. Auto",
+        "facility": "Central General Hospital"
+      }
+    ],
+    "labs": []
+  },
+  {
     "id": "P-8W8AHD",
     "nationalId": "999999999",
     "fullName": "Pita Domingos",

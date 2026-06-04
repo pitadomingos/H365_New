@@ -15,11 +15,17 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path aliases - @/ maps to the parent src (shared i18n/context) */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../src/*"]
+    },
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "../src/lib/i18n.ts", "../src/context/locale-context.tsx"]
 }

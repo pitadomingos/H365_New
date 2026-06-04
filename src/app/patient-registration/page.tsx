@@ -368,7 +368,7 @@ export default function PatientRegistrationPage() {
       toast({
         variant: "destructive",
         title: t('patientRegistration.toast.regFailed.title'),
-        description: "Failed to save data. Please check your local storage.",
+        description: t('patientRegistration.toast.regFailed.description'),
       });
     } finally {
       setIsSubmitting(false);
@@ -523,7 +523,7 @@ export default function PatientRegistrationPage() {
                             <Camera className="mr-2 h-4 w-4" /> {t('patientRegistration.photoCapture.enableCamera')}
                             </Button>
                             <Button type="button" id="mock-photo-btn" onClick={() => setCapturedImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")} variant="secondary">
-                            Mock Photo
+                            {t('patientRegistration.photoCapture.mockPhoto')}
                             </Button>
                           </>
                         )}

@@ -24,7 +24,7 @@ HealthFlow is a production-ready, local-first SaaS platform designed for public 
 - [Offline vs LAN Sync Architecture](./docs/OFFLINE_ARCHITECTURE.md)
 - [Local Deployment Guide](./docs/LOCAL_DEPLOYMENT.md)
 - [API Reference](./docs/api_endpoints.md)
-- Turning the H365 Patient‑Portal (a Next.js web app) into a native mobile app for Google Play and Apple App Store
+
 
 ## 🛠️ Tech Stack
 - **Framework**: Next.js 15 (App Router)

@@ -1,0 +1,61 @@
+H365 - HealthFlow 365 National Health Information System
+Copyright 2026 Pita Antonio Domingos
+
+This product includes software developed by Pita Antonio Domingos
+for use by the Ministério da Saúde de Moçambique (MISAU) and aligned
+with WHO Digital Health Guidelines and the Digital Public Goods Standard.
+
+================================================================================
+
+PROJECT INFORMATION
+
+  Name:        H365 (HealthFlow 365)
+  Purpose:     National-scale Health Information System for Mozambique
+  Author:      Pita Antonio Domingos
+  Contact:     pitadomingos@outlook.com
+  Repository:  https://github.com/pitadomingos/H365_New
+
+================================================================================
+
+ALIGNMENT & COMPLIANCE
+
+  This software is designed in alignment with:
+
+  • WHO Digital Health Guidelines (2019, 2024)
+  • Digital Public Goods Standard (https://digitalpublicgoods.net/standard/)
+  • Estratégia de Saúde Digital de Moçambique (ESD-MZ)
+  • MISAU national health information system interoperability framework
+  • INTIC regulatory requirements for digital platform operators
+  • Mozambique Data Protection and Cybersecurity regulations
+
+================================================================================
+
+HEALTH SOFTWARE DISCLAIMER
+
+  THIS SOFTWARE IS PROVIDED FOR INFORMATIONAL AND OPERATIONAL SUPPORT
+  PURPOSES ONLY. IT IS NOT A CERTIFIED MEDICAL DEVICE AND SHOULD NOT
+  BE USED AS THE SOLE BASIS FOR CLINICAL DECISION-MAKING.
+
+  Clinical decisions must always be made by qualified healthcare
+  professionals in accordance with applicable medical standards,
+  national treatment guidelines, and professional judgment.
+
+  The authors and contributors shall not be held liable for any
+  clinical outcomes resulting from the use of this software.
+
+================================================================================
+
+THIRD-PARTY COMPONENTS
+
+  This project incorporates open-source components under their
+  respective licenses. See the package.json and node_modules
+  directories for individual component licenses.
+
+  Key dependencies include:
+  • Next.js (MIT License) - https://nextjs.org
+  • React (MIT License) - https://reactjs.org
+  • Radix UI (MIT License) - https://radix-ui.com
+  • Recharts (MIT License) - https://recharts.org
+  • Lucide Icons (ISC License) - https://lucide.dev
+
+================================================================================

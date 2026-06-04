@@ -86,6 +86,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'nav.settings': "Settings",
     'nav.logout': "Logout",
 
+
     'staffManagement.pageTitle': "Staff Management",
     'staffManagement.addStaff': "Add Staff",
     'staffManagement.searchPlaceholder': "Search staff...",
@@ -2134,6 +2135,64 @@ export const translations: Record<Locale, Record<string, any>> = {
     'common.no': 'No',
   },
   pt: {
+    // Patient Portal - Login
+    'patientPortal.login.title': "Portal de Saúde do Paciente",
+    'patientPortal.login.subtitle': "Aceda aos seus registos médicos de forma segura usando o seu BI Nacional.",
+    'patientPortal.login.idLabel': "Número do BI Nacional",
+    'patientPortal.login.idPlaceholder': "ex., 1234567890",
+    'patientPortal.login.button': "Iniciar Sessão",
+    'patientPortal.login.footer': "Ao iniciar sessão, concorda com a Política de Privacidade do Paciente e os termos de Governação de Dados Clínicos.",
+    'patientPortal.login.demoCredentials': "Credenciais de Demonstração",
+
+    // Patient Portal - Dashboard
+    'patientPortal.dashboard.title': "O Meu Hub de Saúde",
+    'patientPortal.dashboard.welcome': "Bem-vindo(a), {name}",
+    'patientPortal.dashboard.idCard': "Identidade Digital de Saúde",
+    'patientPortal.dashboard.summary': "Resumo de Saúde",
+    'patientPortal.dashboard.bloodType': "Grupo Sanguíneo",
+    'patientPortal.dashboard.allergies': "Alergias",
+    'patientPortal.dashboard.conditions': "Condições Ativas",
+    'patientPortal.dashboard.recentVisit': "Última Consulta",
+    'patientPortal.dashboard.upcoming': "Próximas Consultas",
+    'patientPortal.dashboard.recommendations': "Recomendações Clínicas",
+    'patientPortal.dashboard.nutrition': "Orientação Nutricional",
+    'patientPortal.dashboard.treatmentPlan': "Plano de Tratamento & Estado",
+    'patientPortal.dashboard.compliance': "Estado de Adesão",
+
+    // Patient Portal - Navigation
+    'patientPortal.nav.home': "Início",
+    'patientPortal.nav.records': "Registos",
+    'patientPortal.nav.meds': "Medicação",
+    'patientPortal.nav.profile': "Perfil",
+
+    // Patient Portal - Records
+    'patientPortal.records.title': "Registos Médicos",
+    'patientPortal.records.visits': "Historial de Visitas",
+    'patientPortal.records.labs': "Resultados Laboratoriais",
+    'patientPortal.records.imaging': "Relatórios de Imagiologia",
+
+    // Patient Portal - Medications
+    'patientPortal.meds.title': "Os Meus Medicamentos",
+    'patientPortal.meds.active': "Regime Atual",
+    'patientPortal.meds.history': "Prescrições Anteriores",
+    'patientPortal.meds.reminder': "Confirmar Toma",
+
+    // Patient Portal - Profile
+    'patientPortal.profile.edit': "Editar Perfil",
+    'patientPortal.profile.save': "Guardar Alterações",
+    'patientPortal.profile.cancel': "Cancelar",
+    'patientPortal.profile.personalInfo': "Informação Pessoal",
+    'patientPortal.profile.contactInfo': "Dados de Contacto",
+    'patientPortal.profile.nextOfKin': "Contacto de Emergência",
+    'patientPortal.profile.email': "Endereço de Email",
+    'patientPortal.profile.phone': "Número de Telefone",
+    'patientPortal.profile.address': "Morada Residencial",
+    'patientPortal.profile.nokName': "Nome do Contacto",
+    'patientPortal.profile.nokRelation': "Parentesco",
+    'patientPortal.profile.nokPhone': "Telefone do Contacto",
+    'patientPortal.profile.success': "Perfil sincronizado com sucesso.",
+    'patientPortal.error.notFound': "Nenhum registo de saúde encontrado para este BI.",
+
     'dashboard.welcomeMessage': 'Bem-vindo ao H365',
     'dashboard.tagline': 'O seu hub centralizado de gestão de saúde.',
     'dashboard.card.appointments.title': "Consultas de Hoje",
@@ -2692,53 +2751,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'ai.assistant.error.connectivity': "Conetividade limitada detetada. Solicitando auditoria diferida em vez disso...",
     'ai.assistant.result.noInsight': "Nenhum insight gerado.",
     'ai.assistant.result.queued': "Registo colocado com sucesso na fila para Auditoria de IA Clínica diferida. Os insights estarão disponíveis após a próxima sincronização do sistema (janela de banda larga).",
-
-    'patientPortal.login.title': "Portal de Saúde do Paciente",
-    'patientPortal.login.subtitle': "Aceda aos seus registos médicos de forma segura usando o seu ID Nacional.",
-    'patientPortal.login.idLabel': "Número de ID Nacional",
-    'patientPortal.login.idPlaceholder': "ex: 1234567890",
-    'patientPortal.login.button': "Login Seguro",
-    'patientPortal.login.footer': "Ao fazer login, concorda com a Política de Privacidade do Paciente e os termos de Governação de Dados Clínicos.",
-    'patientPortal.login.demoCredentials': "Credenciais de Demonstração",
-    'patientPortal.dashboard.title': "Meu Hub de Saúde",
-    'patientPortal.dashboard.welcome': "Bem-vindo de volta, {name}",
-    'patientPortal.dashboard.idCard': "ID de Saúde Digital",
-    'patientPortal.dashboard.summary': "Resumo de Saúde",
-    'patientPortal.dashboard.bloodType': "Grupo Sanguíneo",
-    'patientPortal.dashboard.allergies': "Alergias",
-    'patientPortal.dashboard.conditions': "Condições Ativas",
-    'patientPortal.dashboard.recentVisit': "Última Visita Clínica",
-    'patientPortal.dashboard.upcoming': "Próximas Consultas",
-    'patientPortal.dashboard.recommendations': "Recomendações Clínicas",
-    'patientPortal.dashboard.nutrition': "Orientação Nutricional",
-    'patientPortal.dashboard.treatmentPlan': "Plano de Tratamento e Estado",
-    'patientPortal.dashboard.compliance': "Estado de Adesão",
-    'patientPortal.nav.home': "Início",
-    'patientPortal.nav.records': "Registos",
-    'patientPortal.nav.meds': "Meds",
-    'patientPortal.nav.profile': "Perfil",
-    'patientPortal.records.title': "Registos Médicos",
-    'patientPortal.records.visits': "Histórico de Visitas",
-    'patientPortal.records.labs': "Resultados de Laboratório",
-    'patientPortal.records.imaging': "Relatórios de Imagem",
-    'patientPortal.meds.title': "Minhas Medicações",
-    'patientPortal.meds.active': "Regime Atual",
-    'patientPortal.meds.history': "Prescrições Passadas",
-    'patientPortal.meds.reminder': "Confirmar Toma",
-    'patientPortal.profile.edit': "Editar Perfil",
-    'patientPortal.profile.save': "Guardar Alterações",
-    'patientPortal.profile.cancel': "Cancelar",
-    'patientPortal.profile.personalInfo': "Informação Pessoal",
-    'patientPortal.profile.contactInfo': "Detalhes de Contacto",
-    'patientPortal.profile.nextOfKin': "Próximo de Kin (Emergência)",
-    'patientPortal.profile.email': "Endereço de E-mail",
-    'patientPortal.profile.phone': "Número de Telefone",
-    'patientPortal.profile.address': "Endereço Residencial",
-    'patientPortal.profile.nokName': "Nome do Contacto",
-    'patientPortal.profile.nokRelation': "Relação",
-    'patientPortal.profile.nokPhone': "Telefone do Contacto",
-    'patientPortal.profile.success': "Perfil sincronizado com sucesso.",
-    'patientPortal.error.notFound': "Registo de saúde não encontrado para este ID.",
 
     'system.docs.title': "Transparência do Sistema e Governação de Dados",
     'system.docs.subtitle': "Compreender como o H365 gere os seus dados clínicos em ambientes de recursos limitados.",
@@ -3324,6 +3336,12 @@ export const translations: Record<Locale, Record<string, any>> = {
     // Elementos comuns
     'common.yes': 'Sim',
     'common.no': 'Não',
+
+    // Nav
+
+    // Patient Registration
+    'patientRegistration.photoCapture.mockPhoto': "Foto de Teste",
+    'patientRegistration.toast.regFailed.description': "Falha ao guardar os dados. Por favor verifique o armazenamento local.",
   },
   es: {
     // ... (Spanish translations, if any)
