@@ -9,8 +9,11 @@ export default defineConfig({
     port: 5174,
   },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      // chaem-app's own context files take precedence (e.g. chaem-user-context)
+      { find: '@/context', replacement: path.resolve(__dirname, './src/context') },
+      // Everything else (@/lib, etc.) resolves to the parent shared src
+      { find: '@', replacement: path.resolve(__dirname, '../src') },
+    ],
   },
 })

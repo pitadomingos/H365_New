@@ -1,5 +1,54 @@
 [
   {
+    "id": "P-031YH7",
+    "nationalId": "0987654321B",
+    "fullName": "Joao Antonio James",
+    "gender": "Male",
+    "age": 47,
+    "dateOfBirth": "1979-05-28",
+    "photoUrl": "https://api.dicebear.com/7.x/initials/svg?seed=Joao%20Antonio%20James",
+    "district": "Tete",
+    "province": "Tete",
+    "lastVisit": "2026-06-15",
+    "status": "Self-Registered",
+    "location": "Outpatient",
+    "timeAdded": "12:48",
+    "allergies": [],
+    "chronicConditions": [],
+    "email": "pita.domingos@jachris.com",
+    "phone": "+258845479481",
+    "address": "",
+    "nextOfKinName": "Pita Domingos",
+    "nextOfKinRelation": "Parent",
+    "nextOfKinPhone": "",
+    "medications": [
+      {
+        "id": 1,
+        "name": "Lisinopril",
+        "dosage": "10mg",
+        "frequency": "Once daily (Morning)",
+        "reason": "Hypertension",
+        "reminders": "08:00 AM",
+        "instructions": "Take with water before breakfast.",
+        "pillColor": "bg-blue-400",
+        "adherenceLog": [
+          "2026-06-15T10:48:57.292Z"
+        ]
+      }
+    ],
+    "visits": [
+      {
+        "id": 1,
+        "date": "2026-06-15",
+        "dept": "General Practice",
+        "reason": "Registration Consultation",
+        "doctor": "Dr. Auto",
+        "facility": "Central General Hospital"
+      }
+    ],
+    "labs": []
+  },
+  {
     "id": "P-JAZZHT",
     "nationalId": "050100731234C",
     "fullName": "Pita Domingos",

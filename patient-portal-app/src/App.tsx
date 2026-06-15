@@ -252,12 +252,27 @@ export default function App() {
         setLabs(recordsData.labs || []);
       }
 
-      // 4. Fetch Occupational Exams (simulated L-LAN)
-      const storedExams = localStorage.getItem('h365_occupational_exams');
-      if (storedExams) {
-        const allExams = JSON.parse(storedExams);
-        const myExams = allExams.filter((e: any) => e.patientId === nid);
-        setOccupationalExams(myExams);
+      // 4. Fetch Occupational Exams from shared H365 CHAEM hub (cross-origin L-LAN bridge)
+      try {
+        const examsRes = await fetch(`http://localhost:3000/api/chaem/exams?nid=${encodeURIComponent(nid)}`);
+        if (examsRes.ok) {
+          const examsData = await examsRes.json();
+          setOccupationalExams(examsData.exams || []);
+        } else {
+          // Fallback to local localStorage if hub unreachable
+          const storedExams = localStorage.getItem('h365_occupational_exams');
+          if (storedExams) {
+            const allExams = JSON.parse(storedExams);
+            setOccupationalExams(allExams.filter((e: any) => e.patientId === nid));
+          }
+        }
+      } catch {
+        // Offline fallback
+        const storedExams = localStorage.getItem('h365_occupational_exams');
+        if (storedExams) {
+          const allExams = JSON.parse(storedExams);
+          setOccupationalExams(allExams.filter((e: any) => e.patientId === nid));
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -438,7 +453,10 @@ export default function App() {
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`H365_Health_Report_${patient.nationalId}.pdf`);
+      // Filename: PatientName_YYYY-MM-DD.pdf
+      const safeName = patient.fullName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+      const dateStr = new Date().toISOString().split('T')[0];
+      pdf.save(`${safeName}_${dateStr}.pdf`);
       
       reportElement.style.display = 'none';
       showToast('Success', currentLocale === 'pt' ? 'Relatório baixado com sucesso!' : 'Report downloaded successfully!', 'success');
@@ -460,9 +478,17 @@ export default function App() {
           className="fixed top-0 left-[-9999px] w-[800px] bg-white text-slate-900 p-10 hidden font-sans"
         >
           <div className="flex items-center justify-between border-b-4 border-primary pb-6 mb-6">
-            <div>
-              <h1 className="text-4xl font-extrabold text-primary tracking-tight">H365</h1>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t('patientPortal.nav.title') || 'Patient Portal'}</p>
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo.png"
+                alt="H365 Logo"
+                crossOrigin="anonymous"
+                style={{ height: '52px', width: 'auto', objectFit: 'contain' }}
+              />
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{currentLocale === 'pt' ? 'Portal do Paciente' : 'Patient Portal'}</p>
+                <p className="text-[10px] text-slate-300 uppercase tracking-widest">Sistema de Saúde Digital • Moçambique</p>
+              </div>
             </div>
             <div className="text-right">
               <h2 className="text-xl font-bold text-slate-800">{currentLocale === 'pt' ? 'Relatório Oficial de Saúde' : 'Official Health Report'}</h2>
@@ -1573,10 +1599,40 @@ export default function App() {
                                {exam.status}
                              </span>
                            </div>
-                           <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl italic">"{exam.notes}"</p>
-                           <button className="w-full text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl transition-colors">
-                             {currentLocale === 'pt' ? 'Descarregar Certificado (AMA)' : 'Download AMA Certificate'}
-                           </button>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 rounded-xl p-3">
+                              <div><span className="font-bold text-slate-400 uppercase text-[10px] block">Data</span>{exam.date}</div>
+                              <div><span className="font-bold text-slate-400 uppercase text-[10px] block">Sector</span>{exam.sectorLabel || exam.sector}</div>
+                              <div><span className="font-bold text-slate-400 uppercase text-[10px] block">Médico</span>{exam.doctorName || '—'}</div>
+                              <div><span className="font-bold text-slate-400 uppercase text-[10px] block">BI / NUIT</span>{exam.patientId}</div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const a = document.createElement('a');
+                                const blob = new Blob([
+                                  `ATESTADO MÉDICO DE APTIDÃO (AMA)\n` +
+                                  `=====================================\n` +
+                                  `Documento: ${exam.id}\n` +
+                                  `Data: ${exam.date}\n` +
+                                  `Paciente: ${exam.patientName}\n` +
+                                  `BI/NUIT: ${exam.patientId}\n` +
+                                  `Empresa: ${exam.companyName}\n` +
+                                  `Sector: ${exam.sectorLabel || exam.sector}\n` +
+                                  `Tipo de Exame: ${exam.examType}\n` +
+                                  `Determinação: ${exam.status}\n` +
+                                  `Médico: ${exam.doctorName || '—'}\n` +
+                                  `Observações: ${exam.notes || '—'}\n` +
+                                  `=====================================\n` +
+                                  `CHAEM — Sistema H365 | MISAU, República de Moçambique\n` +
+                                  `Válido apenas com assinatura e carimbo originais\n`
+                                ], { type: 'application/octet-stream' });
+                                a.href = URL.createObjectURL(blob);
+                                a.download = `AMA_${exam.patientName?.replace(/\s+/g,'_')}_${exam.date}.txt`;
+                                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                URL.revokeObjectURL(a.href);
+                              }}
+                              className="w-full text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                              {currentLocale === 'pt' ? '⬇ Descarregar Certificado (AMA)' : '⬇ Download AMA Certificate'}
+                            </button>
                         </div>
                       </div>
                     ))
