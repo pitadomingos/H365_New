@@ -32,7 +32,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleLocale = () => {
-    setCurrentLocaleState((prevLocale) => {
+    setCurrentLocaleState((prevLocale: Locale) => {
       const newLocale = prevLocale === 'en' ? 'pt' : 'en';
       localStorage.setItem('h365-locale', newLocale);
       return newLocale;

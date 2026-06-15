@@ -17,7 +17,9 @@
 
     /* Path aliases - @/ maps to the parent src (shared i18n/context) */
     "paths": {
-      "@/*": ["../src/*"]
+      "@/*": ["../src/*"],
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"]
     },
 
     /* Linting */
