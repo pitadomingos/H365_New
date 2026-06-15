@@ -12,6 +12,9 @@ export default defineConfig({
     alias: {
       // Share i18n and locale-context from the parent Next.js app's src folder
       '@': path.resolve(__dirname, '../src'),
+      'react': path.resolve(__dirname, './node_modules/react'),
+      'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
   },
   server: {
