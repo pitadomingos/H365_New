@@ -1,5 +1,52 @@
 [
   {
+    "id": "P-JAZZHT",
+    "nationalId": "050100731234C",
+    "fullName": "Pita Domingos",
+    "gender": "Male",
+    "age": 52,
+    "dateOfBirth": "1974-05-28",
+    "photoUrl": "https://api.dicebear.com/7.x/initials/svg?seed=Pita%20Domingos",
+    "district": "Tete",
+    "province": "Tete",
+    "lastVisit": "2026-06-15",
+    "status": "Self-Registered",
+    "location": "Outpatient",
+    "timeAdded": "11:56",
+    "allergies": [],
+    "chronicConditions": [],
+    "email": "",
+    "phone": "+258 845479481",
+    "address": "",
+    "nextOfKinName": "Pita Domingos",
+    "nextOfKinRelation": "Parent",
+    "nextOfKinPhone": "+258845479481",
+    "medications": [
+      {
+        "id": 1,
+        "name": "Lisinopril",
+        "dosage": "10mg",
+        "frequency": "Once daily (Morning)",
+        "reason": "Hypertension",
+        "reminders": "08:00 AM",
+        "instructions": "Take with water before breakfast.",
+        "pillColor": "bg-blue-400",
+        "adherenceLog": []
+      }
+    ],
+    "visits": [
+      {
+        "id": 1,
+        "date": "2026-06-15",
+        "dept": "General Practice",
+        "reason": "Registration Consultation",
+        "doctor": "Dr. Auto",
+        "facility": "Central General Hospital"
+      }
+    ],
+    "labs": []
+  },
+  {
     "id": "P-QN9B4C",
     "nationalId": "05010731234C",
     "fullName": "Pita Antonio Domingos",

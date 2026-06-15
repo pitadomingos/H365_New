@@ -115,8 +115,9 @@ export default function App() {
 
   // Navigation & Session State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [currentView, setCurrentView] = useState<'home' | 'records' | 'medications' | 'profile'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'records' | 'medications' | 'profile' | 'occupational'>('home');
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [occupationalExams, setOccupationalExams] = useState<any[]>([]);
   const [loginNid, setLoginNid] = useState<string>('');
   
   // Data State
@@ -249,6 +250,14 @@ export default function App() {
         const recordsData = await recordsRes.json();
         setVisits(recordsData.visits || []);
         setLabs(recordsData.labs || []);
+      }
+
+      // 4. Fetch Occupational Exams (simulated L-LAN)
+      const storedExams = localStorage.getItem('h365_occupational_exams');
+      if (storedExams) {
+        const allExams = JSON.parse(storedExams);
+        const myExams = allExams.filter((e: any) => e.patientId === nid);
+        setOccupationalExams(myExams);
       }
     } catch (err: any) {
       console.error(err);
@@ -1534,6 +1543,52 @@ export default function App() {
                 )}
               </div>
             )}
+
+            {/* 5. OCCUPATIONAL VIEW */}
+            {currentView === 'occupational' && (
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black text-slate-800 dark:text-white font-heading">{currentLocale === 'pt' ? 'Saúde Ocupacional' : 'Occupational Health'}</h2>
+                  <p className="text-xs text-slate-400 flex items-center gap-1">
+                     <ShieldCheck className="h-3.5 w-3.5 text-teal-600" /> {currentLocale === 'pt' ? 'Certificados de Aptidão e Exames' : 'Fitness Certificates and Exams'}
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  {occupationalExams.length > 0 ? (
+                    occupationalExams.map(exam => (
+                      <div key={exam.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden flex relative">
+                        <div className={`w-2.5 shrink-0 ${exam.status === 'Inapto' ? 'bg-rose-500' : 'bg-teal-500'}`} />
+                        <div className="p-5 flex-1 space-y-3">
+                           <div className="flex justify-between items-start">
+                             <div>
+                               <h4 className="text-lg font-bold text-slate-850 dark:text-slate-100 leading-none">{exam.examType}</h4>
+                               <p className="text-xs font-semibold text-slate-400 mt-1">{exam.companyName}</p>
+                             </div>
+                             <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                               exam.status === 'Inapto' 
+                               ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300' 
+                               : 'bg-teal-50 text-teal-700 dark:bg-teal-950/80 dark:text-teal-300'
+                             }`}>
+                               {exam.status}
+                             </span>
+                           </div>
+                           <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl italic">"{exam.notes}"</p>
+                           <button className="w-full text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl transition-colors">
+                             {currentLocale === 'pt' ? 'Descarregar Certificado (AMA)' : 'Download AMA Certificate'}
+                           </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-10 text-center text-slate-400 space-y-3">
+                       <ShieldCheck className="mx-auto h-12 w-12 opacity-30 text-slate-400" />
+                       <p className="font-semibold text-sm">{currentLocale === 'pt' ? 'Nenhum exame ocupacional registado.' : 'No occupational exams registered.'}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </main>
 
           {/* Bottom Tab Navigation Bar */}
@@ -1541,6 +1596,7 @@ export default function App() {
             {[
               { id: 'home', icon: Home, label: t('patientPortal.nav.home') },
               { id: 'records', icon: ClipboardList, label: t('patientPortal.nav.records') },
+              { id: 'occupational', icon: ShieldCheck, label: 'CHAEM' },
               { id: 'medications', icon: Pill, label: t('patientPortal.nav.meds') },
               { id: 'profile', icon: User, label: t('patientPortal.nav.profile') },
             ].map((item) => {
