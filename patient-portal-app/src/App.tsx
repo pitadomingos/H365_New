@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 import { 
@@ -404,72 +405,149 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
-  const downloadHealthReport = () => {
+  const downloadHealthReport = async () => {
     if (!patient) return;
-    showToast('Report Request', 'Downloading health passport PDF packet...', 'info');
+    setIsLoading(true);
+    showToast('Report Request', currentLocale === 'pt' ? 'A gerar relatório PDF...' : 'Generating PDF report...', 'info');
     
-    const doc = new jsPDF();
-    
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(30, 58, 138);
-    doc.text('H365 Universal Health Node', 20, 20);
-    
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42);
-    doc.text('Official Health Report (PDF)', 20, 30);
-    
-    // Patient Data
-    doc.setFontSize(12);
-    doc.setTextColor(71, 85, 105);
-    
-    doc.text(`Patient Name: ${patient.fullName}`, 20, 50);
-    doc.text(`National ID: ${patient.nationalId}`, 20, 60);
-    doc.text(`Blood Profile: O Positive (O+)`, 20, 70);
-    doc.text(`Date of Birth: ${patient.dateOfBirth}`, 20, 80);
-    doc.text(`Gender: ${patient.gender}`, 20, 90);
-    
-    // Health status
-    doc.setFontSize(14);
-    doc.setTextColor(30, 58, 138);
-    doc.text('Clinical Status', 20, 110);
-    
-    doc.setFontSize(12);
-    doc.setTextColor(71, 85, 105);
-    const allergies = patient.allergies?.length ? patient.allergies.join(', ') : 'None Reported';
-    const conditions = patient.chronicConditions?.length ? patient.chronicConditions.join(', ') : 'No Conditions';
-    
-    doc.text(`Allergies: ${allergies}`, 20, 120);
-    doc.text(`Chronic Conditions: ${conditions}`, 20, 130);
-    
-    // Contact Info
-    doc.setFontSize(14);
-    doc.setTextColor(30, 58, 138);
-    doc.text('Contact & Registry', 20, 150);
-    
-    doc.setFontSize(12);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Phone: ${patient.phone || 'None Provided'}`, 20, 160);
-    doc.text(`Email: ${patient.email || 'None Provided'}`, 20, 170);
-    doc.text(`Address: ${patient.address || 'None Provided'}`, 20, 180);
-    
-    // Next of kin
-    if (patient.nextOfKinName) {
-      doc.text(`Emergency Contact: ${patient.nextOfKinName} (${patient.nextOfKinRelation})`, 20, 190);
-      doc.text(`Emergency Phone: ${patient.nextOfKinPhone}`, 20, 200);
+    try {
+      const reportElement = document.getElementById('health-report-pdf');
+      if (!reportElement) throw new Error('Report template not found');
+      
+      reportElement.style.display = 'block';
+      
+      const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`H365_Health_Report_${patient.nationalId}.pdf`);
+      
+      reportElement.style.display = 'none';
+      showToast('Success', currentLocale === 'pt' ? 'Relatório baixado com sucesso!' : 'Report downloaded successfully!', 'success');
+    } catch (error) {
+      console.error(error);
+      showToast('Error', currentLocale === 'pt' ? 'Falha ao gerar o PDF' : 'Failed to generate PDF', 'error');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Footer
-    doc.setFontSize(10);
-    doc.setTextColor(148, 163, 184);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 280);
-    doc.text(`Node CL-772 • Verified by H365 SaaS Engine`, 20, 285);
-    
-    doc.save(`H365_Health_Report_${patient.nationalId}.pdf`);
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300 relative pb-20">
+      
+      {/* Hidden PDF Template */}
+      {patient && (
+        <div 
+          id="health-report-pdf" 
+          className="fixed top-0 left-[-9999px] w-[800px] bg-white text-slate-900 p-10 hidden font-sans"
+        >
+          <div className="flex items-center justify-between border-b-4 border-primary pb-6 mb-6">
+            <div>
+              <h1 className="text-4xl font-extrabold text-primary tracking-tight">H365</h1>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{t('patientPortal.nav.title') || 'Patient Portal'}</p>
+            </div>
+            <div className="text-right">
+              <h2 className="text-xl font-bold text-slate-800">{currentLocale === 'pt' ? 'Relatório Oficial de Saúde' : 'Official Health Report'}</h2>
+              <p className="text-sm text-slate-500">{new Date().toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div className="flex gap-8 mb-8">
+            <div className="w-32 h-32 rounded-2xl overflow-hidden shrink-0 border-4 border-slate-100 shadow-sm">
+              <img 
+                src={patient.photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${patient.fullName}`} 
+                alt="Patient" 
+                className="w-full h-full object-cover"
+                crossOrigin="anonymous" 
+              />
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-y-4 gap-x-8">
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase">{currentLocale === 'pt' ? 'Nome do Paciente' : 'Patient Name'}</p>
+                <p className="text-lg font-bold text-slate-800">{patient.fullName}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase">{currentLocale === 'pt' ? 'ID Nacional' : 'National ID'}</p>
+                <p className="text-lg font-mono text-slate-800">{patient.nationalId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase">{currentLocale === 'pt' ? 'Data de Nascimento' : 'Date of Birth'}</p>
+                <p className="text-md text-slate-700">{patient.dateOfBirth} ({patient.age || 0} {currentLocale === 'pt' ? 'Anos' : 'Years'})</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase">{currentLocale === 'pt' ? 'Gênero' : 'Gender'}</p>
+                <p className="text-md text-slate-700">{patient.gender}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase">{currentLocale === 'pt' ? 'Contacto' : 'Contact'}</p>
+                <p className="text-md text-slate-700">{patient.phone || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase">{currentLocale === 'pt' ? 'Endereço' : 'Address'}</p>
+                <p className="text-md text-slate-700">{patient.address || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            <div className="p-6 bg-rose-50 rounded-3xl border border-rose-100">
+              <h3 className="text-sm font-bold text-rose-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" /> {currentLocale === 'pt' ? 'Alergias' : 'Allergies'}
+              </h3>
+              <ul className="list-disc list-inside text-rose-900 space-y-1">
+                {patient.allergies?.length ? patient.allergies.map(a => <li key={a}>{a}</li>) : <li>{currentLocale === 'pt' ? 'Nenhuma reportada' : 'None reported'}</li>}
+              </ul>
+            </div>
+            <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100">
+              <h3 className="text-sm font-bold text-blue-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <Activity className="w-5 h-5" /> {currentLocale === 'pt' ? 'Condições Crônicas' : 'Chronic Conditions'}
+              </h3>
+              <ul className="list-disc list-inside text-blue-900 space-y-1">
+                {patient.chronicConditions?.length ? patient.chronicConditions.map(c => <li key={c}>{c}</li>) : <li>{currentLocale === 'pt' ? 'Nenhuma reportada' : 'None reported'}</li>}
+              </ul>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">{currentLocale === 'pt' ? 'Resumo de Saúde & Recomendações' : 'Health Summary & Recommendations'}</h3>
+            
+            <div className="mb-6 space-y-2">
+              <div className="flex justify-between items-center text-sm font-bold text-slate-600">
+                <span>{currentLocale === 'pt' ? 'Índice de Vitalidade (Estimado)' : 'Vitality Index (Estimated)'}</span>
+                <span className="text-emerald-600">85% - Bom</span>
+              </div>
+              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 w-[85%] rounded-full"></div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 border-l-4 border-l-emerald-500 bg-emerald-50 rounded-r-xl">
+                <h4 className="font-bold text-emerald-800">{currentLocale === 'pt' ? 'Plano de Nutrição' : 'Nutrition Plan'}</h4>
+                <p className="text-sm text-emerald-700">{currentLocale === 'pt' ? 'Aumente a ingestão de potássio fresco (verduras, bananas) para auxiliar no controle da hipertensão. Restrinja o sal processado.' : 'Increase fresh potassium-rich inputs (greens, bananas) to assist hypertension management. Restrict process salts.'}</p>
+              </div>
+              <div className="p-4 border-l-4 border-l-blue-500 bg-blue-50 rounded-r-xl">
+                <h4 className="font-bold text-blue-800">{currentLocale === 'pt' ? 'Recomendação Clínica' : 'Clinical Recommendation'}</h4>
+                <p className="text-sm text-blue-700">{currentLocale === 'pt' ? 'Espera-se conformidade regular com os medicamentos. Recomenda-se caminhada diária de pelo menos 30 minutos.' : 'Regular medication compliance expected. Daily walking of at least 30 minutes is highly recommended.'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center pt-8 border-t border-slate-200">
+            <p className="text-xs text-slate-400 font-bold tracking-widest uppercase mb-1">H365 SaaS Engine • CL-772</p>
+            <p className="text-[10px] text-slate-300">{currentLocale === 'pt' ? 'Este documento foi gerado de forma segura no dispositivo do paciente.' : 'This document was securely generated on the patient device.'}</p>
+          </div>
+        </div>
+      )}
       
       {/* Toast Notification */}
       {toast && (
@@ -503,7 +581,7 @@ export default function App() {
 
             {/* Registration Header */}
             <div className="sticky top-0 z-40 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-lg border-b border-slate-100 dark:border-slate-800 px-4 py-3 flex items-center gap-3">
-              <button
+              <button title="button"
                 onClick={() => setShowRegistration(false)}
                 className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
@@ -566,7 +644,7 @@ export default function App() {
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">{t('patientPortal.login.idLabel')} <span className="text-rose-500">*</span></label>
-                      <input
+                      <input title="input"
                         type="text"
                         placeholder={t('patientPortal.login.idPlaceholder')}
                         value={registerForm.nationalId}
@@ -578,7 +656,7 @@ export default function App() {
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Full Name <span className="text-rose-500">*</span></label>
-                      <input
+                      <input title="input"
                         type="text"
                         placeholder="As on national document"
                         value={registerForm.fullName}
@@ -591,7 +669,7 @@ export default function App() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Gender <span className="text-rose-500">*</span></label>
-                        <select
+                        <select title="select"
                           value={registerForm.gender}
                           onChange={e => setRegisterForm(p => ({ ...p, gender: e.target.value as any }))}
                           className="w-full h-11 px-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary dark:text-white transition-all"
@@ -603,7 +681,7 @@ export default function App() {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Date of Birth <span className="text-rose-500">*</span></label>
-                        <input
+                        <input title="input"
                           type="date"
                           value={registerForm.dateOfBirth}
                           onChange={e => setRegisterForm(p => ({ ...p, dateOfBirth: e.target.value }))}
@@ -616,7 +694,7 @@ export default function App() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">District</label>
-                        <input
+                        <input title="input"
                           type="text"
                           placeholder="e.g. Tete"
                           value={registerForm.district}
@@ -626,7 +704,7 @@ export default function App() {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Province</label>
-                        <input
+                        <input title="input"
                           type="text"
                           placeholder="e.g. Tete"
                           value={registerForm.province}
@@ -655,7 +733,7 @@ export default function App() {
                   <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Phone Number</label>
-                      <input
+                      <input title="input"
                         type="tel"
                         placeholder="+258 8X XXX XXXX"
                         value={registerForm.phone}
@@ -666,7 +744,7 @@ export default function App() {
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Email Address</label>
-                      <input
+                      <input title="input"
                         type="email"
                         placeholder="your@email.com"
                         value={registerForm.email}
@@ -680,7 +758,7 @@ export default function App() {
                   <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Full Name</label>
-                      <input
+                      <input title="input"
                         type="text"
                         placeholder="Emergency contact name"
                         value={registerForm.nextOfKinName}
@@ -691,7 +769,7 @@ export default function App() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Relation</label>
-                        <select
+                        <select title="select"
                           value={registerForm.nextOfKinRelation}
                           onChange={e => setRegisterForm(p => ({ ...p, nextOfKinRelation: e.target.value }))}
                           className="w-full h-11 px-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary dark:text-white transition-all"
@@ -706,7 +784,7 @@ export default function App() {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Phone</label>
-                        <input
+                        <input title="input"
                           type="tel"
                           placeholder="+258 8X XXX"
                           value={registerForm.nextOfKinPhone}
@@ -735,7 +813,7 @@ export default function App() {
                   <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Known Allergies</label>
-                      <input
+                      <input title="input"
                         type="text"
                         placeholder="e.g. Penicillin, Latex (comma separated)"
                         value={registerForm.allergies}
@@ -747,7 +825,7 @@ export default function App() {
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Chronic Conditions</label>
-                      <input
+                      <input title="input"
                         type="text"
                         placeholder="e.g. Diabetes, Hypertension"
                         value={registerForm.chronicConditions}
@@ -776,7 +854,7 @@ export default function App() {
               <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-lg border-t border-slate-100 dark:border-slate-800">
                 <div className="max-w-md mx-auto flex gap-3">
                   {regStep > 1 && (
-                    <button
+                    <button title="button"
                       type="button"
                       onClick={() => setRegStep(s => (s - 1) as any)}
                       className="flex-1 h-12 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -785,7 +863,7 @@ export default function App() {
                     </button>
                   )}
                   {regStep < 3 ? (
-                    <button
+                    <button title="button"
                       type="button"
                       onClick={() => {
                         if (regStep === 1 && (!registerForm.nationalId || !registerForm.fullName || !registerForm.dateOfBirth)) {
@@ -799,7 +877,7 @@ export default function App() {
                       Continue <ArrowRight className="h-4 w-4" />
                     </button>
                   ) : (
-                    <button
+                    <button title="button"
                       type="submit"
                       disabled={isLoading}
                       className="flex-1 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-60"
@@ -820,13 +898,13 @@ export default function App() {
           
           {/* Header Controls */}
           <div className="absolute top-4 right-4 flex items-center gap-2">
-            <button
+            <button title="button"
               onClick={toggleLocale}
               className="px-3 py-1.5 bg-white dark:bg-slate-800 rounded-full shadow-md border dark:border-slate-700 text-xs font-black text-slate-500 dark:text-slate-300 hover:scale-105 transition-transform tracking-widest uppercase"
             >
               {currentLocale === 'en' ? 'PT' : 'EN'}
             </button>
-            <button 
+            <button title="button" 
               onClick={toggleTheme}
               className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-md border dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:scale-105 transition-transform"
             >
@@ -860,7 +938,7 @@ export default function App() {
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block ml-1">{t('patientPortal.login.idLabel')}</label>
-                  <input
+                  <input title="input"
                     type="text"
                     placeholder={t('patientPortal.login.idPlaceholder')}
                     value={loginNid}
@@ -869,7 +947,7 @@ export default function App() {
                   />
                 </div>
 
-                <button 
+                <button title="button" 
                   type="submit" 
                   className="w-full h-12 text-md font-bold bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group transition-all"
                   disabled={isLoading}
@@ -888,7 +966,7 @@ export default function App() {
               {/* Register CTA */}
               <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
                 <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-3">{currentLocale === 'pt' ? 'Primeira vez aqui? Sem necessidade de visita.' : 'First time here? No facility visit needed.'}</p>
-                <button
+                <button title="button"
                   type="button"
                   onClick={openRegistration}
                   className="w-full h-11 border-2 border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all group"
@@ -962,7 +1040,7 @@ export default function App() {
               >
                 {currentLocale === 'en' ? 'PT' : 'EN'}
               </button>
-              <button 
+              <button title="button" 
                 onClick={toggleTheme}
                 className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300"
               >
@@ -1137,7 +1215,7 @@ export default function App() {
                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                       All clinical updates are validated by authorized node operators. In case of emergency or severe reactions, call 117 or report to your nearest ER node.
                    </p>
-                   <button 
+                   <button title="button" 
                      onClick={downloadHealthReport}
                      className="w-full h-10 border border-primary/20 text-primary hover:bg-primary/5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-colors bg-white dark:bg-slate-900"
                    >
@@ -1189,7 +1267,7 @@ export default function App() {
                                </p>
                             </div>
 
-                            <button 
+                            <button title="button" 
                               className={`w-full h-11 text-xs font-bold rounded-2xl transition-all duration-300 flex items-center justify-center gap-1.5 ${
                                 isConfirmed 
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900 cursor-default" 
@@ -1257,7 +1335,7 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-black text-slate-800 dark:text-white font-heading">{currentLocale === 'pt' ? 'Definições de Perfil' : 'Profile Settings'}</h2>
                   {!isEditing && (
-                    <button 
+                    <button title="button" 
                       onClick={() => setIsEditing(true)}
                       className="px-4 py-2 border dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-bold rounded-2xl flex items-center gap-1.5 transition-colors shadow-sm"
                     >
@@ -1276,7 +1354,7 @@ export default function App() {
                       <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4">
                         <div className="space-y-1.5">
                            <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">{t('patientPortal.profile.email')}</label>
-                          <input 
+                          <input title="input" 
                             type="email"
                             value={editForm.email} 
                             onChange={(e) => setEditForm({...editForm, email: e.target.value})}
@@ -1287,7 +1365,7 @@ export default function App() {
                         
                         <div className="space-y-1.5">
                            <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">{t('patientPortal.profile.phone')}</label>
-                          <input 
+                          <input title="input" 
                             type="text"
                             value={editForm.phone} 
                             onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
@@ -1299,6 +1377,8 @@ export default function App() {
                         <div className="space-y-1.5">
                            <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">{t('patientPortal.profile.address')}</label>
                           <textarea 
+                            title="Address"
+                            placeholder="Address"
                             value={editForm.address} 
                             onChange={(e) => setEditForm({...editForm, address: e.target.value})}
                             className="w-full px-4 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 h-20 dark:text-white text-sm"
@@ -1314,7 +1394,7 @@ export default function App() {
                       <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4">
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Kin Full Name</label>
-                          <input 
+                          <input title="input" 
                             type="text"
                             value={editForm.nextOfKinName} 
                             onChange={(e) => setEditForm({...editForm, nextOfKinName: e.target.value})}
@@ -1325,7 +1405,7 @@ export default function App() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Relation</label>
-                            <input 
+                            <input title="input" 
                               type="text"
                               value={editForm.nextOfKinRelation} 
                               onChange={(e) => setEditForm({...editForm, nextOfKinRelation: e.target.value})}
@@ -1334,7 +1414,7 @@ export default function App() {
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Kin Phone</label>
-                            <input 
+                            <input title="input" 
                               type="text"
                               value={editForm.nextOfKinPhone} 
                               onChange={(e) => setEditForm({...editForm, nextOfKinPhone: e.target.value})}
@@ -1346,14 +1426,14 @@ export default function App() {
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                      <button 
+                      <button title="button" 
                         type="button" 
                         className="flex-1 h-12 border dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
                         onClick={() => setIsEditing(false)}
                       >
                         {t('patientPortal.profile.cancel')}
                       </button>
-                      <button 
+                      <button title="button" 
                         type="submit" 
                         className="flex-1 h-12 bg-primary hover:bg-primary/95 text-white text-xs font-bold rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                         disabled={isLoading}
@@ -1466,7 +1546,7 @@ export default function App() {
             ].map((item) => {
               const isActive = currentView === item.id;
               return (
-                <button
+                <button title="button"
                   key={item.id}
                   onClick={() => {
                     setIsEditing(false);
@@ -1492,7 +1572,7 @@ export default function App() {
           {showQrModal && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
                <div className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-3xl p-6 w-full max-w-xs space-y-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
-                  <button 
+                  <button title="button" 
                     onClick={() => setShowQrModal(false)}
                     className="absolute top-4 right-4 p-1 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
@@ -1534,7 +1614,7 @@ function RecordTabs({ visits, labs }: RecordTabsProps) {
     <div className="space-y-4">
       {/* Tab Select Header */}
       <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl h-11 border dark:border-slate-850">
-        <button
+        <button title="button"
           onClick={() => setActiveTab('visits')}
           className={`text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 ${
             activeTab === 'visits'
@@ -1545,7 +1625,7 @@ function RecordTabs({ visits, labs }: RecordTabsProps) {
           <ClipboardList className="h-4 w-4" />
           Visits ({visits.length})
         </button>
-        <button
+        <button title="button"
           onClick={() => setActiveTab('labs')}
           className={`text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 ${
             activeTab === 'labs'

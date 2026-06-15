@@ -1,7 +1,7 @@
 
 export type Locale = 'en' | 'pt' | 'es';
 
-export const defaultLocale: Locale = 'en';
+export const defaultLocale: Locale = 'pt';
 
 export const locales: Locale[] = ['en', 'pt']; // For now, only enable en and pt for the global toggle
 
