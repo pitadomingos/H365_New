@@ -16,7 +16,6 @@
     "jsx": "react-jsx",
 
     /* Path aliases - @/ maps to the parent src (shared i18n/context) */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["../src/*"]
     },
