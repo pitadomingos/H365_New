@@ -184,7 +184,8 @@
         "pillColor": "bg-blue-400",
         "adherenceLog": [
           "2026-06-03T07:51:02.337Z",
-          "2026-06-03T07:51:02.502Z"
+          "2026-06-03T07:51:02.502Z",
+          "2026-06-10T11:36:56.682Z"
         ]
       },
       {
@@ -197,7 +198,8 @@
         "instructions": "Take with food to minimize stomach upset.",
         "pillColor": "bg-orange-400",
         "adherenceLog": [
-          "2026-06-03T07:51:02.653Z"
+          "2026-06-03T07:51:02.653Z",
+          "2026-06-10T11:36:56.856Z"
         ]
       }
     ],

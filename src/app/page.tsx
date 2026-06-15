@@ -21,6 +21,7 @@ interface SummaryCardData {
   id: string;
   titleKey: string;
   value: string | string[];
+  valueSuffixKey?: string;
   iconName: "TrendingUp" | "CalendarCheck" | "BedDouble" | "Siren" | "Users" | "HeartPulse" | "PillIcon" | "FileClock" | "Stethoscope";
   color: string;
   descriptionKey: string;
@@ -67,6 +68,48 @@ export default function DashboardPage() {
   const { currentLocale } = useLocale();
   const { user } = useUser();
   const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
+
+  // Helper functions for dynamic content translation
+  const translateDisease = React.useCallback((name: string) => {
+    const key = 'disease.' + name.toLowerCase();
+    const trans = t(key);
+    return trans === key ? name : trans;
+  }, [t]);
+
+  const translateFacility = React.useCallback((name: string) => {
+    const camel = name.replace(/\s+/g, '').replace(/^[A-Z]/, c => c.toLowerCase());
+    const key = 'facility.' + camel;
+    const trans = t(key);
+    return trans === key ? name : trans;
+  }, [t]);
+
+  const translateCampaign = React.useCallback((name: string) => {
+    const camel = name.replace(/\s+/g, '').replace(/^[A-Z]/, c => c.toLowerCase());
+    const key = 'campaign.' + camel;
+    const trans = t(key);
+    return trans === key ? name : trans;
+  }, [t]);
+
+  const translateRegion = React.useCallback((name: string) => {
+    const camel = name.replace(/\s+/g, '').replace(/^[A-Z]/, c => c.toLowerCase());
+    const key = 'region.' + camel;
+    const trans = t(key);
+    return trans === key ? name : trans;
+  }, [t]);
+
+  const translateAction = React.useCallback((name: string) => {
+    const camel = name.replace(/\s+/g, '').replace(/^[A-Z]/, c => c.toLowerCase());
+    const key = 'action.' + camel;
+    const trans = t(key);
+    return trans === key ? name : trans;
+  }, [t]);
+
+  const translateItem = React.useCallback((name: string) => {
+    const camel = name.replace(/\s+/g, '').replace(/^[A-Z]/, c => c.toLowerCase());
+    const key = 'item.' + camel;
+    const trans = t(key);
+    return trans === key ? name : trans;
+  }, [t]);
 
   const [summaryCardsData, setSummaryCardsData] = useState<SummaryCardData[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
@@ -139,18 +182,18 @@ export default function DashboardPage() {
       if (role === 'NATIONAL_ADMIN' || role === 'PROVINCIAL_ADMIN' || role === 'DISTRICT_ADMIN') {
         // Management KPIs (Decision Support)
         fetchedSummary = [
-          { id: "sc1", titleKey: "Avg. Patient Load / Facility", value: "842", iconName: "Users", color: "text-blue-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
-          { id: "sc2", titleKey: "Regional Bed Occupancy", value: "72%", iconName: "BedDouble", color: "text-indigo-500", descriptionKey: "Weighted average across units", link: "#" },
-          { id: "sc3", titleKey: "Resource Health Index", value: "88/100", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "Staffing & Supply availability", link: "#" },
-          { id: "sc4", titleKey: "Epidemiological Alerts", value: "3 Active", iconName: "Siren", color: "text-red-500", descriptionKey: "Clusters requiring intervention", link: "/epidemic-control" },
+          { id: "sc1", titleKey: "dashboard.management.avgLoad", value: "842", iconName: "Users", color: "text-blue-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
+          { id: "sc2", titleKey: "dashboard.management.bedOccupancy", value: "72%", iconName: "BedDouble", color: "text-indigo-500", descriptionKey: "dashboard.management.bedOccupancyDesc", link: "#" },
+          { id: "sc3", titleKey: "dashboard.management.resourceIndex", value: "88/100", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "dashboard.management.resourceIndexDesc", link: "#" },
+          { id: "sc4", titleKey: "dashboard.management.alerts", value: "3", valueSuffixKey: "common.active", iconName: "Siren", color: "text-red-500", descriptionKey: "dashboard.management.alertsDesc", link: "/epidemic-control" },
         ];
       } else {
         // Facility Operational KPIs (Immediate Ops)
         fetchedSummary = [
-          { id: "sc1", titleKey: "Current Patient Queue", value: "42", iconName: "Users", color: "text-orange-500", descriptionKey: "Patients waiting for triage", link: "/patient-registration" },
-          { id: "sc2", titleKey: "Ward Bed Availability", value: "8 Free", iconName: "BedDouble", color: "text-green-500", descriptionKey: "Real-time bed tracking", link: "/ward-management" },
-          { id: "sc3", titleKey: "Today's Appointments", value: "12", iconName: "CalendarCheck", color: "text-sky-500", descriptionKey: "dashboard.card.appointments.description", link: "/appointments" },
-          { id: "sc4", titleKey: "Critical Supply Alerts", value: "2 Low", iconName: "PillIcon", color: "text-red-500", descriptionKey: "Oxygen & Essential Meds", link: "/drug-dispensing" },
+          { id: "sc1", titleKey: "dashboard.facility.queue", value: "42", iconName: "Users", color: "text-orange-500", descriptionKey: "dashboard.facility.queueDesc", link: "/patient-registration" },
+          { id: "sc2", titleKey: "dashboard.facility.beds", value: "8", valueSuffixKey: "common.free", iconName: "BedDouble", color: "text-green-500", descriptionKey: "dashboard.facility.bedsDesc", link: "/ward-management" },
+          { id: "sc3", titleKey: "dashboard.card.appointments.title", value: "12", iconName: "CalendarCheck", color: "text-sky-500", descriptionKey: "dashboard.card.appointments.description", link: "/appointments" },
+          { id: "sc4", titleKey: "dashboard.facility.supplies", value: "2", valueSuffixKey: "common.status.low", iconName: "PillIcon", color: "text-red-500", descriptionKey: "dashboard.facility.suppliesDesc", link: "/drug-dispensing" },
         ];
       }
 
@@ -238,19 +281,35 @@ export default function DashboardPage() {
   }), [t]) satisfies ChartConfig;
 
 
+  const displayPerformanceData = useMemo(() => facilityPerformance.map(item => ({ ...item, name: translateFacility(item.name) })), [facilityPerformance, translateFacility]);
+
+  const displayAttendanceData = useMemo(() => dailyAttendanceData.map(item => {
+    const isDayOfWeek = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].includes(item.day);
+    const isMonth = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].includes(item.day);
+    let translatedDay = item.day;
+    if (isDayOfWeek) {
+      translatedDay = t('day.' + item.day);
+    } else if (isMonth) {
+      translatedDay = t('month.' + item.day);
+    }
+    return { ...item, day: translatedDay };
+  }), [dailyAttendanceData, t]);
+
+  const displayTrendData = useMemo(() => trendData.map(item => ({ ...item, label: t('month.' + item.label) })), [trendData, t]);
+
   return (
       <div className="flex flex-col gap-6">
         {/* Header with period selector */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              {t('dashboard.welcomeMessage')} {user?.role === 'NATIONAL_ADMIN' ? '(National)' : user?.jurisdiction.facility || user?.jurisdiction.district || user?.jurisdiction.province || ''}
+              {t('dashboard.welcomeMessage')} {user?.role === 'NATIONAL_ADMIN' ? `(${t('dashboard.public.level.national')})` : user?.jurisdiction.facility || user?.jurisdiction.district || user?.jurisdiction.province || ''}
             </h1>
             <p className="text-muted-foreground">
-              {user?.role === 'NATIONAL_ADMIN' && "Consolidated nationwide healthcare metrics and surveillance."}
-              {user?.role === 'PROVINCIAL_ADMIN' && `Provincial healthcare overview for ${user.jurisdiction.province}.`}
-              {user?.role === 'DISTRICT_ADMIN' && `District healthcare performance for ${user.jurisdiction.district}.`}
-              {user?.role === 'FACILITY_ADMIN' && `Operational dashboard for ${user.jurisdiction.facility}.`}
+              {user?.role === 'NATIONAL_ADMIN' && t('dashboard.desc.national')}
+              {user?.role === 'PROVINCIAL_ADMIN' && t('dashboard.desc.provincial', { province: user.jurisdiction.province || '' })}
+              {user?.role === 'DISTRICT_ADMIN' && t('dashboard.desc.district', { district: user.jurisdiction.district || '' })}
+              {user?.role === 'FACILITY_ADMIN' && t('dashboard.desc.facility', { facility: user.jurisdiction.facility || '' })}
               {!user && t('dashboard.tagline')}
             </p>
           </div>
@@ -265,7 +324,7 @@ export default function DashboardPage() {
                     ? 'bg-background shadow text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
-              >{p}</button>
+              >{t('period.' + p.toLowerCase())}</button>
             ))}
           </div>
         </div>
@@ -295,7 +354,10 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-end gap-2">
-                      <div className="text-2xl font-bold">{Array.isArray(item.value) ? item.value.join(', ') : item.value}</div>
+                      <div className="text-2xl font-bold">
+                        {Array.isArray(item.value) ? item.value.join(', ') : item.value}
+                        {item.valueSuffixKey && ` ${t(item.valueSuffixKey)}`}
+                      </div>
                       {showDelta && (
                         <span className={`flex items-center text-xs font-semibold mb-0.5 ${
                           periodDelta.up ? 'text-green-600' : 'text-red-500'
@@ -385,31 +447,31 @@ export default function DashboardPage() {
             <Card className="shadow-sm border-primary/20 bg-primary/5">
               <CardHeader>
                 <CardTitle className="text-primary flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5" /> Decision Support Center
+                  <ShieldCheck className="h-5 w-5" /> {t('dashboard.management.decisionCenter')}
                 </CardTitle>
-                <CardDescription>Strategic actions and resource distribution tools.</CardDescription>
+                <CardDescription>{t('dashboard.management.decisionCenterDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                  <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 text-xs">
-                       <TrendingUp className="h-5 w-5" /> Analyze Trends
+                       <TrendingUp className="h-5 w-5" /> {t('dashboard.management.action.analyzeTrends')}
                     </Button>
                     <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 text-xs">
-                       <Users className="h-5 w-5" /> Reallocate Staff
+                       <Users className="h-5 w-5" /> {t('dashboard.management.action.reallocateStaff')}
                     </Button>
                     <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 text-xs">
-                       <Microscope className="h-5 w-5" /> Regional Lab Stats
+                       <Microscope className="h-5 w-5" /> {t('dashboard.management.action.labStats')}
                     </Button>
                     <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1 text-xs" asChild>
                        <Link href="/epidemic-control">
-                         <Siren className="h-5 w-5" /> Manage Outbreaks
+                          <Siren className="h-5 w-5" /> {t('dashboard.management.action.manageOutbreaks')}
                        </Link>
                     </Button>
                  </div>
                  <div className="p-3 bg-white rounded-lg border border-primary/10">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Management Briefing (AI)</p>
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">{t('dashboard.management.briefingTitle')}</p>
                     <p className="text-xs italic leading-snug">
-                      &quot;Bed occupancy in the South District has spiked by 15% due to seasonal influenza. Recommend shifting oxygen reserves from Central General to District Hospital A.&quot;
+                      &quot;{t('dashboard.management.briefingText')}&quot;
                     </p>
                  </div>
               </CardContent>
@@ -424,7 +486,7 @@ export default function DashboardPage() {
              <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <HeartPulse className="h-4 w-4 text-orange-500" /> Recurring Infections
+                    <HeartPulse className="h-4 w-4 text-orange-500" /> {t('dashboard.management.recurringInfections')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -432,13 +494,15 @@ export default function DashboardPage() {
                     {require('@/lib/mock-data').MOCK_RECURRING_INFECTIONS.map((inf: any) => (
                       <li key={inf.name} className="flex items-center justify-between">
                          <div className="space-y-0.5">
-                            <p className="text-xs font-bold">{inf.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{inf.facilities.join(', ')}</p>
+                            <p className="text-xs font-bold">{translateDisease(inf.name)}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {inf.facilities.map((fac: string) => translateFacility(fac)).join(', ')}
+                            </p>
                          </div>
                          <div className="text-right">
-                            <p className="text-sm font-bold">{inf.cases} cases</p>
+                            <p className="text-sm font-bold">{inf.cases} {t('common.cases')}</p>
                             <Badge variant="outline" className={`text-[9px] h-4 px-1 ${inf.trend === 'up' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                               {inf.trend.toUpperCase()}
+                               {t('common.status.' + inf.trend).toUpperCase()}
                             </Badge>
                          </div>
                       </li>
@@ -451,20 +515,22 @@ export default function DashboardPage() {
              <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <CalendarCheck className="h-4 w-4 text-primary" /> Health Campaigns
+                    <CalendarCheck className="h-4 w-4 text-primary" /> {t('dashboard.management.healthCampaigns')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                    {require('@/lib/mock-data').MOCK_CAMPAIGNS.map((camp: any) => (
                      <div key={camp.name} className="space-y-1">
                         <div className="flex justify-between text-[11px]">
-                           <span className="font-bold">{camp.name}</span>
+                           <span className="font-bold">{translateCampaign(camp.name)}</span>
                            <span className="text-muted-foreground">{camp.progress}%</span>
                         </div>
                         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                           <div className="h-full bg-primary" style={{ width: `${camp.progress}%` }} />
+                           <div className="h-full bg-primary" {...{ style: { width: `${camp.progress}%` } }} />
                         </div>
-                        <p className="text-[10px] text-muted-foreground">Reach: {camp.reach} targets</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {t('dashboard.management.campaignReach', { reach: camp.reach })}
+                        </p>
                      </div>
                    ))}
                 </CardContent>
@@ -475,7 +541,7 @@ export default function DashboardPage() {
                 <Card className="shadow-sm border-red-100 bg-red-50/30">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2 text-red-600">
-                      <AlertTriangle className="h-4 w-4" /> Epidemic Surveillance
+                      <AlertTriangle className="h-4 w-4" /> {t('dashboard.management.epidemicSurveillance')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -483,10 +549,12 @@ export default function DashboardPage() {
                       {require('@/lib/mock-data').MOCK_EPIDEMIC_ALERTS.map((alert: any) => (
                         <li key={alert.id} className="p-2 bg-white rounded border border-red-100">
                            <div className="flex justify-between items-start mb-1">
-                              <p className="text-xs font-bold text-red-700">{alert.disease}</p>
-                              <Badge className="bg-red-600 text-[9px] h-4">{alert.risk}</Badge>
+                              <p className="text-xs font-bold text-red-700">{translateDisease(alert.disease)}</p>
+                              <Badge className="bg-red-600 text-[9px] h-4">{t('common.status.' + alert.risk.toLowerCase())}</Badge>
                            </div>
-                           <p className="text-[10px] text-slate-600">{alert.location} • {alert.action}</p>
+                           <p className="text-[10px] text-slate-600">
+                             {translateRegion(alert.location)} • {translateAction(alert.action)}
+                           </p>
                         </li>
                       ))}
                     </ul>
@@ -496,15 +564,17 @@ export default function DashboardPage() {
                 <Card className="shadow-sm border-orange-100 bg-orange-50/30">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2 text-orange-600">
-                      <PillIcon className="h-4 w-4" /> Critical Stock Alerts
+                      <PillIcon className="h-4 w-4" /> {t('dashboard.management.criticalStockAlerts')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       {require('@/lib/mock-data').MOCK_FACILITY_STOCKS.filter((s:any) => s.status === 'Critical').map((stock: any) => (
                         <div key={stock.facility} className="text-[10px]">
-                           <p className="font-bold text-slate-800">{stock.facility}</p>
-                           <p className="text-orange-700 truncate">Needs: {stock.lowItems.join(', ')}</p>
+                           <p className="font-bold text-slate-800">{translateFacility(stock.facility)}</p>
+                           <p className="text-orange-700 truncate">
+                             {t('dashboard.management.criticalStockNeeds', { items: stock.lowItems.map((item: string) => translateItem(item)).join(', ') })}
+                           </p>
                         </div>
                       ))}
                     </div>
@@ -520,9 +590,9 @@ export default function DashboardPage() {
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-6 w-6 text-primary" /> Facility Performance Comparison
+                    <BarChart3 className="h-6 w-6 text-primary" /> {t('dashboard.charts.facilityComparison.title')}
                   </CardTitle>
-                  <CardDescription>Comparing patient load and occupancy % across units.</CardDescription>
+                  <CardDescription>{t('dashboard.charts.facilityComparison.desc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                   {isLoadingPerformance ? (
@@ -532,13 +602,13 @@ export default function DashboardPage() {
                   ) : (
                     <ChartContainer config={chartConfig} className="w-full h-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={facilityPerformance}>
+                        <RechartsBarChart data={displayPerformanceData}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
                           <XAxis dataKey="name" fontSize={10} />
                           <YAxis fontSize={10} />
                           <RechartsTooltip content={<ChartTooltipContent />} />
-                          <Bar dataKey="patients" name="Patient Count" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="occupancy" name="Occupancy %" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="patients" name={t('dashboard.charts.labels.patientCount')} fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="occupancy" name={t('dashboard.charts.labels.occupancyPct')} fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
                         </RechartsBarChart>
                       </ResponsiveContainer>
                     </ChartContainer>
@@ -580,7 +650,7 @@ export default function DashboardPage() {
                                       <div className="flex items-center justify-center gap-3 mt-4">
                                           {payload?.map((entry: any, index: number) => (
                                           <div key={`item-${entry.value}-${index}`} className="flex items-center space-x-1">
-                                              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                              <span className="h-2 w-2 rounded-full" {...{ style: { backgroundColor: entry.color } }} />
                                               <span className="text-xs text-muted-foreground">{entry.payload.name}</span>
                                           </div>
                                           ))}
@@ -600,13 +670,15 @@ export default function DashboardPage() {
                     <CardTitle className="flex items-center gap-2">
                         <BarChart3 className="h-6 w-6 text-primary" /> {t('dashboard.charts.dailyAttendance.title')}
                     </CardTitle>
-                    <CardDescription>{selectedPeriod} view · {PERIOD_CURR[selectedPeriod].toLocaleString()} total</CardDescription>
+                    <CardDescription>
+                      {t('dashboard.charts.dailyAttendance.subtitle', { period: t('period.' + selectedPeriod.toLowerCase()), total: PERIOD_CURR[selectedPeriod].toLocaleString() })}
+                    </CardDescription>
                   </div>
                   <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${
                     periodDelta.up ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                   }`}>
                     {periodDelta.up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {periodDelta.pct}% vs prev
+                    {t('dashboard.charts.dailyAttendance.deltaDesc', { pct: periodDelta.pct })}
                   </span>
                 </CardHeader>
                 <CardContent className="h-[300px]">
@@ -617,13 +689,13 @@ export default function DashboardPage() {
                     ) : (
                         <ChartContainer config={chartConfig} className="w-full h-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <RechartsBarChart data={dailyAttendanceData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                <RechartsBarChart data={displayAttendanceData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="day" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis fontSize={12} tickLine={false} axisLine={false} />
                                     <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" hideLabel />} />
                                     <Bar dataKey="patients" name={t('dashboard.charts.dailyAttendance.patients')} radius={[4, 4, 0, 0]}>
-                                      {dailyAttendanceData.map((entry, index) => (
+                                      {displayAttendanceData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill || "hsl(var(--chart-4))"} />
                                       ))}
                                     </Bar>
@@ -640,15 +712,15 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-start justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <LineChartIcon className="h-6 w-6 text-primary" /> Patient Volume Trend
+                <LineChartIcon className="h-6 w-6 text-primary" /> {t('dashboard.charts.patientVolumeTrend.title')}
               </CardTitle>
-              <CardDescription>Year-over-year monthly comparison (Current vs Previous Year)</CardDescription>
+              <CardDescription>{t('dashboard.charts.patientVolumeTrend.desc')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="h-[280px]">
-            <ChartContainer config={{ thisYear: { label: 'This Year', color: 'hsl(var(--chart-1))' }, lastYear: { label: 'Last Year', color: 'hsl(var(--chart-2))' } }} className="w-full h-full">
+            <ChartContainer config={{ thisYear: { label: t('dashboard.charts.labels.thisYear'), color: 'hsl(var(--chart-1))' }, lastYear: { label: t('dashboard.charts.labels.lastYear'), color: 'hsl(var(--chart-2))' } }} className="w-full h-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                <AreaChart data={displayTrendData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="gradThisYear" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.2} />
@@ -667,8 +739,8 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-center gap-4 mt-2">
                       {payload?.map((e: any, i: number) => (
                         <div key={i} className="flex items-center gap-1.5">
-                          <span className="h-2 w-4 rounded-sm" style={{ backgroundColor: e.color }} />
-                          <span className="text-xs text-muted-foreground">{e.value === 'thisYear' ? 'This Year' : 'Last Year'}</span>
+                          <span className="h-2 w-4 rounded-sm" {...{ style: { backgroundColor: e.color } }} />
+                          <span className="text-xs text-muted-foreground">{e.value === 'thisYear' ? t('dashboard.charts.labels.thisYear') : t('dashboard.charts.labels.lastYear')}</span>
                         </div>
                       ))}
                     </div>

@@ -34,12 +34,12 @@ import { useLocale } from "@/context/locale-context";
 import { getTranslator } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-// Mock Data
+// Mock Data - reasonKey maps to i18n translation keys
 const MOCK_MATCH_GROUPS = [
   { 
     id: "MG-101", 
     confidence: 94, 
-    reason: "Name/DOB/NID Match", 
+    reasonKey: "mpi.reason.nameDobNid", 
     records: [
       { name: "Joana Maria dos Santos", dob: "1985-04-12", nid: "542.112.XX", facility: "Hosp. Central" },
       { name: "Joana M. Santos", dob: "1985-04-12", nid: "542.112.XX", facility: "Rural Clinic B" }
@@ -48,13 +48,19 @@ const MOCK_MATCH_GROUPS = [
   { 
     id: "MG-102", 
     confidence: 82, 
-    reason: "Phone/Address Match", 
+    reasonKey: "mpi.reason.phoneAddress", 
     records: [
       { name: "Carlos Eduardo Silva", dob: "1972-09-30", nid: "888.112.YY", facility: "ER Unit" },
       { name: "Carlos E. Silva", dob: "1972-10-01", nid: "Unknown", facility: "Hosp. Central" }
     ]
   }
 ];
+
+// MPI nodes static list (names are proper nouns, no translation needed)
+const MPI_NODES = ["Central MPI", "MOH Cloud", "District A", "Private Lab X"];
+
+// Historical data for bar chart
+const TREND_DATA = [20, 35, 42, 38, 45, 55, 62, 58, 65, 75, 82, 94];
 
 export default function MPIPage() {
   const { currentLocale } = useLocale();
@@ -64,6 +70,14 @@ export default function MPIPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const translateFacility = (name: string) => {
+    const cleanName = name.replace(/\./g, '').trim();
+    const camel = cleanName.replace(/\s+/g, '').replace(/^[A-Z]/, c => c.toLowerCase());
+    const key = 'facility.' + camel;
+    const trans = t(key);
+    return trans === key ? name : trans;
+  };
 
   if (!isMounted) return null;
 
@@ -92,11 +106,11 @@ export default function MPIPage() {
         <div className="flex items-center gap-3">
           <Button variant="outline" className="gap-2 shadow-sm">
             <RefreshCw className="h-4 w-4" />
-            Sync with National Registry
+            {t('mpi.action.syncRegistry')}
           </Button>
           <Button className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-lg shadow-indigo-200">
             <UserPlus className="h-4 w-4" />
-            Resolve Bulk Queue
+            {t('mpi.action.resolveBulk')}
           </Button>
         </div>
       </div>
@@ -114,7 +128,7 @@ export default function MPIPage() {
                <CardContent className="p-0">
                   <div className="p-6 flex items-center gap-4">
                     <div className={cn("p-3 rounded-2xl", stat.bg)}>
-                      <stat.icon className={cn("h-6 w-6", stat.color)} />
+                       <stat.icon className={cn("h-6 w-6", stat.color)} />
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
@@ -150,8 +164,8 @@ export default function MPIPage() {
                   <div key={group.id} className="border rounded-2xl overflow-hidden shadow-sm hover:border-indigo-400 transition-colors">
                     <div className="bg-slate-50 border-b p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Badge className="bg-indigo-600">{group.confidence}% Confidence</Badge>
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{group.reason}</span>
+                        <Badge className="bg-indigo-600">{group.confidence}% {t('mpi.confidence')}</Badge>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t(group.reasonKey)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="sm" variant="ghost" className="h-8 text-xs">{t('mpi.action.ignore')}</Button>
@@ -165,10 +179,10 @@ export default function MPIPage() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-slate-50/50 pointer-events-none">
-                            <TableHead className="text-[10px] uppercase font-bold tracking-tighter w-1/3">Patient Name</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-tighter">DOB</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-tighter">National ID</TableHead>
-                            <TableHead className="text-[10px] uppercase font-bold tracking-tighter text-right">Source Facility</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-tighter w-1/3">{t('mpi.table.patientName')}</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-tighter">{t('mpi.table.dob')}</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-tighter">{t('mpi.table.nid')}</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-tighter text-right">{t('mpi.table.sourceFacility')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -178,7 +192,7 @@ export default function MPIPage() {
                               <TableCell className="text-xs text-muted-foreground">{rec.dob}</TableCell>
                               <TableCell className="text-xs font-mono">{rec.nid}</TableCell>
                               <TableCell className="text-right text-xs">
-                                <Badge variant="secondary" className="font-normal">{rec.facility}</Badge>
+                                <Badge variant="secondary" className="font-normal">{translateFacility(rec.facility)}</Badge>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -193,12 +207,12 @@ export default function MPIPage() {
                   <div className="p-4 bg-slate-100 rounded-full">
                     <ShieldCheck className="h-12 w-12 text-slate-300" />
                   </div>
-                  <h3 className="text-lg font-bold">All Facility Records Linked</h3>
+                  <h3 className="text-lg font-bold">{t('mpi.unlinked.allLinked')}</h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    All currently synchronized facility records carry a verified National Health Identity (NID).
+                    {t('mpi.unlinked.allLinkedDesc')}
                   </p>
                   <Button variant="outline" className="mt-4 shadow-sm border-slate-200">
-                    Run Connectivity Check
+                    {t('mpi.unlinked.runCheck')}
                   </Button>
                 </div>
               </TabsContent>
@@ -211,29 +225,29 @@ export default function MPIPage() {
           <Card className="shadow-lg border-2 border-indigo-100">
             <CardHeader className="bg-indigo-50/50">
               <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-indigo-700">
-                <Info className="h-4 w-4" /> AI Deduplication Logic
+                <Info className="h-4 w-4" /> {t('mpi.sidebar.aiTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Our probabilistic matching engine uses <strong>Jaro-Winkler</strong> string similarity and phonetic indexing to identify duplicates across disparate facility databases.
+                {t('mpi.sidebar.aiDesc')}
               </p>
               
               <div className="space-y-3">
                 <div className="p-3 bg-slate-50 rounded-lg flex items-center justify-between border">
-                   <span className="text-xs font-semibold">Probabilistic Threshold</span>
+                   <span className="text-xs font-semibold">{t('mpi.sidebar.threshold')}</span>
                    <span className="text-xs font-bold text-indigo-600">85%</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg flex items-center justify-between border">
-                   <span className="text-xs font-semibold">Auto-Link Eligible</span>
-                   <Badge className="bg-green-600">Active</Badge>
+                   <span className="text-xs font-semibold">{t('mpi.sidebar.autoLink')}</span>
+                   <Badge className="bg-green-600">{t('common.active')}</Badge>
                 </div>
               </div>
 
               <div className="pt-4 border-t space-y-2">
-                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">MPI Nodes in Sync</h4>
+                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('mpi.sidebar.nodesTitle')}</h4>
                  <div className="grid grid-cols-2 gap-2">
-                    {["Central MPI", "MOH Cloud", "District A", "Private Lab X"].map((n, i) => (
+                    {MPI_NODES.map((n, i) => (
                       <div key={i} className="flex items-center gap-2 text-[11px]">
                          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
                          {n}
@@ -243,25 +257,25 @@ export default function MPIPage() {
               </div>
             </CardContent>
             <CardFooter className="bg-slate-50 p-4 border-t text-[10px] text-muted-foreground text-center">
-              Governance: All identity merges are cryptographically signed and auditable.
+              {t('mpi.sidebar.governance')}
             </CardFooter>
           </Card>
 
           <Card className="shadow-sm">
              <CardHeader className="pb-2">
-               <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Historical Trends</CardTitle>
+               <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">{t('mpi.trends.title')}</CardTitle>
              </CardHeader>
              <CardContent className="space-y-4 pt-2">
                 <div className="text-center py-6 border-2 border-dashed rounded-xl border-slate-100">
-                   <p className="text-xs text-muted-foreground mb-3">Duplicate reduction over 12 months</p>
+                   <p className="text-xs text-muted-foreground mb-3">{t('mpi.trends.desc')}</p>
                    <div className="h-24 flex items-end justify-center gap-1.5">
-                      {[20, 35, 42, 38, 45, 55, 62, 58, 65, 75, 82, 94].map((h, i) => (
-                        <div key={i} title={`${h}% reduction`} className="w-2.5 bg-indigo-500 rounded-t-sm" style={{ height: `${h}%` }} />
+                      {TREND_DATA.map((h, i) => (
+                         <div key={i} title={`${h}% ${t('mpi.trends.reduction')}`} className="w-2.5 bg-indigo-500 rounded-t-sm" {...{ style: { height: `${h}%` } }} />
                       ))}
                    </div>
                 </div>
                 <Button variant="link" className="w-full text-xs text-indigo-600 gap-1">
-                  View Full Audit Report <ExternalLink className="h-3 w-3" />
+                  {t('mpi.trends.viewReport')} <ExternalLink className="h-3 w-3" />
                 </Button>
              </CardContent>
           </Card>
