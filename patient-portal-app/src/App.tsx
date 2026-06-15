@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
 import { useLocale } from '@/context/locale-context';
 import { getTranslator } from '@/lib/i18n';
 import { 
@@ -160,6 +161,7 @@ export default function App() {
     nextOfKinName: '',
     nextOfKinRelation: 'Spouse',
     nextOfKinPhone: '',
+    photoUrl: '',
   });
 
   // Initialize App and Theme
@@ -392,6 +394,80 @@ export default function App() {
     }, 2000);
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setRegisterForm(p => ({ ...p, photoUrl: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const downloadHealthReport = () => {
+    if (!patient) return;
+    showToast('Report Request', 'Downloading health passport PDF packet...', 'info');
+    
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(30, 58, 138);
+    doc.text('H365 Universal Health Node', 20, 20);
+    
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Official Health Report (PDF)', 20, 30);
+    
+    // Patient Data
+    doc.setFontSize(12);
+    doc.setTextColor(71, 85, 105);
+    
+    doc.text(`Patient Name: ${patient.fullName}`, 20, 50);
+    doc.text(`National ID: ${patient.nationalId}`, 20, 60);
+    doc.text(`Blood Profile: O Positive (O+)`, 20, 70);
+    doc.text(`Date of Birth: ${patient.dateOfBirth}`, 20, 80);
+    doc.text(`Gender: ${patient.gender}`, 20, 90);
+    
+    // Health status
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 138);
+    doc.text('Clinical Status', 20, 110);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(71, 85, 105);
+    const allergies = patient.allergies?.length ? patient.allergies.join(', ') : 'None Reported';
+    const conditions = patient.chronicConditions?.length ? patient.chronicConditions.join(', ') : 'No Conditions';
+    
+    doc.text(`Allergies: ${allergies}`, 20, 120);
+    doc.text(`Chronic Conditions: ${conditions}`, 20, 130);
+    
+    // Contact Info
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 138);
+    doc.text('Contact & Registry', 20, 150);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Phone: ${patient.phone || 'None Provided'}`, 20, 160);
+    doc.text(`Email: ${patient.email || 'None Provided'}`, 20, 170);
+    doc.text(`Address: ${patient.address || 'None Provided'}`, 20, 180);
+    
+    // Next of kin
+    if (patient.nextOfKinName) {
+      doc.text(`Emergency Contact: ${patient.nextOfKinName} (${patient.nextOfKinRelation})`, 20, 190);
+      doc.text(`Emergency Phone: ${patient.nextOfKinPhone}`, 20, 200);
+    }
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 280);
+    doc.text(`Node CL-772 • Verified by H365 SaaS Engine`, 20, 285);
+    
+    doc.save(`H365_Health_Report_${patient.nationalId}.pdf`);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300 relative pb-20">
       
@@ -462,6 +538,32 @@ export default function App() {
                   </div>
 
                   <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">Profile Photo <span className="text-[9px] lowercase font-normal text-slate-400">(optional)</span></label>
+                      <div className="flex items-center gap-4">
+                        <div className="h-16 w-16 rounded-full border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center bg-slate-50 dark:bg-slate-900 overflow-hidden shrink-0 relative group">
+                          {registerForm.photoUrl ? (
+                            <img src={registerForm.photoUrl} alt="Preview" className="h-full w-full object-cover" />
+                          ) : (
+                            <User className="h-6 w-6 text-slate-400" />
+                          )}
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            title="Upload profile picture"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+                            Upload a clear photo for your health record. <br />
+                            <span className="text-[10px] text-primary/80">In the future, this will be verified by scanning your National ID Card.</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block ml-1">{t('patientPortal.login.idLabel')} <span className="text-rose-500">*</span></label>
                       <input
@@ -1036,7 +1138,7 @@ export default function App() {
                       All clinical updates are validated by authorized node operators. In case of emergency or severe reactions, call 117 or report to your nearest ER node.
                    </p>
                    <button 
-                     onClick={() => showToast('Report Request', 'Downloading health passport PDF packet...', 'info')}
+                     onClick={downloadHealthReport}
                      className="w-full h-10 border border-primary/20 text-primary hover:bg-primary/5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-colors bg-white dark:bg-slate-900"
                    >
                       <Download className="h-4 w-4" /> Download Health Report (PDF)
