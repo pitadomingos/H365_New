@@ -636,7 +636,8 @@ function PortalTab({ data }: { data: AnalyticsSummary['portal'] | null }) {
                   { name: 'Elevated', value: 28, color: '#f59e0b' },
                   { name: 'Critical', value: 14, color: '#ef4444' },
                 ]).map(d => {
-                  const t = (labPie.length ? labPie : [{value:58},{value:28},{value:14}]).reduce((a: number, b: any) => a + b.value, 0) || 1;
+                  const entries = (labPie.length ? labPie : [{ name: 'Normal', value: 58, color: '#10b981' }, { name: 'Elevated', value: 28, color: '#f59e0b' }, { name: 'Critical', value: 14, color: '#ef4444' }]);
+                  const t = entries.reduce((a: number, b: { value: number }) => a + b.value, 0) || 1;
                   const pct = Math.round((d.value / t) * 100);
                   return (
                     <div key={d.name} className="flex items-center gap-3">
