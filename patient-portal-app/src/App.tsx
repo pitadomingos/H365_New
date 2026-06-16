@@ -5,7 +5,7 @@ import { useLocale } from '@/context/locale-context';
 import {
   ShieldCheck, Loader2, Home, ClipboardList, Pill, User, LogOut,
   Moon, Sun, Activity, AlertTriangle, Download, Clock,
-  ChevronRight, Beaker, Lock, Check, Bell, UserPlus, ChevronLeft,
+  ChevronRight, Beaker, Lock, Check, Bell, UserPlus, ChevronLeft, Heart,
   Search, FileText, HardHat, RefreshCw, Stethoscope
 } from 'lucide-react';
 
