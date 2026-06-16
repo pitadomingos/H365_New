@@ -1,1 +1,174 @@
-{}
+{
+  "EXM-DEMO-001": {
+    "id": "EXM-DEMO-001",
+    "patientId": "050100731234C",
+    "patientName": "Pita Domingos",
+    "sector": "mining",
+    "sectorLabel": "Mineração & Pedreiras",
+    "examType": "Admissional",
+    "date": "2026-01-15",
+    "companyName": "VALE Moçambique, S.A.",
+    "doctorName": "Dr. António Mondlane — CRM/MZ 004521",
+    "status": "Apto",
+    "notes": "Poeira de sílica cristalina, vibrações de corpo inteiro, ruído industrial >85dB(A), explosivos",
+    "formSnapshot": {
+      "patientId": "050100731234C",
+      "patientName": "Pita Domingos",
+      "companyName": "VALE Moçambique, S.A.",
+      "bp": "128/82",
+      "hr": "72",
+      "temp": "36.6",
+      "height": "178",
+      "weight": "81",
+      "systems": {
+        "Respiratório": false,
+        "Cardiovascular": false,
+        "Musculoesquelético": false,
+        "Neurológico": false,
+        "Dermatológico": false
+      },
+      "vitalsNotes": "Trabalhador em boas condições gerais de saúde. Sem queixas activas.",
+      "hazards": "Poeira de sílica cristalina, vibrações de corpo inteiro, ruído industrial >85dB(A), explosivos",
+      "testResults": {
+        "xray": {
+          "status": "Normal",
+          "notes": "Campos pulmonares limpos. Classificação ILO 0/0. Sem opacidades. Baseline arquivada."
+        },
+        "spirometry": {
+          "status": "Normal (≥80% previsto)",
+          "notes": "FEV1: 92% previsto | FVC: 94% | FEV1/FVC: 0.98. Padrão ventilatório normal."
+        },
+        "audiometry": {
+          "status": "Normal",
+          "notes": "Limiares auditivos ≤20dB em todas as frequências. Baseline arquivada."
+        },
+        "biomonitoring": {
+          "status": "Dentro dos BEIs (ACGIH)",
+          "notes": "Chumbo sérico: 8 µg/dL (BEI <30). Mercúrio urinário: 4 µg/g creat. Todos dentro dos limites."
+        },
+        "msk": {
+          "status": "Apto Pleno",
+          "notes": "Força de preensão: 48kg (D) / 45kg (E). Schober positivo. Levantamento funcional 25kg OK."
+        }
+      },
+      "determination": "Apto",
+      "restrictions": "",
+      "reviewDays": "365",
+      "physicianLicense": "Dr. António Mondlane — CRM/MZ 004521"
+    }
+  },
+  "EXM-DEMO-002": {
+    "id": "EXM-DEMO-002",
+    "patientId": "050100731234C",
+    "patientName": "Pita Domingos",
+    "sector": "healthcare",
+    "sectorLabel": "Saúde & Farmácia",
+    "examType": "Periódico",
+    "date": "2026-04-10",
+    "companyName": "Hospital Central de Tete",
+    "doctorName": "Dra. Celeste Nhantumbo — CRM/MZ 007834",
+    "status": "Apto com Restrições",
+    "notes": "Exposição a patogénios de transmissão sanguínea, agentes biológicos Classe 2, látex",
+    "formSnapshot": {
+      "patientId": "050100731234C",
+      "patientName": "Pita Domingos",
+      "companyName": "Hospital Central de Tete",
+      "bp": "132/86",
+      "hr": "78",
+      "temp": "36.8",
+      "height": "178",
+      "weight": "83",
+      "systems": {
+        "Respiratório": false,
+        "Cardiovascular": false,
+        "Dermatológico": true,
+        "Imunológico": false
+      },
+      "vitalsNotes": "Leve irritação cutânea nas mãos documentada. Suspeita de sensibilização ao látex.",
+      "hazards": "Exposição a patogénios de transmissão sanguínea, agentes biológicos Classe 2, látex",
+      "testResults": {
+        "immunization": {
+          "status": "Completo e Actualizado",
+          "notes": "Hep B Anti-HBs: 48 mIU/mL (≥10). DTP reforço 2024. COVID-19 primária + reforço. Influenza anual."
+        },
+        "tb": {
+          "status": "Negativo",
+          "notes": "QuantiFERON-TB Gold: Negativo. Rx Tórax não indicado."
+        },
+        "bloodborne": {
+          "status": "Todos Negativos",
+          "notes": "HIV Ag/Ab: NR | HBsAg: NR | Anti-HCV: NR | VDRL: NR. Consentimento arquivado."
+        },
+        "vision_color": {
+          "status": "Normal Corrigido (Óculos/Lentes — Obrigatório)",
+          "notes": "Snellen longe 6/6 c/ óculos. Discriminação de cores Ishihara 15/15 placas. PIO: 14mmHg."
+        },
+        "latex": {
+          "status": "Sensibilizado — Protocolo Látex-Free Obrigatório",
+          "notes": "IgE específica ao látex: 1.8 kU/L (borderline). Protocolo látex-free activado. Luvas nitrilo obrigatórias."
+        }
+      },
+      "determination": "Apto com Restrições",
+      "restrictions": "Uso obrigatório de luvas de nitrilo. Evitar contacto com látex natural.",
+      "reviewDays": "180",
+      "physicianLicense": "Dra. Celeste Nhantumbo — CRM/MZ 007834"
+    }
+  },
+  "EXM-DEMO-003": {
+    "id": "EXM-DEMO-003",
+    "patientId": "050100731234C",
+    "patientName": "Pita Domingos",
+    "sector": "logistics",
+    "sectorLabel": "Logística & Condução Comercial",
+    "examType": "Periódico",
+    "date": "2026-06-01",
+    "companyName": "TMS Transportes Moçambique",
+    "doctorName": "Dr. João Sithole — CRM/MZ 011203",
+    "status": "Apto",
+    "notes": "Condução profissional de longa distância, turnos nocturnos, carga e descarga",
+    "formSnapshot": {
+      "patientId": "050100731234C",
+      "patientName": "Pita Domingos",
+      "companyName": "TMS Transportes Moçambique",
+      "bp": "126/80",
+      "hr": "70",
+      "temp": "36.5",
+      "height": "178",
+      "weight": "82",
+      "systems": {
+        "Cardiovascular": false,
+        "Neurológico": false,
+        "Oftalmológico": false,
+        "Musculoesquelético": false
+      },
+      "vitalsNotes": "Excelente condição cardiovascular. Sem alterações neurológicas. Apto para condução noturna.",
+      "hazards": "Condução profissional de longa distância, turnos nocturnos, carga e descarga",
+      "testResults": {
+        "vision_drv": {
+          "status": "Aprovado para Condução (Visão Normal)",
+          "notes": "Snellen 6/6 c/ óculos. Ishihara 15/15. Campo visual ≥120°. Visão de profundidade OK."
+        },
+        "osa": {
+          "status": "Baixo Risco (ESE <10)",
+          "notes": "Epworth Sleepiness Scale: 5/24. STOP-BANG: 1/8. IMC 25.9. Sem risco OSA."
+        },
+        "cardio_drv": {
+          "status": "Sem Contra-indicação Cardiovascular",
+          "notes": "ECG normal. PA 126/80. Colesterol total: 185 mg/dL. LDL 110. Glicemia jejum: 89 mg/dL."
+        },
+        "reflex": {
+          "status": "Dentro dos Padrões Aceitáveis (<250ms)",
+          "notes": "Ruler Drop Test: 19cm. Finger Tapping 54/min. Tempo de reacção visual: 198ms."
+        },
+        "toxicology_drv": {
+          "status": "Negativo — Apto para Condução",
+          "notes": "Alcoolémia: 0.0‰. Painel urinário 5: Cannabis NR, Cocaína NR, Opioides NR, Anfet. NR, Benzo. NR."
+        }
+      },
+      "determination": "Apto",
+      "restrictions": "",
+      "reviewDays": "365",
+      "physicianLicense": "Dr. João Sithole — CRM/MZ 011203"
+    }
+  }
+}
