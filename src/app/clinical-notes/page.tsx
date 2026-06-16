@@ -110,7 +110,7 @@ export default function ClinicalNotesPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-lg font-semibold text-blue-700 dark:text-blue-400">Subjective (S)</Label>
-                  <p className="text-xs text-muted-foreground">Patient's chief complaint, history of present illness, symptoms as described by patient.</p>
+                  <p className="text-xs text-muted-foreground">Patient&apos;s chief complaint, history of present illness, symptoms as described by patient.</p>
                   <Textarea placeholder="e.g., Patient reports a 3-day history of sharp chest pain..." className="min-h-[100px]" value={subjective} onChange={e => setSubjective(e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -143,7 +143,7 @@ export default function ClinicalNotesPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Comprehensive History</CardTitle>
-                <CardDescription>Review and update {patientData.fullName}'s long-term medical history.</CardDescription>
+                <CardDescription>Review and update {patientData.fullName}&apos;s long-term medical history.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">

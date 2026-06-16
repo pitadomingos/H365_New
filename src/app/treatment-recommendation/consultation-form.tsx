@@ -245,6 +245,7 @@ export function ConsultationForm({ getRecommendationAction, getPatientContextAct
     if (initialData?.nationalIdSearch && !patientData && !isSearching) {
         handlePatientSearch();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.nationalIdSearch, patientData, isSearching]);
 
 

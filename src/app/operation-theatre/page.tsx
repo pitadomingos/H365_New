@@ -247,7 +247,7 @@ export default function OperationTheatrePage() {
           <Card className="shadow-sm border-slate-100 dark:border-slate-800">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Today's Surgery Board</CardTitle>
+                <CardTitle className="text-lg">Today&apos;s Surgery Board</CardTitle>
                 <CardDescription>Visual list of scheduled and active operating procedures.</CardDescription>
               </div>
               <Badge variant="outline" className="border-indigo-200 bg-indigo-50/50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400">

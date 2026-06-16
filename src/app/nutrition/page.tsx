@@ -252,7 +252,7 @@ export default function NutritionPage() {
             <Utensils className="h-8 w-8 text-emerald-600" /> Nutrition & Dietetics
           </h1>
           <p className="text-muted-foreground text-sm">
-            Integrated malnutrition classification (SAM/MAM), Plumpy'Nut ration stock management, and inpatient milk calculators.
+            Integrated malnutrition classification (SAM/MAM), Plumpy&apos;Nut ration stock management, and inpatient milk calculators.
           </p>
         </div>
       </div>
@@ -326,7 +326,7 @@ export default function NutritionPage() {
             <Tabs defaultValue="assessment" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="assessment" className="gap-2"><Activity className="h-4 w-4" /> Child Growth & MUAC Log</TabsTrigger>
-                <TabsTrigger value="therapeutic" className="gap-2"><ShoppingBag className="h-4 w-4" /> Plumpy'Nut Distribution</TabsTrigger>
+                <TabsTrigger value="therapeutic" className="gap-2"><ShoppingBag className="h-4 w-4" /> Plumpy&apos;Nut Distribution</TabsTrigger>
               </TabsList>
 
               {/* Assessment Form Tab */}
@@ -397,7 +397,7 @@ export default function NutritionPage() {
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <div>
-                        <CardTitle className="text-lg">RUTF Plumpy'Nut Ration Dispatch</CardTitle>
+                        <CardTitle className="text-lg">RUTF Plumpy&apos;Nut Ration Dispatch</CardTitle>
                         <CardDescription>Verify therapeutic stock and log distribution cycles.</CardDescription>
                       </div>
                       <Badge className="bg-indigo-600 text-white">Stock: {rutfStock} Sachets</Badge>

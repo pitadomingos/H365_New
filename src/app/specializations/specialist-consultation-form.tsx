@@ -200,6 +200,7 @@ export function SpecialistConsultationForm({ getRecommendationAction, initialDat
       setRecommendation(initialData.recommendation || null);
       setError(null); 
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, form]);
 
   useEffect(() => {
@@ -207,6 +208,7 @@ export function SpecialistConsultationForm({ getRecommendationAction, initialDat
     if (initialData?.nationalIdSearch && !patientData && !isSearching) {
         handlePatientSearch();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.nationalIdSearch, patientData, isSearching]);
 
 

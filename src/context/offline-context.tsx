@@ -15,12 +15,16 @@ interface OfflineContextType {
 const OfflineContext = createContext<OfflineContextType | undefined>(undefined);
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
-  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  // Always start with `true` to match SSR — real value is synced in useEffect after hydration
+  const [isOnline, setIsOnline] = useState(true);
   const [isLanOnline, setIsLanOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
 
   useEffect(() => {
+    // Sync actual browser online status after hydration
+    setIsOnline(navigator.onLine);
+
     const handleOnline = () => {
       setIsOnline(true);
       performSync();

@@ -146,7 +146,7 @@ export default function PrescriptionManagementPage() {
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Patient Lookup</CardTitle>
-          <CardDescription>Enter the patient's National ID to begin prescribing.</CardDescription>
+          <CardDescription>Enter the patient&apos;s National ID to begin prescribing.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 max-w-md">

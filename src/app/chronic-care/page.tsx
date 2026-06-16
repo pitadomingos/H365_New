@@ -516,7 +516,7 @@ export default function ChronicCarePage() {
                        WHO Clinical Staging (HIV Programmatic Tracking)
                     </CardTitle>
                     <CardDescription>
-                       Assess and log patient's disease progression stage based on standardized clinical criteria.
+                       Assess and log patient&apos;s disease progression stage based on standardized clinical criteria.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">

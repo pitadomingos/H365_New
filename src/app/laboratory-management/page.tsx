@@ -898,7 +898,7 @@ export default function LaboratoryManagementPage() {
                         {selectedRequestForResults?.technicianNotes && (
                             <div className="p-3.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-950/50 rounded-lg text-xs space-y-1 mt-1">
                                 <p className="font-bold text-indigo-700 dark:text-indigo-400">Technician Comments (TECH-CURRENT):</p>
-                                <p className="italic text-muted-foreground">"{selectedRequestForResults.technicianNotes}"</p>
+                                <p className="italic text-muted-foreground">&quot;{selectedRequestForResults.technicianNotes}&quot;</p>
                             </div>
                         )}
 
@@ -979,7 +979,7 @@ export default function LaboratoryManagementPage() {
                                 <p className="font-bold text-slate-700 dark:text-slate-400">Technician Sign-off</p>
                                 <p className="text-[10px] text-muted-foreground">Technician ID: {selectedRequestForResults.technicianId || "TECH-CURRENT"}</p>
                                 {selectedRequestForResults.technicianNotes ? (
-                                    <p className="italic text-slate-600 dark:text-slate-400 mt-1">"{selectedRequestForResults.technicianNotes}"</p>
+                                    <p className="italic text-slate-600 dark:text-slate-400 mt-1">&quot;{selectedRequestForResults.technicianNotes}&quot;</p>
                                 ) : (
                                     <p className="text-muted-foreground italic mt-1">No comments logged.</p>
                                 )}
@@ -988,7 +988,7 @@ export default function LaboratoryManagementPage() {
                                 <p className="font-bold text-emerald-700 dark:text-emerald-400">Pathologist Verification</p>
                                 <p className="text-[10px] text-muted-foreground">Pathologist ID: {selectedRequestForResults.verifiedBy || "PATH-001"}</p>
                                 {selectedRequestForResults.pathologistNotes ? (
-                                    <p className="italic text-emerald-600 dark:text-emerald-400 mt-1">"{selectedRequestForResults.pathologistNotes}"</p>
+                                    <p className="italic text-emerald-600 dark:text-emerald-400 mt-1">&quot;{selectedRequestForResults.pathologistNotes}&quot;</p>
                                 ) : (
                                     <p className="text-muted-foreground italic mt-1">No comments logged.</p>
                                 )}

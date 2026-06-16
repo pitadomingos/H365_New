@@ -162,7 +162,7 @@ export default function NotificationsPage() {
             <div className="space-y-1">
               <h3 className="text-xl font-semibold">No notifications</h3>
               <p className="text-muted-foreground max-w-xs mx-auto">
-                You're all caught up! New alerts and clinical updates will appear here.
+                You&apos;re all caught up! New alerts and clinical updates will appear here.
               </p>
             </div>
           </div>

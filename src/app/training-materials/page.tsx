@@ -505,6 +505,7 @@ export default function TrainingMaterialsPage() {
     } else {
       setActiveResource(res);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedIds, inProgressIds]);
 
   const resumeLast = useCallback(() => {

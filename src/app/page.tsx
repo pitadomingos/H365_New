@@ -152,6 +152,7 @@ export default function DashboardPage() {
     const curr = PERIOD_CURR[selectedPeriod];
     const pct = prev > 0 ? (((curr - prev) / prev) * 100).toFixed(1) : '0.0';
     return { pct, up: curr >= prev };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPeriod]);
 
   const trendData = useMemo(() => [
@@ -258,6 +259,7 @@ export default function DashboardPage() {
       setDailyAttendanceData(PERIOD_ATTENDANCE[selectedPeriod]);
       setIsLoadingAttendance(false);
     }, 400);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPeriod]);
 
   useEffect(() => {

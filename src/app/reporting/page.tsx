@@ -22,6 +22,7 @@ export default function NationalReportingPage() {
   const [reportPeriod, setReportPeriod] = useState('2024-05');
   const [isReporting, setIsReporting] = useState(false);
   const [reportResult, setReportResult] = useState<any>(null);
+  const [txnId, setTxnId] = useState<string>('');
 
   // Mock indicators that would be pulled from the aggregation engine
   const [indicators, setIndicators] = useState([
@@ -49,6 +50,7 @@ export default function NationalReportingPage() {
       // Simulation for demo if backend not fully connected in this env
       await new Promise(r => setTimeout(r, 2000));
       
+      setTxnId(Math.random().toString(36).substring(7).toUpperCase());
       setReportResult({
         success: true,
         importCount: { imported: 4, updated: 0, ignored: 0, deleted: 0 },
@@ -210,7 +212,7 @@ export default function NationalReportingPage() {
                     <p className="text-sm text-red-800">{reportResult.error}</p>
                   )}
                   <div className="text-[10px] text-slate-400 font-mono">
-                    TXN_ID: HF-{Math.random().toString(36).substring(7).toUpperCase()}
+                    TXN_ID: HF-{txnId}
                   </div>
                 </CardContent>
               </Card>
