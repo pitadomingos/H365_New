@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-const H365_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
+const H365_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:3000').replace(/\/$/, '');
 
 import { jsPDF } from 'jspdf';
 import { useLocale, LocaleProvider } from '@/context/locale-context';

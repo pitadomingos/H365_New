@@ -46,7 +46,8 @@ import {
   Phone
 } from 'lucide-react';
 
-const API_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:3000') + '/api/patient-portal';
+const _VITE_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:3000').replace(/\/$/, '');
+const API_BASE = _VITE_BASE + '/api/patient-portal';
 
 // Interface definitions
 interface Patient {
@@ -260,7 +261,7 @@ export default function App() {
 
       // 4. Fetch Occupational Exams from shared H365 CHAEM hub (cross-origin L-LAN bridge)
       try {
-        const examsRes = await fetch(`${import.meta.env.VITE_API_BASE ?? 'http://localhost:3000'}/api/chaem/exams?nid=${encodeURIComponent(nid)}`);
+        const examsRes = await fetch(`${_VITE_BASE}/api/chaem/exams?nid=${encodeURIComponent(nid)}`);
         if (examsRes.ok) {
           const examsData = await examsRes.json();
           setOccupationalExams(examsData.exams || []);
@@ -426,7 +427,7 @@ export default function App() {
         { type: 'session_heartbeat', nid: patient.nationalId, timestamp: Date.now() },
         ...confirmedMeds.map(medId => ({ type: 'adherence_log', nid: patient.nationalId, medId, timestamp: Date.now() })),
       ];
-      const res = await fetch(`${import.meta.env.VITE_API_BASE ?? 'http://localhost:3000'}/api/sync/batch`, {
+      const res = await fetch(`${_VITE_BASE}/api/sync/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
