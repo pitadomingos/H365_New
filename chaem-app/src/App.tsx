@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 const H365_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:3000').replace(/\/$/, '');
 
 import { jsPDF } from 'jspdf';
@@ -465,6 +465,8 @@ function DashboardView({
   onNewExam?: () => void;
 }) {
   const ld = KPI_LEVELS[level];
+  const [range, setRange] = useState<'today' | 'week' | 'month' | 'all'>('all');
+
   const levels: Array<{ key: DashLevel; label: string; Icon: React.ElementType }> = [
     { key: 'facility', label: 'Unidade', Icon: Home },
     { key: 'district', label: 'Distrito (DDS)', Icon: Building2 },
@@ -472,9 +474,139 @@ function DashboardView({
     { key: 'national', label: 'Nacional (MISAU)', Icon: Globe },
   ];
 
+  // ── Date-range filter ────────────────────────────────────────────────────────
+  const filteredExams = React.useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo  = new Date(today); weekAgo.setDate(today.getDate() - 7);
+    const monthAgo = new Date(today); monthAgo.setMonth(today.getMonth() - 1);
+    return exams.filter(e => {
+      if (range === 'all') return true;
+      const d = new Date(e.date);
+      if (range === 'today') return d >= today;
+      if (range === 'week')  return d >= weekAgo;
+      if (range === 'month') return d >= monthAgo;
+      return true;
+    });
+  }, [exams, range]);
+
+  // ── Live stats from real exam data ──────────────────────────────────────────
+  const totalEx    = filteredExams.length;
+  const totApto    = filteredExams.filter(e => e.status === 'Apto').length;
+  const totAptoR   = filteredExams.filter(e => e.status === 'Apto com Restrições').length;
+  const totInaptoT = filteredExams.filter(e => e.status === 'Inapto Temporário').length;
+  const totInapto  = filteredExams.filter(e => e.status === 'Inapto').length;
+  const aptoRate   = totalEx > 0 ? (totApto / totalEx) * 100 : 0;
+  const inaptoRate = totalEx > 0 ? (totInapto + totInaptoT) / totalEx : 0;
+
+  // ── CHAEM Health Index (0–100) ───────────────────────────────────────────────
+  const healthIndex: number | null = totalEx > 0
+    ? Math.max(0, Math.min(100, Math.round(aptoRate * 0.6 + (1 - inaptoRate) * 40)))
+    : null;
+  const hiColor = !healthIndex ? '#94a3b8' : healthIndex >= 80 ? '#10b981' : healthIndex >= 60 ? '#f59e0b' : '#ef4444';
+  const hiLabel = !healthIndex ? 'N/D' : healthIndex >= 80 ? 'Excelente' : healthIndex >= 60 ? 'Satisfatório' : 'Crítico';
+
+  // ── Live KPIs — only override at facility level ──────────────────────────────
+  const RANGE_LABELS: Record<typeof range, string> = { today: 'Hoje', week: '7 Dias', month: '30 Dias', all: 'Total' };
+  const liveKpis = level === 'facility' ? [
+    { label: 'Total de Exames', value: String(totalEx), unit: '', trend: RANGE_LABELS[range], up: null as null | boolean, color: 'teal', desc: 'Exames no período seleccionado' },
+    { label: 'Taxa de Aptidão', value: totalEx > 0 ? aptoRate.toFixed(1) : '—', unit: totalEx > 0 ? '%' : '', trend: totApto > 0 ? `${totApto} aptos plenos` : 'Sem dados', up: totalEx > 0 ? aptoRate >= 80 : null, color: 'blue', desc: 'Apto pleno, sem restrições' },
+    { label: 'Apto c/ Restrições', value: String(totAptoR), unit: '', trend: totalEx > 0 ? `${((totAptoR / totalEx) * 100).toFixed(1)}%` : '—', up: totAptoR === 0, color: 'amber', desc: 'Requerem seguimento activo' },
+    { label: 'Inaptidões', value: String(totInapto + totInaptoT), unit: '', trend: totInapto > 0 ? `${totInapto} confirmadas` : totInaptoT > 0 ? 'Temporários' : 'Nenhuma', up: totInapto + totInaptoT === 0, color: 'rose', desc: 'Inapto + Inapto Temporário' },
+  ] : ld.kpis;
+
+  // ── Real 7-day sparkline ─────────────────────────────────────────────────────
+  const realSparkData = React.useMemo(() => {
+    const today = new Date();
+    const raw = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today); d.setDate(today.getDate() - (6 - i));
+      const key = d.toISOString().split('T')[0];
+      return exams.filter(e => e.date === key).length;
+    });
+    return raw.some(v => v > 0) ? raw : ld.sparkData;
+  }, [exams, ld.sparkData]);
+
+  // ── Sector analytics ────────────────────────────────────────────────────────
+  const sectors = Object.entries(SECTOR_CONFIG).map(([key, cfg]) => {
+    const sx = filteredExams.filter(e => e.sector === key);
+    return { key, emoji: cfg.emoji, label: cfg.label, total: sx.length,
+      apto: sx.filter(e => e.status === 'Apto').length,
+      aptoR: sx.filter(e => e.status === 'Apto com Restrições').length,
+      inaptoT: sx.filter(e => e.status === 'Inapto Temporário').length,
+      inapto: sx.filter(e => e.status === 'Inapto').length };
+  });
+  const withData   = sectors.filter(s => s.total > 0);
+  const maxTotal   = Math.max(...sectors.map(s => s.total), 1);
+  const isDemo     = totalEx === 0;
+  const riskSectors = [...withData].sort((a, b) => (b.inapto + b.inaptoT) - (a.inapto + a.inaptoT));
+
+  // ── Exam Stage breakdown ─────────────────────────────────────────────────────
+  const stageRows: Array<{ key: ExamStage; color: string; bg: string; count: number }> = [
+    { key: 'Admissional', color: '#3b82f6', bg: 'bg-blue-500',   count: filteredExams.filter(e => e.examType === 'Admissional').length },
+    { key: 'Periódico',   color: '#0d9488', bg: 'bg-teal-500',   count: filteredExams.filter(e => e.examType === 'Periódico').length },
+    { key: 'Demissional', color: '#8b5cf6', bg: 'bg-violet-500', count: filteredExams.filter(e => e.examType === 'Demissional').length },
+  ];
+  const stageTotal = stageRows.reduce((a, b) => a + b.count, 0) || 1;
+
+  // ── Company league table ─────────────────────────────────────────────────────
+  const companyMap: Record<string, { apto: number; total: number }> = {};
+  filteredExams.forEach(e => {
+    if (!companyMap[e.companyName]) companyMap[e.companyName] = { apto: 0, total: 0 };
+    companyMap[e.companyName].total++;
+    if (e.status === 'Apto') companyMap[e.companyName].apto++;
+  });
+  const companies = Object.entries(companyMap)
+    .map(([name, { apto, total }]) => ({ name, apto, total, rate: Math.round((apto / total) * 100) }))
+    .sort((a, b) => b.total - a.total).slice(0, 5);
+
+  // ── Follow-up workers (Apto c/ Restrições + Inapto Temp.) ───────────────────
+  const followUp = filteredExams
+    .filter(e => e.status === 'Apto com Restrições' || e.status === 'Inapto Temporário')
+    .map(e => {
+      const snap = (e.formSnapshot as any) || {};
+      const reviewDays = parseInt(snap.reviewDays || '0', 10);
+      const examDate = e.date ? new Date(e.date) : new Date();
+      const nextReview = new Date(examDate); nextReview.setDate(examDate.getDate() + reviewDays);
+      const daysLeft = Math.ceil((nextReview.getTime() - Date.now()) / 86400000);
+      return { ...e, daysLeft };
+    })
+    .sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 6);
+
+  // ── Most problematic tests ───────────────────────────────────────────────────
+  const testMap: Record<string, { name: string; sector: string; total: number; abnormal: number }> = {};
+  filteredExams.forEach(e => {
+    const snap = (e.formSnapshot as any) || {};
+    const tr: Record<string, { status: string }> = snap.testResults || {};
+    const cfg = SECTOR_CONFIG[e.sector]; if (!cfg) return;
+    cfg.tests.forEach(t => {
+      const result = tr[t.id]; if (!result?.status) return;
+      if (!testMap[t.id]) testMap[t.id] = { name: t.name, sector: cfg.label, total: 0, abnormal: 0 };
+      testMap[t.id].total++;
+      if (!/normal|apt|negat|dentro|aprovad|completo|baixo|pleno|todos neg/i.test(result.status))
+        testMap[t.id].abnormal++;
+    });
+  });
+  const problemTests = Object.values(testMap)
+    .filter(t => t.total > 0)
+    .map(t => ({ ...t, rate: Math.round((t.abnormal / t.total) * 100) }))
+    .sort((a, b) => b.rate - a.rate).slice(0, 5);
+
+  // ── Donut chart segments ─────────────────────────────────────────────────────
+  const donutSlots = [
+    { label: 'Apto',               count: totalEx > 0 ? totApto    : 6, color: '#10b981' },
+    { label: 'Apto c/ Restrições', count: totalEx > 0 ? totAptoR   : 2, color: '#f59e0b' },
+    { label: 'Inapto Temporário',  count: totalEx > 0 ? totInaptoT : 1, color: '#f97316' },
+    { label: 'Inapto',             count: totalEx > 0 ? totInapto  : 1, color: '#ef4444' },
+  ];
+  const donutTotal = donutSlots.reduce((a, b) => a + b.count, 0) || 1;
+  const R = 50, cx = 68, cy = 68, sw = 18, circ = 2 * Math.PI * R;
+  let offset = 0;
+  const segs = donutSlots.map(s => { const da = (s.count / donutTotal) * circ; const seg = { ...s, da, off: -offset }; offset += da; return seg; });
+
   return (
     <div className="space-y-6">
-      {/* Level Tabs — RBAC-locked */}
+
+      {/* ── Level Tabs — RBAC-locked ─────────────────────────────────────── */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {levels.map(({ key, label, Icon }) => {
           const allowed = allowedLevels.includes(key);
@@ -489,67 +621,113 @@ function DashboardView({
                   ? 'bg-teal-600 text-white shadow-md shadow-teal-200'
                   : 'bg-white text-slate-600 border border-slate-200 hover:border-teal-300 hover:text-teal-600'
               }`}>
-              {!allowed
-                ? <Lock className="w-3.5 h-3.5" />
-                : <Icon className="w-4 h-4" />}
+              {!allowed ? <Lock className="w-3.5 h-3.5" /> : <Icon className="w-4 h-4" />}
               {label}
             </button>
           );
         })}
       </div>
 
-      {/* Level header */}
-      <div className="flex items-center justify-between">
+      {/* ── Level header + Date range filter ────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-800">{ld.title}</h2>
           <p className="text-sm text-slate-400">{ld.subtitle}</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-100 rounded-xl">
-          <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
-          <span className="text-xs font-bold text-teal-700">L-LAN Activa</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+            {(['today', 'week', 'month', 'all'] as const).map(r => (
+              <button key={r} onClick={() => setRange(r)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  range === r ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-500 hover:text-teal-600'
+                }`}>
+                {RANGE_LABELS[r]}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-100 rounded-xl">
+            <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-teal-700">L-LAN Activa</span>
+          </div>
         </div>
       </div>
 
-      {/* KPI Grid */}
+      {/* ── CHAEM HEALTH INDEX — facility only ──────────────────────────── */}
+      {level === 'facility' && (
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 shadow-lg">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Índice de Saúde CHAEM</p>
+              <div className="flex items-baseline gap-3">
+                <span className="text-5xl font-extrabold" style={{ color: hiColor }}>
+                  {healthIndex !== null ? healthIndex : '—'}
+                </span>
+                <span className="text-sm font-bold" style={{ color: hiColor }}>{hiLabel}</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                {totalEx > 0
+                  ? `Calculado com base em ${totalEx} exame${totalEx !== 1 ? 's' : ''} · Taxa de aptidão: ${aptoRate.toFixed(1)}%`
+                  : 'Registe exames para calcular o índice de saúde da unidade'}
+              </p>
+            </div>
+            <svg width="100" height="60" viewBox="0 0 100 60" className="shrink-0">
+              <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#334155" strokeWidth="10" strokeLinecap="round"/>
+              <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke={hiColor}
+                strokeWidth="10" strokeLinecap="round"
+                strokeDasharray={`${((healthIndex ?? 0) / 100) * 125.66} 125.66`}
+                style={{ transition: 'stroke-dasharray 1s ease' }} />
+              <text x="50" y="54" textAnchor="middle" fontSize="11" fontWeight="900" fill="#f8fafc">
+                {healthIndex !== null ? `${healthIndex}/100` : 'N/D'}
+              </text>
+            </svg>
+            <div className="grid grid-cols-2 gap-2 shrink-0">
+              {[
+                { label: 'Aptos',       value: totApto,    color: '#10b981' },
+                { label: 'Restrições',  value: totAptoR,   color: '#f59e0b' },
+                { label: 'Inapto Tmp.', value: totInaptoT, color: '#f97316' },
+                { label: 'Inaptos',     value: totInapto,  color: '#ef4444' },
+              ].map(s => (
+                <div key={s.label} className="text-center bg-slate-700/50 rounded-xl px-3 py-2">
+                  <p className="text-lg font-extrabold" style={{ color: s.color }}>{s.value}</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── KPI Grid ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {ld.kpis.map((kpi, i) => <KpiCard key={i} kpi={kpi as any} />)}
+        {liveKpis.map((kpi, i) => <KpiCard key={i} kpi={kpi as any} />)}
       </div>
 
-      {/* Charts Row */}
+      {/* ── Charts Row 1: Trend + Recent Exams ──────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
         {/* Trend Card */}
         <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="font-bold text-slate-700 text-sm">Tendência — Últimos 7 Dias</h3>
+              <h3 className="font-bold text-slate-700 text-sm">Tendência — {RANGE_LABELS[range]}</h3>
               <p className="text-xs text-slate-400 mt-0.5">{ld.title}</p>
             </div>
-            <Sparkline data={ld.sparkData} color={ld.sparkColor} />
+            <Sparkline data={realSparkData} color={ld.sparkColor} />
           </div>
           <div className="space-y-3">
-            {ld.kpis.slice(0, 3).map((kpi, i) => {
+            {liveKpis.slice(0, 3).map((kpi, i) => {
               const rawNum = parseFloat(String(kpi.value).replace(/[^0-9.]/g, ''));
               const isNumeric = !isNaN(rawNum) && rawNum > 0;
-              // Scale: if value looks like a large number (M suffix or >100), clamp differently
               const isMillion = String(kpi.value).includes('M');
-              const pct = isNumeric
-                ? isMillion ? Math.min((rawNum / 10) * 100, 100)
-                  : Math.min(rawNum, 100)
-                : 28; // qualitative/non-numeric → show at 28% with hatching
+              const pct = isNumeric ? (isMillion ? Math.min((rawNum / 10) * 100, 100) : Math.min(rawNum, 100)) : 28;
               const cc = CC[kpi.color] ?? CC.teal;
-              const barColors: Record<string, string> = {
-                teal: 'bg-teal-400', blue: 'bg-blue-400', amber: 'bg-amber-400',
-                rose: 'bg-rose-400', violet: 'bg-violet-400', indigo: 'bg-indigo-400',
-                orange: 'bg-orange-400', emerald: 'bg-emerald-400',
-              };
+              const barColors: Record<string, string> = { teal: 'bg-teal-400', blue: 'bg-blue-400', amber: 'bg-amber-400', rose: 'bg-rose-400', violet: 'bg-violet-400', indigo: 'bg-indigo-400', orange: 'bg-orange-400', emerald: 'bg-emerald-400' };
               return (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-xs text-slate-500 w-36 shrink-0 truncate">{kpi.label}</span>
                   <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all chaem-bar ${isNumeric ? barColors[kpi.color] || 'bg-teal-400' : 'bg-slate-300'}`}
-                      style={{ '--bar-w': `${pct}%`, '--bar-op': isNumeric ? '1' : '0.5' } as React.CSSProperties}
-                    />
+                    <div className={`h-full rounded-full transition-all chaem-bar ${isNumeric ? barColors[kpi.color] || 'bg-teal-400' : 'bg-slate-300'}`}
+                      style={{ '--bar-w': `${pct}%`, '--bar-op': isNumeric ? '1' : '0.5' } as React.CSSProperties} />
                   </div>
                   <span className={`text-xs font-bold ${cc.text} shrink-0 min-w-[3rem] text-right`}>{kpi.value}{kpi.unit}</span>
                 </div>
@@ -558,7 +736,7 @@ function DashboardView({
           </div>
         </div>
 
-        {/* Recent Exams Quick View */}
+        {/* Recent Exams — with AMA PDF download */}
         <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-700 text-sm">Exames Recentes (L-LAN)</h3>
@@ -568,15 +746,15 @@ function DashboardView({
               </button>
             )}
           </div>
-          {exams.length === 0 ? (
+          {filteredExams.length === 0 ? (
             <div className="text-center py-6 text-slate-400">
               <Stethoscope className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Nenhum exame registado</p>
-              <p className="text-xs mt-1">Registe o primeiro exame para sincronizar na L-LAN</p>
+              <p className="text-sm">Nenhum exame no período</p>
+              <p className="text-xs mt-1">Ajuste o filtro ou registe um novo exame</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {exams.slice(0, 5).map(exam => (
+              {filteredExams.slice(0, 5).map(exam => (
                 <div key={exam.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors">
                   <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-base shrink-0">
                     {SECTOR_CONFIG[exam.sector]?.emoji || '🏥'}
@@ -585,12 +763,24 @@ function DashboardView({
                     <p className="text-sm font-bold text-slate-700 truncate">{exam.patientName}</p>
                     <p className="text-xs text-slate-400 truncate">{exam.examType} • {exam.companyName} • {exam.date}</p>
                   </div>
-                  <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+                  <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded-full ${
                     exam.status === 'Apto' ? 'bg-emerald-100 text-emerald-700' :
                     exam.status === 'Inapto' ? 'bg-rose-100 text-rose-700' :
                     exam.status === 'Inapto Temporário' ? 'bg-orange-100 text-orange-700' :
                     'bg-amber-100 text-amber-700'
                   }`}>{exam.status}</span>
+                  <button title="Baixar AMA PDF"
+                    onClick={() => generateAMAPdf({
+                      patientId: exam.patientId, patientName: exam.patientName,
+                      companyName: exam.companyName, sectorLabel: exam.sectorLabel, sector: exam.sector,
+                      examType: exam.examType,
+                      examDate: new Date(exam.date).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'long', year: 'numeric' }),
+                      examId: exam.id, physicianLicense: exam.doctorName, hazards: exam.notes,
+                      ...((exam.formSnapshot || {}) as any),
+                    })}
+                    className="shrink-0 p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 transition-colors text-teal-600">
+                    <FileText className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -598,267 +788,326 @@ function DashboardView({
         </div>
       </div>
 
-      {/* ── SECTOR ANALYTICS CHARTS ── */}
-      {(() => {
-        // Derive per-sector stats from real stored exams
-        const sectors = Object.entries(SECTOR_CONFIG).map(([key, cfg]) => {
-          const sx = exams.filter(e => e.sector === key);
-          return {
-            key, emoji: cfg.emoji, label: cfg.label,
-            total: sx.length,
-            apto:    sx.filter(e => e.status === 'Apto').length,
-            aptoR:   sx.filter(e => e.status === 'Apto com Restrições').length,
-            inaptoT: sx.filter(e => e.status === 'Inapto Temporário').length,
-            inapto:  sx.filter(e => e.status === 'Inapto').length,
-          };
-        });
-        const withData   = sectors.filter(s => s.total > 0);
-        const maxTotal   = Math.max(...sectors.map(s => s.total), 1);
-        const totalEx    = exams.length;
-        const totApto    = exams.filter(e => e.status === 'Apto').length;
-        const totAptoR   = exams.filter(e => e.status === 'Apto com Restrições').length;
-        const totInaptoT = exams.filter(e => e.status === 'Inapto Temporário').length;
-        const totInapto  = exams.filter(e => e.status === 'Inapto').length;
-        const donutSlots = [
-          { label: 'Apto',               count: totalEx > 0 ? totApto    : 6, color: '#10b981' },
-          { label: 'Apto c/ Restrições', count: totalEx > 0 ? totAptoR   : 2, color: '#f59e0b' },
-          { label: 'Inapto Temporário',  count: totalEx > 0 ? totInaptoT : 1, color: '#f97316' },
-          { label: 'Inapto',             count: totalEx > 0 ? totInapto  : 1, color: '#ef4444' },
-        ];
-        const donutTotal  = donutSlots.reduce((a, b) => a + b.count, 0) || 1;
-        const isDemo      = totalEx === 0;
-        const riskSectors = [...withData].sort((a, b) => (b.inapto + b.inaptoT) - (a.inapto + a.inaptoT));
+      {/* ── SECTOR ANALYTICS ────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-slate-800 text-sm">Análise por Sector Industrial</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {totalEx > 0 ? `${totalEx} exame${totalEx !== 1 ? 's' : ''} · dados reais L-LAN · ${RANGE_LABELS[range]}` : 'Nenhum exame ainda — gráficos de demonstração abaixo'}
+            </p>
+          </div>
+          <BarChart2 className="w-5 h-5 text-teal-400 shrink-0" />
+        </div>
 
-        // Build SVG donut segments
-        const R = 50, cx = 68, cy = 68, sw = 18;
-        const circ = 2 * Math.PI * R;
-        let offset = 0;
-        const segs = donutSlots.map(s => {
-          const da = (s.count / donutTotal) * circ;
-          const seg = { ...s, da, off: -offset };
-          offset += da;
-          return seg;
-        });
+        {/* Row A/B: Stacked Bar + Donut */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        return (
-          <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-slate-800 text-sm">Análise por Sector Industrial</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {totalEx > 0
-                    ? `${totalEx} exame${totalEx !== 1 ? 's' : ''} registados — dados reais L-LAN`
-                    : 'Nenhum exame ainda — gráficos de demonstração abaixo'}
-                </p>
-              </div>
-              <BarChart2 className="w-5 h-5 text-teal-400 shrink-0" />
+          {/* ── Chart A: Sector Stacked Bar ── */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">Exames por Sector</h4>
+            <p className="text-[10px] text-slate-400 mb-4">Proporção de aptidão dentro de cada sector</p>
+            <div className="flex flex-wrap gap-3 mb-4">
+              {[{ color: 'bg-emerald-500', label: 'Apto' }, { color: 'bg-amber-400', label: 'Apto c/ Rest.' }, { color: 'bg-orange-400', label: 'Inapto Temp.' }, { color: 'bg-rose-500', label: 'Inapto' }].map(l => (
+                <div key={l.label} className="flex items-center gap-1.5">
+                  <div className={`w-2.5 h-2.5 rounded-sm ${l.color}`} />
+                  <span className="text-[9px] font-bold text-slate-500">{l.label}</span>
+                </div>
+              ))}
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              {/* ── Chart A: Sector Stacked Bar ── */}
-              <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-                <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">
-                  Exames por Sector
-                </h4>
-                <p className="text-[10px] text-slate-400 mb-4">
-                  Cada barra mostra a proporção de aptidão dentro do sector
-                </p>
-
-                {/* Legend */}
-                <div className="flex flex-wrap gap-3 mb-4">
-                  {[
-                    { color: 'bg-emerald-500', label: 'Apto' },
-                    { color: 'bg-amber-400',   label: 'Apto c/ Rest.' },
-                    { color: 'bg-orange-400',  label: 'Inapto Temp.' },
-                    { color: 'bg-rose-500',    label: 'Inapto' },
-                  ].map(l => (
-                    <div key={l.label} className="flex items-center gap-1.5">
-                      <div className={`w-2.5 h-2.5 rounded-sm ${l.color}`} />
-                      <span className="text-[9px] font-bold text-slate-500">{l.label}</span>
+            <div className="space-y-4">
+              {(withData.length > 0 ? withData : [
+                { key:'mining',      emoji:'⛏️', label:'Mineração',  total:8, apto:5, aptoR:2, inaptoT:1, inapto:0 },
+                { key:'healthcare',  emoji:'🏥', label:'Saúde',      total:6, apto:5, aptoR:1, inaptoT:0, inapto:0 },
+                { key:'construction',emoji:'🏗️', label:'Construção', total:4, apto:2, aptoR:1, inaptoT:1, inapto:0 },
+              ]).map(s => {
+                const t = s.total || 1; const w = (s.total / maxTotal) * 100;
+                const ap = (s.apto / t)*100, ar = (s.aptoR / t)*100, it = (s.inaptoT / t)*100, ip = (s.inapto / t)*100;
+                return (
+                  <div key={s.key} className={isDemo && withData.length === 0 ? 'opacity-40' : ''}>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-xs font-bold text-slate-700">{s.emoji} {s.label}</span>
+                      <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                        {isDemo && withData.length === 0 ? 'DEMO' : `${s.total} exam.`}
+                      </span>
                     </div>
-                  ))}
-                </div>
-
-                <div className="space-y-4">
-                  {(withData.length > 0 ? withData : [
-                    { key:'mining',    emoji:'⛏️', label:'Mineração',   total:8, apto:5, aptoR:2, inaptoT:1, inapto:0 },
-                    { key:'healthcare',emoji:'🏥', label:'Saúde',       total:6, apto:5, aptoR:1, inaptoT:0, inapto:0 },
-                    { key:'construction',emoji:'🏗️',label:'Construção', total:4, apto:2, aptoR:1, inaptoT:1, inapto:0 },
-                  ].map(s => ({ ...s, maxTotal: 8 }))).map(s => {
-                    const t = s.total || 1;
-                    const w = (s.total / maxTotal) * 100;
-                    const ap = (s.apto    / t) * 100;
-                    const ar = (s.aptoR   / t) * 100;
-                    const it = (s.inaptoT / t) * 100;
-                    const ip = (s.inapto  / t) * 100;
-                    return (
-                      <div key={s.key} className={isDemo && withData.length === 0 ? 'opacity-40' : ''}>
-                        <div className="flex justify-between items-center mb-1.5">
-                          <span className="text-xs font-bold text-slate-700">{s.emoji} {s.label}</span>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                            {isDemo && withData.length === 0 ? 'DEMO' : `${s.total} exam.`}
-                          </span>
-                        </div>
-                        {/* Outer bar width ∝ sector total vs max; inner segments = status % */}
-                        <div className="w-full h-6 bg-slate-100 rounded-lg overflow-hidden">
-                          <div className="h-full flex chaem-bar" style={{ '--bar-w': `${w}%` } as React.CSSProperties}>
-                            {ap > 0 && <div className="h-full bg-emerald-500 chaem-bar" style={{ '--bar-w': `${ap}%` } as React.CSSProperties} title={`Apto: ${s.apto}`} />}
-                            {ar > 0 && <div className="h-full bg-amber-400 chaem-bar"   style={{ '--bar-w': `${ar}%` } as React.CSSProperties} title={`Apto c/ Restrições: ${s.aptoR}`} />}
-                            {it > 0 && <div className="h-full bg-orange-400 chaem-bar"  style={{ '--bar-w': `${it}%` } as React.CSSProperties} title={`Inapto Temp.: ${s.inaptoT}`} />}
-                            {ip > 0 && <div className="h-full bg-rose-500 chaem-bar"    style={{ '--bar-w': `${ip}%` } as React.CSSProperties} title={`Inapto: ${s.inapto}`} />}
-                          </div>
-                        </div>
-                        {/* Sub-labels */}
-                        {!(isDemo && withData.length === 0) && (
-                          <div className="flex gap-3 mt-1 text-[9px] font-bold">
-                            {s.apto    > 0 && <span className="text-emerald-600">✓ {s.apto}</span>}
-                            {s.aptoR   > 0 && <span className="text-amber-600">⚠ {s.aptoR}</span>}
-                            {s.inaptoT > 0 && <span className="text-orange-600">↺ {s.inaptoT}</span>}
-                            {s.inapto  > 0 && <span className="text-rose-600">✗ {s.inapto}</span>}
-                          </div>
-                        )}
+                    <div className="w-full h-6 bg-slate-100 rounded-lg overflow-hidden">
+                      <div className="h-full flex chaem-bar" style={{ '--bar-w': `${w}%` } as React.CSSProperties}>
+                        {ap > 0 && <div className="h-full bg-emerald-500 chaem-bar" style={{ '--bar-w': `${ap}%` } as React.CSSProperties} title={`Apto: ${s.apto}`} />}
+                        {ar > 0 && <div className="h-full bg-amber-400 chaem-bar"   style={{ '--bar-w': `${ar}%` } as React.CSSProperties} title={`Apto c/ Rest.: ${s.aptoR}`} />}
+                        {it > 0 && <div className="h-full bg-orange-400 chaem-bar"  style={{ '--bar-w': `${it}%` } as React.CSSProperties} title={`Inapto Tmp.: ${s.inaptoT}`} />}
+                        {ip > 0 && <div className="h-full bg-rose-500 chaem-bar"    style={{ '--bar-w': `${ip}%` } as React.CSSProperties} title={`Inapto: ${s.inapto}`} />}
                       </div>
-                    );
-                  })}
-                </div>
-                {isDemo && withData.length === 0 && (
-                  <p className="text-[10px] text-center text-slate-300 italic mt-4 pt-3 border-t border-slate-100">
-                    Registe exames para ver dados reais por sector
-                  </p>
-                )}
-              </div>
-
-              {/* ── Chart B: Aptitude Donut ── */}
-              <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-                <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">
-                  Distribuição de Aptidão Global
-                </h4>
-                <p className="text-[10px] text-slate-400 mb-4">Todos os sectores combinados</p>
-                <div className="flex items-center gap-5">
-                  {/* SVG Donut */}
-                  <div className="shrink-0 relative">
-                    <svg width={136} height={136} viewBox="0 0 136 136">
-                      <circle cx={cx} cy={cy} r={R} fill="none" stroke="#f1f5f9" strokeWidth={sw} />
-                      {segs.map((s, i) => (
-                        <circle key={i} cx={cx} cy={cy} r={R} fill="none"
-                          stroke={s.color} strokeWidth={sw}
-                          strokeOpacity={isDemo ? 0.25 : 0.92}
-                          strokeDasharray={`${s.da.toFixed(2)} ${(circ - s.da).toFixed(2)}`}
-                          strokeDashoffset={s.off.toFixed(2)}
-                          transform={`rotate(-90, ${cx}, ${cy})`}
-                        />
-                      ))}
-                      {/* Centre */}
-                      <text x={cx} y={cy - 8} textAnchor="middle" fontSize="22" fontWeight="900" fill="#1e293b">
-                        {totalEx > 0 ? totalEx : '—'}
-                      </text>
-                      <text x={cx} y={cy + 9} textAnchor="middle" fontSize="9" fontWeight="700" fill="#94a3b8" letterSpacing="1">
-                        EXAMES
-                      </text>
-                      {isDemo && (
-                        <text x={cx} y={cy + 24} textAnchor="middle" fontSize="8" fontWeight="700" fill="#cbd5e1">DEMO</text>
-                      )}
-                    </svg>
-                  </div>
-                  {/* Legend + values */}
-                  <div className="flex-1 space-y-3">
-                    {donutSlots.map(s => {
-                      const pct = totalEx > 0 ? ((s.count / donutTotal) * 100).toFixed(0) : null;
-                      return (
-                        <div key={s.label} className="flex items-center gap-2.5">
-                          <div className="w-3 h-3 rounded-sm shrink-0 chaem-swatch" style={{ '--seg-color': s.color } as React.CSSProperties} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-bold text-slate-700 leading-none">{s.label}</p>
-                            {totalEx > 0 && (
-                              <p className="text-[9px] text-slate-400 mt-0.5">{s.count} exame{s.count !== 1 ? 's' : ''} · {pct}%</p>
-                            )}
-                          </div>
-                          {totalEx > 0 && (
-                            <span className="text-xs font-extrabold shrink-0 chaem-seg-text" style={{ '--seg-color': s.color } as React.CSSProperties}>{pct}%</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {totalEx > 0 && (
-                      <div className="pt-2 border-t border-slate-100">
-                        <p className="text-[10px] font-bold text-emerald-600">
-                          Taxa de Aptidão: {((totApto / totalEx) * 100).toFixed(1)}%
-                        </p>
-                        <p className="text-[9px] text-slate-400">Apto pleno s/ restrições</p>
+                    </div>
+                    {!(isDemo && withData.length === 0) && (
+                      <div className="flex gap-3 mt-1 text-[9px] font-bold">
+                        {s.apto    > 0 && <span className="text-emerald-600">✓ {s.apto}</span>}
+                        {s.aptoR   > 0 && <span className="text-amber-600">⚠ {s.aptoR}</span>}
+                        {s.inaptoT > 0 && <span className="text-orange-600">↺ {s.inaptoT}</span>}
+                        {s.inapto  > 0 && <span className="text-rose-600">✗ {s.inapto}</span>}
                       </div>
                     )}
                   </div>
-                </div>
+                );
+              })}
+            </div>
+            {isDemo && withData.length === 0 && (
+              <p className="text-[10px] text-center text-slate-300 italic mt-4 pt-3 border-t border-slate-100">Registe exames para ver dados reais por sector</p>
+            )}
+          </div>
+
+          {/* ── Chart B: Aptitude Donut ── */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">Distribuição de Aptidão Global</h4>
+            <p className="text-[10px] text-slate-400 mb-4">Todos os sectores combinados</p>
+            <div className="flex items-center gap-5">
+              <div className="shrink-0">
+                <svg width={136} height={136} viewBox="0 0 136 136">
+                  <circle cx={cx} cy={cy} r={R} fill="none" stroke="#f1f5f9" strokeWidth={sw} />
+                  {segs.map((s, i) => (
+                    <circle key={i} cx={cx} cy={cy} r={R} fill="none" stroke={s.color} strokeWidth={sw}
+                      strokeOpacity={isDemo ? 0.25 : 0.92}
+                      strokeDasharray={`${s.da.toFixed(2)} ${(circ - s.da).toFixed(2)}`}
+                      strokeDashoffset={s.off.toFixed(2)} transform={`rotate(-90, ${cx}, ${cy})`} />
+                  ))}
+                  <text x={cx} y={cy - 8} textAnchor="middle" fontSize="22" fontWeight="900" fill="#1e293b">{totalEx > 0 ? totalEx : '—'}</text>
+                  <text x={cx} y={cy + 9} textAnchor="middle" fontSize="9" fontWeight="700" fill="#94a3b8" letterSpacing="1">EXAMES</text>
+                  {isDemo && <text x={cx} y={cy + 24} textAnchor="middle" fontSize="8" fontWeight="700" fill="#cbd5e1">DEMO</text>}
+                </svg>
+              </div>
+              <div className="flex-1 space-y-3">
+                {donutSlots.map(s => {
+                  const pct = totalEx > 0 ? ((s.count / donutTotal) * 100).toFixed(0) : null;
+                  return (
+                    <div key={s.label} className="flex items-center gap-2.5">
+                      <div className="w-3 h-3 rounded-sm shrink-0 chaem-swatch" style={{ '--seg-color': s.color } as React.CSSProperties} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-slate-700 leading-none">{s.label}</p>
+                        {totalEx > 0 && <p className="text-[9px] text-slate-400 mt-0.5">{s.count} exame{s.count !== 1 ? 's' : ''} · {pct}%</p>}
+                      </div>
+                      {totalEx > 0 && <span className="text-xs font-extrabold shrink-0 chaem-seg-text" style={{ '--seg-color': s.color } as React.CSSProperties}>{pct}%</span>}
+                    </div>
+                  );
+                })}
+                {totalEx > 0 && (
+                  <div className="pt-2 border-t border-slate-100">
+                    <p className="text-[10px] font-bold text-emerald-600">Taxa de Aptidão: {aptoRate.toFixed(1)}%</p>
+                    <p className="text-[9px] text-slate-400">Apto pleno s/ restrições</p>
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* ── Chart C: Critical Sector Alerts ── */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500">
-                    Sectores com Maior Concentração de Risco
-                  </h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Ordenado por inaptidões confirmadas + temporárias
-                  </p>
-                </div>
-                <Activity className="w-4 h-4 text-rose-400 shrink-0" />
+        {/* Row C/D: Exam Stage + Company League Table */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* ── Chart C: Exam Stage Breakdown ── */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">Tipo de Exame</h4>
+            <p className="text-[10px] text-slate-400 mb-4">Admissional · Periódico · Demissional</p>
+            {isDemo ? (
+              <div className="text-center py-6 text-slate-300">
+                <p className="text-xs">Registe exames para ver o mix de tipos</p>
               </div>
-              {riskSectors.length === 0 ? (
-                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <Stethoscope className="w-8 h-8 text-slate-200 shrink-0" />
-                  <div>
-                    <p className="text-sm font-bold text-slate-400">Sem dados — registe exames para ver alertas por sector</p>
-                    <p className="text-xs text-slate-300 mt-0.5">Os sectores com maior risco serão listados aqui por ordem de prioridade</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {riskSectors.map((s, i) => {
-                    const riskN = s.inapto + s.inaptoT;
-                    const riskPct = s.total > 0 ? Math.round((riskN / s.total) * 100) : 0;
-                    const lvl = riskN === 0 ? 'low' : riskPct >= 25 ? 'high' : 'mid';
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {stageRows.map(s => {
+                    const pct = Math.round((s.count / stageTotal) * 100);
                     return (
-                      <div key={s.key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                        lvl === 'high' ? 'bg-rose-50 border-rose-200' :
-                        lvl === 'mid'  ? 'bg-amber-50 border-amber-200' :
-                        'bg-emerald-50 border-emerald-100'
-                      }`}>
-                        <span className="text-[10px] font-extrabold text-slate-400 w-4 text-center shrink-0">#{i+1}</span>
-                        <span className="text-lg shrink-0">{s.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-700 truncate">{s.label}</p>
-                          <p className="text-[9px] text-slate-500 mt-0.5">
-                            {s.total} exam. · {s.apto} Apto · {riskN} em risco
-                          </p>
+                      <div key={s.key}>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-xs font-bold text-slate-700">{s.key}</span>
+                          <span className="text-[10px] font-bold text-slate-400">{s.count} exam. · {pct}%</span>
                         </div>
-                        {/* Mini progress bar for risk % */}
-                        <div className="w-20 h-1.5 bg-white/60 rounded-full overflow-hidden shrink-0">
-                          <div className={`h-full rounded-full chaem-bar ${
-                            lvl === 'high' ? 'bg-rose-500' : lvl === 'mid' ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`} style={{ '--bar-w': `${Math.max(riskPct, lvl === 'low' ? 4 : riskPct)}%` } as React.CSSProperties} />
+                        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full chaem-bar ${s.bg}`}
+                            style={{ '--bar-w': `${pct}%` } as React.CSSProperties} />
                         </div>
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
-                          lvl === 'high' ? 'bg-rose-100 text-rose-700' :
-                          lvl === 'mid'  ? 'bg-amber-100 text-amber-700' :
-                          'bg-emerald-100 text-emerald-700'
-                        }`}>
-                          {lvl === 'low' ? '✓ OK' : `${riskPct}% risco`}
-                        </span>
                       </div>
                     );
                   })}
                 </div>
-              )}
-            </div>
+                <div className="pt-4 border-t border-slate-100 mt-4 grid grid-cols-3 gap-2">
+                  {stageRows.map(s => (
+                    <div key={s.key} className="text-center">
+                      <p className="text-xl font-extrabold" style={{ color: s.color }}>{s.count}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">{s.key.substring(0, 4)}.</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-        );
-      })()}
 
-      {/* Sentinel Alert Banner */}
+          {/* ── Chart D: Company League Table ── */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">Empresas — Volume de Exames</h4>
+            <p className="text-[10px] text-slate-400 mb-4">Top 5 empregadores · taxa de aptidão</p>
+            {companies.length === 0 ? (
+              <div className="text-center py-6 text-slate-300">
+                <p className="text-xs">Sem dados de empresas no período</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {companies.map((c, i) => (
+                  <div key={c.name} className="flex items-center gap-3">
+                    <span className="text-[10px] font-extrabold text-slate-300 w-4 shrink-0">#{i+1}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold text-slate-700 truncate">{c.name}</span>
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0 ml-2">{c.total}</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full chaem-bar ${c.rate >= 80 ? 'bg-emerald-400' : c.rate >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                          style={{ '--bar-w': `${c.rate}%` } as React.CSSProperties} />
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                      c.rate >= 80 ? 'bg-emerald-100 text-emerald-700' : c.rate >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                    }`}>{c.rate}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Chart E: Critical Sector Alerts ─────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500">Sectores com Maior Concentração de Risco</h4>
+              <p className="text-[10px] text-slate-400 mt-0.5">Ordenado por inaptidões confirmadas + temporárias</p>
+            </div>
+            <Activity className="w-4 h-4 text-rose-400 shrink-0" />
+          </div>
+          {riskSectors.length === 0 ? (
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              <Stethoscope className="w-8 h-8 text-slate-200 shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-slate-400">Sem dados — registe exames para ver alertas por sector</p>
+                <p className="text-xs text-slate-300 mt-0.5">Os sectores com maior risco serão listados aqui por ordem de prioridade</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {riskSectors.map((s, i) => {
+                const riskN = s.inapto + s.inaptoT;
+                const riskPct = s.total > 0 ? Math.round((riskN / s.total) * 100) : 0;
+                const lvl = riskN === 0 ? 'low' : riskPct >= 25 ? 'high' : 'mid';
+                return (
+                  <div key={s.key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                    lvl === 'high' ? 'bg-rose-50 border-rose-200' : lvl === 'mid' ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-100'
+                  }`}>
+                    <span className="text-[10px] font-extrabold text-slate-400 w-4 text-center shrink-0">#{i+1}</span>
+                    <span className="text-lg shrink-0">{s.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-700 truncate">{s.label}</p>
+                      <p className="text-[9px] text-slate-500 mt-0.5">{s.total} exam. · {s.apto} Apto · {riskN} em risco</p>
+                    </div>
+                    <div className="w-20 h-1.5 bg-white/60 rounded-full overflow-hidden shrink-0">
+                      <div className={`h-full rounded-full chaem-bar ${lvl === 'high' ? 'bg-rose-500' : lvl === 'mid' ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ '--bar-w': `${Math.max(riskPct, lvl === 'low' ? 4 : riskPct)}%` } as React.CSSProperties} />
+                    </div>
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                      lvl === 'high' ? 'bg-rose-100 text-rose-700' : lvl === 'mid' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                    }`}>{lvl === 'low' ? '✓ OK' : `${riskPct}% risco`}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Row F/G: Follow-up Workers + Most Problematic Tests */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* ── Chart F: Follow-up Workers ── */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500">Trabalhadores em Seguimento</h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">Apto c/ Restrições + Inapto Temp. — por revisão</p>
+              </div>
+              <Bell className="w-4 h-4 text-amber-400 shrink-0" />
+            </div>
+            {followUp.length === 0 ? (
+              <div className="text-center py-6 text-slate-300">
+                <p className="text-xs font-bold">Nenhum trabalhador em seguimento activo</p>
+                <p className="text-[10px] mt-1">Apenas Apto c/ Restrições e Inapto Temporário aparecem aqui</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {followUp.map(e => {
+                  const urgency = e.daysLeft < 0 ? 'overdue' : e.daysLeft <= 30 ? 'soon' : 'ok';
+                  return (
+                    <div key={e.id} className={`p-3 rounded-xl border flex items-start gap-3 ${
+                      urgency === 'overdue' ? 'bg-rose-50 border-rose-200' :
+                      urgency === 'soon'    ? 'bg-amber-50 border-amber-200' :
+                      'bg-slate-50 border-slate-200'
+                    }`}>
+                      <span className="shrink-0 text-base">{SECTOR_CONFIG[e.sector]?.emoji || '🏥'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-700 truncate">{e.patientName}</p>
+                        <p className="text-[9px] text-slate-500">{e.companyName} · {e.status}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className={`text-xs font-extrabold ${urgency === 'overdue' ? 'text-rose-600' : urgency === 'soon' ? 'text-amber-600' : 'text-slate-400'}`}>
+                          {urgency === 'overdue' ? `${Math.abs(e.daysLeft)}d atrasado` : `${e.daysLeft}d restantes`}
+                        </p>
+                        <p className="text-[9px] text-slate-400">revisão</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Chart G: Most Problematic Tests ── */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500">Testes com Mais Alterações</h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">% de resultados anormais por tipo de teste</p>
+              </div>
+              <Microscope className="w-4 h-4 text-violet-400 shrink-0" />
+            </div>
+            {problemTests.length === 0 ? (
+              <div className="text-center py-6 text-slate-300">
+                <p className="text-xs font-bold">Sem dados de resultados de testes</p>
+                <p className="text-[10px] mt-1">Preencha os resultados nos exames para ver esta análise</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {problemTests.map((t, i) => (
+                  <div key={t.name}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[10px] font-bold text-slate-600 truncate flex-1 pr-2">
+                        {i+1}. {t.name.length > 36 ? t.name.substring(0, 36) + '…' : t.name}
+                      </span>
+                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                        t.rate >= 50 ? 'bg-rose-100 text-rose-700' : t.rate >= 25 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                      }`}>{t.rate}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full chaem-bar ${t.rate >= 50 ? 'bg-rose-400' : t.rate >= 25 ? 'bg-amber-400' : 'bg-teal-400'}`}
+                        style={{ '--bar-w': `${t.rate}%` } as React.CSSProperties} />
+                    </div>
+                    <p className="text-[9px] text-slate-400 mt-0.5">{t.abnormal}/{t.total} alterados · {t.sector}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>{/* end sector analytics */}
+
+      {/* ── Sentinel Alert Banner — counts from real data ─────────────── */}
       <div className="bg-gradient-to-r from-teal-600 via-teal-600 to-teal-700 rounded-2xl p-5 text-white shadow-lg shadow-teal-200">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
@@ -873,11 +1122,12 @@ function DashboardView({
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <div className="text-3xl font-extrabold">12</div>
-            <div className="text-xs text-teal-200">alertas/mês</div>
+            <div className="text-3xl font-extrabold">{totInapto + totInaptoT}</div>
+            <div className="text-xs text-teal-200">casos activos · {RANGE_LABELS[range].toLowerCase()}</div>
           </div>
         </div>
       </div>
+
     </div>
   );
 }
