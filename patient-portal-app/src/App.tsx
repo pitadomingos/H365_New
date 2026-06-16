@@ -269,6 +269,34 @@ export default function App() {
             <button onClick={toggleLocale} className="mt-4 w-full text-center text-[10px] text-slate-400 hover:text-cyan-600 font-bold uppercase tracking-widest">
               {pt ? 'Switch to English' : 'Mudar para Português'}
             </button>
+            {/* Demo Patients */}
+            <div className="mt-5 pt-5 border-t border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 text-center">
+                {pt ? '— Pacientes Demo —' : '— Demo Patients —'}
+              </p>
+              <div className="space-y-2">
+                {[
+                  { nid: '1029384756', name: 'Li-Rieal Antonio Pita Domingos', gender: 'F', province: 'Tete' },
+                  { nid: '5647382910', name: 'Delfina Correia Domingos',        gender: 'F', province: 'Tete' },
+                  { nid: '9988776655', name: 'Graciela Tembanne',               gender: 'F', province: 'Angonia' },
+                  { nid: '4433221100', name: 'Josefa Lobo',                     gender: 'F', province: 'Tete' },
+                  { nid: '1231231234', name: 'Sarah Capairor',                  gender: 'F', province: 'Sofala' },
+                  { nid: '050100731234C', name: 'Pita Domingos',                gender: 'M', province: 'Tete' },
+                ].map(({ nid, name, gender, province }) => (
+                  <button key={nid} onClick={() => setLoginNid(nid)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl border-2 transition-colors text-left ${loginNid === nid ? 'border-cyan-500 bg-cyan-50' : 'border-slate-100 hover:border-cyan-300 hover:bg-slate-50'}`}>
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 ${gender === 'F' ? 'bg-pink-400' : 'bg-blue-400'}`}>
+                      {name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-700 truncate">{name}</p>
+                      <p className="text-[10px] text-slate-400 font-mono">{nid} · {province}</p>
+                    </div>
+                    {loginNid === nid && <div className="w-2 h-2 rounded-full bg-cyan-500 shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         <p className="text-center text-[10px] text-slate-300 py-6 font-bold">H365 SAÚDE DIGITAL · MOÇAMBIQUE</p>
