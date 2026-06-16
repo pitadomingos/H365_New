@@ -2,14 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useLocale } from '@/context/locale-context';
-import { getTranslator } from '@/lib/i18n';
 import {
   ShieldCheck, Loader2, Home, ClipboardList, Pill, User, LogOut,
-  Moon, Sun, Activity, AlertTriangle, Download, Calendar, Clock,
-  ChevronRight, Beaker, CheckCircle2, Edit, Save, X, Mail,
-  Smartphone, Lock, Check, Bell, UserPlus, ChevronLeft, Heart,
-  Phone, Search, Plus, FileText, HardHat, Settings, RefreshCw,
-  Wifi, WifiOff, Stethoscope, BarChart2
+  Moon, Sun, Activity, AlertTriangle, Download, Clock,
+  ChevronRight, Beaker, Lock, Check, Bell, UserPlus, ChevronLeft,
+  Search, FileText, HardHat, RefreshCw, Stethoscope
 } from 'lucide-react';
 
 const _VITE_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -70,7 +67,6 @@ function Toast({ toast }: { toast: ToastMessage }) {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const { currentLocale, toggleLocale } = useLocale();
-  const t = getTranslator(currentLocale);
   const pt = currentLocale === 'pt';
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
