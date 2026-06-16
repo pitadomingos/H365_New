@@ -64,6 +64,166 @@ function Toast({ toast }: { toast: ToastMessage }) {
   );
 }
 
+// ─── SECTOR_CONFIG (mirrors CHAEM app — used by generateAMAPdf) ───────────────
+const SECTOR_CONFIG: Record<string, { tests: { id: string; name: string }[] }> = {
+  mining:       { tests: [ { id:'xray',name:'Radiografia de Tórax (Classificação OIT)' }, { id:'spirometry',name:'Espirometria (Função Pulmonar)' }, { id:'audiometry',name:'Audiometria (Tom Puro — Bilateral)' }, { id:'biomonitoring',name:'Monitorização Biológica (Metais Pesados)' }, { id:'msk',name:'Avaliação Musculoesquelética (FCE)' } ] },
+  healthcare:   { tests: [ { id:'immunization',name:'Estado de Imunização (Cobertura Vacinal)' }, { id:'tb',name:'Rastreio de Tuberculose (IGRA / Mantoux)' }, { id:'bloodborne',name:'Rastreio Bloodborne (Consentido)' }, { id:'vision_color',name:'Acuidade Visual & Discriminação de Cores' }, { id:'latex',name:'Rastreio de Alergia ao Látex' } ] },
+  construction: { tests: [ { id:'fce',name:'Avaliação de Capacidade Funcional (FCE)' }, { id:'vestibular',name:'Avaliação Vestibular & Equilíbrio (Trabalho em Altura)' }, { id:'vision_eq',name:'Rastreio Visual (Operação de Equipamentos Pesados)' }, { id:'audiometry_c',name:'Audiometria (Ruído de Estaleiro)' }, { id:'spirometry_c',name:'Espirometria (Poeiras de Construção)' } ] },
+  chemical:     { tests: [ { id:'biomon_chem',name:'Monitorização Biológica de Solventes' }, { id:'spirometry_chem',name:'Espirometria & DLCO (Vapores Químicos)' }, { id:'derm',name:'Rastreio Dermatológico (Dermatite de Contacto)' }, { id:'liver_kidney',name:'Função Hepática & Renal (Painel)' }, { id:'hemato',name:'Painel Hematológico (Mielossupressão)' } ] },
+  logistics:    { tests: [ { id:'vision_drv',name:'Acuidade Visual & Campo Visual (Condutores)' }, { id:'osa',name:'Rastreio de Apneia do Sono (OSA)' }, { id:'cardio_drv',name:'Avaliação Cardiovascular (Risco de Evento Agudo)' }, { id:'reflex',name:'Tempo de Reacção & Avaliação de Reflexos' }, { id:'toxicology_drv',name:'Rastreio de Substâncias Psicoactivas' } ] },
+  oil_gas:      { tests: [ { id:'er_fit',name:'Aptidão para Emergência & Resgate (OGUK Medical)' }, { id:'audio_og',name:'Audiometria (Plataformas, Perfuração & Refinarias)' }, { id:'psych',name:'Rastreio Psicológico (Resiliência & Isolamento)' }, { id:'resp_og',name:'Espirometria & DLCO (Vapores de Hidrocarbonetos)' }, { id:'liver_og',name:'Painéis Hepático & Renal (Hidrocarbonetos)' }, { id:'heat_cardio',name:'Avaliação Cardiovascular (Stress Térmico)' } ] },
+};
+
+// ─── AMA PDF — Image cache (pre-loaded at module init) ───────────────────────
+let _cachedMisauImg: string | null = null;
+let _cachedH365Img: string | null = null;
+
+(async () => {
+  const fetchB64 = async (src: string): Promise<string | null> => {
+    try { const res = await fetch(src); if (!res.ok) return null; const blob = await res.blob(); return await new Promise<string>(r => { const fr = new FileReader(); fr.onload = () => r(fr.result as string); fr.readAsDataURL(blob); }); } catch { return null; }
+  };
+  [_cachedMisauImg, _cachedH365Img] = await Promise.all([fetchB64('/misau_logo.png'), fetchB64('/logo.png')]);
+})();
+
+// ─── AMAPayload (identical interface to CHAEM app) ────────────────────────────
+interface AMAPayload {
+  patientId: string; patientName: string; companyName: string;
+  sectorLabel: string; sector: string;
+  examType: string; examDate: string; examId: string;
+  physicianLicense: string;
+  hazards?: string;
+  bp?: string; hr?: string; temp?: string; heightWeight?: string;
+  systems?: Record<string, boolean>;
+  vitalsNotes?: string;
+  testResults?: Record<string, { status: string; notes: string }>;
+  determination: string;
+  restrictions?: string;
+  reviewDays?: string;
+}
+
+/** Generates the identical CHAEM AMA PDF — called on Download in the CHAEM tab */
+function generateAMAPdf(payload: AMAPayload): void {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const margin = 18; const colW = W - margin * 2; let y = 0;
+  const misauImg = _cachedMisauImg; const h365Img = _cachedH365Img;
+  const drawLine = (x1: number, y1: number, x2: number, y2: number, color = '#e2e8f0') => { doc.setDrawColor(color); doc.line(x1, y1, x2, y2); };
+  const fillRect = (x: number, ry: number, w: number, h: number, fill: string) => { doc.setFillColor(fill); doc.rect(x, ry, w, h, 'F'); };
+  const txt = (text: string, x: number, ty: number, size: number, bold: boolean, color = '#1e293b', align: 'left' | 'center' | 'right' = 'left') => { doc.setFontSize(size); doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setTextColor(color); doc.text(text, x, ty, { align }); };
+  const field = (label: string, value: string, x: number, fy: number) => { txt(label.toUpperCase(), x, fy, 6.5, true, '#64748b'); txt(value || '\u2014', x, fy + 4.5, 9, false, '#1e293b'); };
+  const sectorCfg = payload.sector ? SECTOR_CONFIG[payload.sector] : null;
+
+  // ── HEADER
+  fillRect(0, 0, W, 38, '#0f766e'); fillRect(0, 38, W, 3, '#14b8a6');
+  if (misauImg) { try { doc.addImage(misauImg, 'PNG', margin, 4, 22, 30); } catch { /* fallback */ } }
+  if (!misauImg) { fillRect(margin, 6, 22, 26, '#0d9488'); txt('MISAU', margin + 11, 19, 7, true, '#ffffff', 'center'); }
+  txt('REPÚBLICA DE MOÇAMBIQUE', W / 2, 10, 7, false, '#99f6e4', 'center');
+  txt('MINISTÉRIO DA SAÚDE — MISAU', W / 2, 17, 10, true, '#ffffff', 'center');
+  txt('CHAEM — Centro de Saúde Ambiental e do Ecossistema', W / 2, 24, 8, false, '#ccfbf1', 'center');
+  txt('Direcção de Saúde Ocupacional e Higiene Industrial', W / 2, 30, 7, false, '#99f6e4', 'center');
+  if (h365Img) { try { doc.addImage(h365Img, 'PNG', W - margin - 22, 4, 22, 22); } catch { /* fallback */ } }
+  if (!h365Img) { fillRect(W - margin - 22, 6, 22, 22, '#0d9488'); txt('H365', W - margin - 11, 14, 8, true, '#ffffff', 'center'); txt('CHAEM', W - margin - 11, 20, 6, false, '#99f6e4', 'center'); }
+  txt(`N.º: ${payload.examId}`, W - margin, 35, 6.5, false, '#ccfbf1', 'right');
+  y = 48;
+
+  // ── TITLE
+  txt('ATESTADO MÉDICO DE APTIDÃO (AMA)', W / 2, y + 7, 14, true, '#0f766e', 'center');
+  txt(`Exame ${payload.examType.toUpperCase()} — ${payload.sectorLabel.toUpperCase()}`, W / 2, y + 14, 9, false, '#475569', 'center');
+  txt(payload.examDate, W / 2, y + 20, 8, false, '#94a3b8', 'center');
+  y += 26; drawLine(margin, y, W - margin, y, '#14b8a6'); y += 6;
+
+  // ── SECTION 1: Patient
+  fillRect(margin, y, colW, 7, '#f1fafb'); txt('1. IDENTIFICAÇÃO DO TRABALHADOR', margin + 3, y + 5, 8, true, '#0f766e'); y += 10;
+  const halfW = (colW - 6) / 2;
+  field('N.º BI / NUIT', payload.patientId, margin, y); field('Nome Completo', payload.patientName, margin + halfW + 6, y); y += 12;
+  field('Empresa / Empregador', payload.companyName, margin, y); y += 12;
+  field('Sector / Indústria', payload.sectorLabel, margin, y); field('Tipo de Exame', payload.examType, margin + halfW + 6, y); y += 12;
+  if (payload.hazards) { field('Riscos Ocupacionais', payload.hazards, margin, y); y += 12; }
+  drawLine(margin, y, W - margin, y); y += 6;
+
+  // ── SECTION 2: Vitals
+  fillRect(margin, y, colW, 7, '#f1fafb'); txt('2. SINAIS VITAIS & ANTECEDENTES', margin + 3, y + 5, 8, true, '#0f766e'); y += 10;
+  const thirdW = (colW - 12) / 3;
+  const vitals = [ { l: 'Tensão Arterial', v: payload.bp || '' }, { l: 'Freq. Cardíaca', v: payload.hr ? `${payload.hr} bpm` : '' }, { l: 'Temperatura', v: payload.temp ? `${payload.temp} °C` : '' }, { l: 'Altura / Peso', v: payload.heightWeight || '' } ].filter(v => v.v);
+  let vIdx = 0;
+  vitals.forEach((v, i) => { field(v.l, v.v, margin + (i % 3) * (thirdW + 6), y); vIdx = i; if (i % 3 === 2) y += 12; });
+  if (vitals.length > 0 && vIdx % 3 !== 2) y += 12;
+  const activeSystems = Object.entries(payload.systems || {}).filter(([, v]) => v).map(([k]) => k);
+  if (activeSystems.length > 0) { field('Sistemas com Alterações', activeSystems.join(', '), margin, y); y += 12; }
+  if (payload.vitalsNotes) { field('Observações Clínicas', payload.vitalsNotes, margin, y); y += 12; }
+  drawLine(margin, y, W - margin, y); y += 6;
+
+  // ── SECTION 3: Diagnostic Panel
+  const testResults = payload.testResults || {};
+  const tests = sectorCfg?.tests || [];
+  const filledTests = tests.filter(t => testResults[t.id]?.status || testResults[t.id]?.notes);
+  if (filledTests.length > 0) {
+    fillRect(margin, y, colW, 7, '#f1fafb'); txt('3. PAINEL DIAGNÓSTICO SECTORIAL', margin + 3, y + 5, 8, true, '#0f766e'); y += 10;
+    tests.forEach((test, idx) => {
+      const result = testResults[test.id]; if (!result?.status && !result?.notes) return;
+      if (y > 248) { doc.addPage(); y = 20; }
+      const isOk = /normal|apt|negat|dentro|aprovad/i.test(result?.status || '');
+      const isWarn = /aten|limiar|suspeito/i.test(result?.status || '');
+      const sc = isOk ? '#16a34a' : isWarn ? '#d97706' : '#dc2626';
+      fillRect(margin, y, colW, 6, idx % 2 === 0 ? '#f8fafc' : '#ffffff');
+      txt(`${idx + 1}. ${test.name}`, margin + 2, y + 4.5, 8, true, '#334155');
+      if (result?.status) txt(`● ${result.status}`, W - margin - 2, y + 4.5, 7.5, true, sc, 'right');
+      y += 8; if (result?.notes) { txt(`   Notas: ${result.notes}`, margin + 3, y, 7.5, false, '#64748b'); y += 5; } y += 1;
+    });
+    if (y > 220) { doc.addPage(); y = 20; }
+    const passed = filledTests.filter(t => /normal|apt|negat|dentro|aprovad/i.test(testResults[t.id]?.status || '')).length;
+    const warned = filledTests.filter(t => /aten|limiar|suspeito/i.test(testResults[t.id]?.status || '')).length;
+    const failed = filledTests.length - passed - warned; const total = filledTests.length;
+    y += 2; fillRect(margin, y, colW, 28, '#f1fafb'); doc.setDrawColor('#e2e8f0'); doc.rect(margin, y, colW, 28);
+    txt('RESUMO DOS RESULTADOS', margin + 4, y + 7, 8, true, '#334155');
+    const cellW = (colW - 8) / 4;
+    [{ label:'Total Testes',value:String(total),color:'#475569',bg:'#f1f5f9' }, { label:'Normais / Aptos',value:String(passed),color:'#16a34a',bg:'#f0fdf4' }, { label:'Em Atenção',value:String(warned),color:'#d97706',bg:'#fffbeb' }, { label:'Críticos',value:String(failed),color:'#dc2626',bg:'#fef2f2' }].forEach((item, i) => {
+      const cx = margin + 4 + i * (cellW + 2); fillRect(cx, y + 11, cellW, 13, item.bg);
+      txt(item.value, cx + cellW / 2, y + 20, 14, true, item.color, 'center');
+      txt(item.label, cx + cellW / 2, y + 25, 6, false, item.color, 'center');
+    }); y += 34; drawLine(margin, y, W - margin, y); y += 6;
+  }
+
+  // ── SECTION 4: Determination
+  if (y > 220) { doc.addPage(); y = 20; }
+  const det = payload.determination || 'N/A';
+  const detColor = det === 'Apto' ? '#16a34a' : det === 'Apto com Restrições' ? '#d97706' : det === 'Inapto Temporário' ? '#ea580c' : '#dc2626';
+  const detBg    = det === 'Apto' ? '#f0fdf4' : det === 'Apto com Restrições' ? '#fffbeb' : det === 'Inapto Temporário' ? '#fff7ed' : '#fef2f2';
+  fillRect(margin, y, colW, 18, detBg); doc.setDrawColor(detColor); doc.setLineWidth(0.8); doc.rect(margin, y, colW, 18); doc.setLineWidth(0.2);
+  txt('DETERMINAÇÃO CLÍNICA (AMA)', margin + 4, y + 6, 8, true, '#64748b'); txt(det.toUpperCase(), margin + 4, y + 14, 14, true, detColor);
+  if (payload.restrictions) txt('Restrições: ' + payload.restrictions.slice(0, 55), W / 2 + 2, y + 10, 7.5, false, '#92400e');
+  if (payload.reviewDays)   txt(`Revisão em ${payload.reviewDays} dias`, W / 2 + 2, y + 10, 8, true, '#9a3412');
+  y += 24;
+
+  // ── SECTION 5: Signature
+  y += 4; if (y > 240) { doc.addPage(); y = 20; }
+  fillRect(margin, y, colW, 30, '#f8fafc'); doc.setDrawColor('#e2e8f0'); doc.rect(margin, y, colW, 30);
+  txt('MÉDICO RESPONSÁVEL / ASSINATURA', margin + 4, y + 6, 7, true, '#64748b');
+  txt(payload.physicianLicense || '—', margin + 4, y + 13, 9, true, '#1e293b');
+  txt('Assinatura e Carimbo:', margin + 4, y + 21, 7, false, '#94a3b8');
+  drawLine(margin + 4, y + 28, margin + 80, y + 28, '#94a3b8');
+  txt('DATA DE EMISSÃO', W - margin - 50, y + 6, 7, true, '#64748b');
+  txt(payload.examDate, W - margin - 50, y + 13, 9, true, '#1e293b');
+  const nextYr = new Date(); nextYr.setFullYear(nextYr.getFullYear() + 1);
+  txt('Próxima Revisão:', W - margin - 50, y + 21, 7, false, '#94a3b8');
+  txt(nextYr.toLocaleDateString('pt-MZ', { month: 'long', year: 'numeric' }), W - margin - 50, y + 27, 8, true, '#0f766e'); y += 36;
+
+  // ── FOOTER
+  fillRect(0, 277, W, 20, '#0f172a');
+  txt('CHAEM — Sistema H365 | MISAU, República de Moçambique', W / 2, 285, 6.5, false, '#94a3b8', 'center');
+  txt(`Doc. ${payload.examId} | ${payload.examDate} | Válido apenas com assinatura e carimbo originais`, W / 2, 291, 6, false, '#475569', 'center');
+  txt('Sigilo médico — Lei n.º 4/2007 de 7 de Fevereiro (Estatuto do SNS)', W / 2, 296, 5.5, false, '#334155', 'center');
+
+  const safeName = payload.patientName.replace(/\s+/g, '_');
+  const fileName = `Estado_Medico_${safeName}_${payload.examType}_${payload.examDate}.pdf`;
+  try {
+    const pdfBlob = doc.output('blob'); const blobUrl = URL.createObjectURL(pdfBlob);
+    const anchor = document.createElement('a'); anchor.href = blobUrl; anchor.download = fileName; anchor.style.display = 'none';
+    document.body.appendChild(anchor); anchor.click(); document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+  } catch { doc.save(fileName); }
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const { currentLocale, toggleLocale } = useLocale();
@@ -614,36 +774,54 @@ export default function App() {
                 <h2 className="text-sm font-black text-slate-700 uppercase tracking-wider">{pt ? 'Certificados Ocupacionais' : 'Occupational Certificates'}</h2>
               </div>
               {occupationalExams.length === 0
-                ? <p className="px-5 pb-5 text-xs text-slate-400">{pt ? 'Nenhum exame disponível.' : 'No exams available.'}</p>
-                : occupationalExams.map((exam, i) => (
-                  <div key={exam.id || i} className={`px-5 py-4 flex items-center gap-3 ${i < occupationalExams.length - 1 ? 'border-b border-slate-50' : ''}`}>
-                    <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center shrink-0">
-                      <FileText className="h-5 w-5 text-teal-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-700 truncate">{exam.examType || 'AMA'} — {exam.sector}</p>
-                      <p className="text-[10px] text-slate-400">{exam.date} · <span className={exam.status === 'Apto' ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{exam.status}</span></p>
-                    </div>
-                    <button className="p-2 bg-teal-50 rounded-xl"><Download className="h-4 w-4 text-teal-600" /></button>
-                  </div>
-                ))}
-            </div>
-
-            {/* AMA PDFs */}
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="px-5 pt-5 pb-3">
-                <h2 className="text-sm font-black text-slate-700 uppercase tracking-wider">AMA PDFs</h2>
-              </div>
-              {[pt ? 'Ver / Baixar' : 'View / Download', pt ? 'Ver / Baixar' : 'View / Download'].map((label, i) => (
-                <div key={i} className={`px-5 py-4 flex items-center gap-3 ${i === 0 ? 'border-b border-slate-50' : ''}`}>
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-                    <FileText className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <p className="flex-1 text-sm font-bold text-slate-700">AMA PDFs — {label}</p>
-                  <button onClick={downloadHealthReport} className="p-2 bg-blue-50 rounded-xl"><Download className="h-4 w-4 text-blue-500" /></button>
-                </div>
-              ))}
-            </div>
+                ? <p className="px-5 pb-5 text-xs text-slate-400">{pt ? 'Nenhum exame CHAEM disponível.' : 'No CHAEM exams available.'}</p>
+                : occupationalExams.map((exam: any, i: number) => {
+                    const snap = exam.formSnapshot || {};
+                    const hw = snap.weight && snap.height ? `${snap.height}cm / ${snap.weight}kg` : (snap.heightWeight || '');
+                    const examDate = exam.date
+                      ? new Date(exam.date).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'long', year: 'numeric' })
+                      : new Date().toLocaleDateString('pt-MZ', { day: '2-digit', month: 'long', year: 'numeric' });
+                    const handleDownloadAMA = () => generateAMAPdf({
+                      patientId:        exam.patientId  || patient?.nationalId || '',
+                      patientName:      exam.patientName || patient?.fullName  || '',
+                      companyName:      exam.companyName || snap.companyName   || '—',
+                      sectorLabel:      exam.sectorLabel || exam.sector        || '—',
+                      sector:           exam.sector      || '',
+                      examType:         exam.examType    || 'Admissional',
+                      examDate,
+                      examId:           exam.id          || `CHAEM-${i}`,
+                      physicianLicense: exam.doctorName  || snap.physicianLicense || '—',
+                      hazards:          exam.notes       || snap.hazards,
+                      bp:               snap.bp,          hr:   snap.hr,
+                      temp:             snap.temp,         heightWeight: hw,
+                      systems:          snap.systems,
+                      vitalsNotes:      snap.vitalsNotes,
+                      testResults:      snap.testResults,
+                      determination:    exam.status      || snap.determination || 'Apto',
+                      restrictions:     snap.restrictions,
+                      reviewDays:       snap.reviewDays,
+                    });
+                    return (
+                      <div key={exam.id || i} className={`px-5 py-4 flex items-center gap-3 ${i < occupationalExams.length - 1 ? 'border-b border-slate-50' : ''}`}>
+                        <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center shrink-0">
+                          <FileText className="h-5 w-5 text-teal-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-700 truncate">
+                            {pt ? 'Estado Médico de Aptidão' : 'Medical Fitness Certificate'} — {exam.examType || 'AMA'}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {exam.date} · {exam.sectorLabel || exam.sector} ·{' '}
+                            <span className={exam.status === 'Apto' ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{exam.status}</span>
+                          </p>
+                        </div>
+                        <button onClick={handleDownloadAMA} title="Baixar AMA PDF" className="p-2 bg-teal-50 rounded-xl hover:bg-teal-100 transition-colors">
+                          <Download className="h-4 w-4 text-teal-600" />
+                        </button>
+                      </div>
+                    );
+                  })
+              }
           </div>
         )}
 
