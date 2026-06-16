@@ -11,7 +11,7 @@ const corsHeaders = {
 
 export async function OPTIONS() {
   return new Response(null, {
-    status: 244,
+    status: 204,
     headers: corsHeaders,
   });
 }

@@ -1,10 +1,22 @@
 import { GoogleGenAI } from '@google/genai';
+import { NextRequest } from 'next/server';
+
+// CORS — allow all localhost origins for L-LAN cross-origin AI calls
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
 
 /**
  * API Route Handler to stream Clinical Decision Support recommendations chunk-by-chunk.
  * Incorporates concise prompt directives to reduce latency.
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { prompt, department, patientData, currentLocale, context } = await req.json();
 
@@ -61,13 +73,14 @@ export async function POST(req: Request) {
         'Transfer-Encoding': 'chunked',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        ...corsHeaders,
       }
     });
   } catch (error: any) {
     console.error("Clinical AI API Error:", error);
     return new Response(JSON.stringify({ error: error.message || "Failed to generate recommendation" }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 }

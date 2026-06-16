@@ -46,7 +46,7 @@ import {
   Phone
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:3000/api/patient-portal';
+const API_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:3000') + '/api/patient-portal';
 
 // Interface definitions
 interface Patient {
@@ -176,10 +176,15 @@ export default function App() {
       document.documentElement.classList.add('dark');
     }
 
-    // Session restore
+    // Session restore with 8-hour expiry
+    const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
     const savedNid = localStorage.getItem('session_nid');
-    if (savedNid) {
+    const savedAt  = Number(localStorage.getItem('session_nid_at') || '0');
+    if (savedNid && Date.now() - savedAt < SESSION_TTL_MS) {
       loadSessionData(savedNid);
+    } else {
+      localStorage.removeItem('session_nid');
+      localStorage.removeItem('session_nid_at');
     }
   }, []);
 
@@ -215,6 +220,7 @@ export default function App() {
       setPatient(patientData);
       setIsAuthenticated(true);
       localStorage.setItem('session_nid', nid);
+      localStorage.setItem('session_nid_at', Date.now().toString());
 
       // Populate edit form
       setEditForm({
@@ -254,7 +260,7 @@ export default function App() {
 
       // 4. Fetch Occupational Exams from shared H365 CHAEM hub (cross-origin L-LAN bridge)
       try {
-        const examsRes = await fetch(`http://localhost:3000/api/chaem/exams?nid=${encodeURIComponent(nid)}`);
+        const examsRes = await fetch(`${import.meta.env.VITE_API_BASE ?? 'http://localhost:3000'}/api/chaem/exams?nid=${encodeURIComponent(nid)}`);
         if (examsRes.ok) {
           const examsData = await examsRes.json();
           setOccupationalExams(examsData.exams || []);
@@ -314,6 +320,7 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('session_nid');
+    localStorage.removeItem('session_nid_at');
     setIsAuthenticated(false);
     setPatient(null);
     setMedications([]);
@@ -411,12 +418,36 @@ export default function App() {
     }
   };
 
-  const triggerSatelliteSync = () => {
+  const triggerSatelliteSync = async () => {
+    if (!patient) return;
     setIsSyncing(true);
-    setTimeout(() => {
+    try {
+      const batch = [
+        { type: 'session_heartbeat', nid: patient.nationalId, timestamp: Date.now() },
+        ...confirmedMeds.map(medId => ({ type: 'adherence_log', nid: patient.nationalId, medId, timestamp: Date.now() })),
+      ];
+      const res = await fetch(`${import.meta.env.VITE_API_BASE ?? 'http://localhost:3000'}/api/sync/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workstationId: `portal-${patient.nationalId}`,
+          facilityId: 'h365-saas',
+          batch,
+        }),
+      });
+      const data = await res.json();
+      showToast(
+        'Satellite Sync',
+        res.ok
+          ? `${data.processedCount ?? batch.length} registos sincronizados com o servidor H365.`
+          : 'Falha na sincronização. Verifique a ligação ao servidor.',
+        res.ok ? 'success' : 'error'
+      );
+    } catch {
+      showToast('Satellite Sync', 'Servidor inacessível. Os dados locais estão seguros.', 'error');
+    } finally {
       setIsSyncing(false);
-      showToast('Satellite Sync', 'Secure orbit L-LAN sync session established. Delta logs applied.', 'success');
-    }, 2000);
+    }
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -556,13 +587,32 @@ export default function App() {
             <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">{currentLocale === 'pt' ? 'Resumo de Saúde & Recomendações' : 'Health Summary & Recommendations'}</h3>
             
             <div className="mb-6 space-y-2">
-              <div className="flex justify-between items-center text-sm font-bold text-slate-600">
-                <span>{currentLocale === 'pt' ? 'Índice de Vitalidade (Estimado)' : 'Vitality Index (Estimated)'}</span>
-                <span className="text-emerald-600">85% - Bom</span>
-              </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 w-[85%] rounded-full"></div>
-              </div>
+              {(() => {
+                // M-3: Compute vitality from real patient data
+                let score = 100;
+                const condCount = patient?.chronicConditions?.length ?? 0;
+                score -= Math.min(condCount * 5, 30);
+                const critLabs = labs.filter(l => l.status === 'Critical' || l.status === 'Elevated').length;
+                score -= Math.min(critLabs * 8, 20);
+                if (medications.length > 0) {
+                  const adherence = confirmedMeds.length / medications.length;
+                  score = Math.round(score * (0.6 + 0.4 * adherence));
+                }
+                const vitality = Math.max(25, Math.min(100, score));
+                const label = vitality >= 80 ? 'Bom' : vitality >= 60 ? 'Razoável' : vitality >= 40 ? 'Fraco' : 'Crítico';
+                const color = vitality >= 80 ? '#10b981' : vitality >= 60 ? '#f59e0b' : vitality >= 40 ? '#f97316' : '#ef4444';
+                return (
+                  <>
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-600">
+                      <span>{currentLocale === 'pt' ? 'Índice de Vitalidade (Estimado)' : 'Vitality Index (Estimated)'}</span>
+                      <span style={{ color }}>{vitality}% - {label}</span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${vitality}%`, backgroundColor: color }}></div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="space-y-4">
@@ -645,8 +695,8 @@ export default function App() {
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-800 dark:text-white">Personal Identity</h3>
-                      <p className="text-xs text-slate-400">Your legal identification details</p>
+                      <h3 className="font-bold text-slate-800 dark:text-white">{currentLocale === 'pt' ? 'Identidade Pessoal' : 'Personal Identity'}</h3>
+                      <p className="text-xs text-slate-400">{currentLocale === 'pt' ? 'Os seus dados de identificação legal' : 'Your legal identification details'}</p>
                     </div>
                   </div>
 
@@ -760,8 +810,8 @@ export default function App() {
                       <Phone className="h-5 w-5 text-blue-500" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-800 dark:text-white">Contact Details</h3>
-                      <p className="text-xs text-slate-400">How we can reach you</p>
+                      <h3 className="font-bold text-slate-800 dark:text-white">{currentLocale === 'pt' ? 'Dados de Contacto' : 'Contact Details'}</h3>
+                      <p className="text-xs text-slate-400">{currentLocale === 'pt' ? 'Como podemos contactá-lo' : 'How we can reach you'}</p>
                     </div>
                   </div>
 

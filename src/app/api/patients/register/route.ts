@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { registerPatient } from '@/lib/server-db';
+import { NextRequest, NextResponse } from 'next/server';
+import { registerPatient, findPatientByNid } from '@/lib/server-db';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,20 +8,28 @@ const corsHeaders = {
 };
 
 export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: corsHeaders,
-  });
+  return new Response(null, { status: 204, headers: corsHeaders });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const patientData = await req.json();
+    const { nationalId, fullName, gender, dateOfBirth } = patientData;
 
-    if (!patientData.nationalId || !patientData.fullName) {
+    // Validate required fields — aligned with patient-portal/register
+    if (!nationalId || !fullName || !gender || !dateOfBirth) {
       return NextResponse.json(
-        { error: 'National ID and Full Name are required.' },
+        { error: 'National ID, full name, gender and date of birth are required.' },
         { status: 400, headers: corsHeaders }
+      );
+    }
+
+    // Prevent duplicate NID — same guard as patient-portal/register
+    const existing = findPatientByNid(nationalId);
+    if (existing) {
+      return NextResponse.json(
+        { error: 'A patient with this National ID is already registered.' },
+        { status: 409, headers: corsHeaders }
       );
     }
 

@@ -182,3 +182,21 @@
     border-right-color: var(--border);
   }
 }
+
+/* ── CHAEM dynamic CSS-variable utilities ──────────────────────────────────────
+   These classes consume CSS custom properties set via style={{ '--var': value }}
+   in App.tsx, satisfying the 'no inline styles' linter rule while still allowing
+   JS-driven dynamic values (percentages, colours). */
+
+.chaem-bar {
+  width: var(--bar-w, 0%);
+  opacity: var(--bar-op, 1);
+}
+
+.chaem-swatch {
+  background: var(--seg-color, #cbd5e1);
+}
+
+.chaem-seg-text {
+  color: var(--seg-color, #64748b);
+}

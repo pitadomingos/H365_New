@@ -4,6 +4,9 @@ import withSerwistInit from "@serwist/next";
 const withSerwist = withSerwistInit({
   swSrc: "src/sw.ts",
   swDest: "public/sw.js",
+  // Disable service worker in development — prevents stale-cache fetch failures
+  // when the Next.js dev server hot-reloads after file changes.
+  disable: process.env.NODE_ENV === 'development',
 });
 
 const nextConfig: NextConfig = {

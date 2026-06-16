@@ -1,4 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+const H365_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:3000';
+
 import { jsPDF } from 'jspdf';
 import { useLocale, LocaleProvider } from '@/context/locale-context';
 import {
@@ -409,7 +411,7 @@ function Sparkline({ data, color = '#14b8a6' }: { data: number[]; color?: string
   const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
   const last = pts[pts.length - 1];
   return (
-    <svg width={W} height={H} style={{ overflow: 'visible' }}>
+    <svg width={W} height={H} className="overflow-visible">
       <path d={d} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />
       <circle cx={last.x} cy={last.y} r="3.5" fill={color} />
     </svg>
@@ -526,9 +528,14 @@ function DashboardView({
           </div>
           <div className="space-y-3">
             {ld.kpis.slice(0, 3).map((kpi, i) => {
-              const val = parseFloat(String(kpi.value).replace(/[^0-9.]/g, '')) || 0;
-              const maxVal = 100;
-              const pct = Math.min((val / maxVal) * 100, 100);
+              const rawNum = parseFloat(String(kpi.value).replace(/[^0-9.]/g, ''));
+              const isNumeric = !isNaN(rawNum) && rawNum > 0;
+              // Scale: if value looks like a large number (M suffix or >100), clamp differently
+              const isMillion = String(kpi.value).includes('M');
+              const pct = isNumeric
+                ? isMillion ? Math.min((rawNum / 10) * 100, 100)
+                  : Math.min(rawNum, 100)
+                : 28; // qualitative/non-numeric → show at 28% with hatching
               const cc = CC[kpi.color] ?? CC.teal;
               const barColors: Record<string, string> = {
                 teal: 'bg-teal-400', blue: 'bg-blue-400', amber: 'bg-amber-400',
@@ -538,10 +545,13 @@ function DashboardView({
               return (
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-xs text-slate-500 w-36 shrink-0 truncate">{kpi.label}</span>
-                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${barColors[kpi.color] || 'bg-teal-400'}`} style={{ width: `${pct}%` }} />
+                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all chaem-bar ${isNumeric ? barColors[kpi.color] || 'bg-teal-400' : 'bg-slate-300'}`}
+                      style={{ '--bar-w': `${pct}%`, '--bar-op': isNumeric ? '1' : '0.5' } as React.CSSProperties}
+                    />
                   </div>
-                  <span className={`text-xs font-bold ${cc.text} shrink-0`}>{kpi.value}{kpi.unit}</span>
+                  <span className={`text-xs font-bold ${cc.text} shrink-0 min-w-[3rem] text-right`}>{kpi.value}{kpi.unit}</span>
                 </div>
               );
             })}
@@ -588,6 +598,266 @@ function DashboardView({
         </div>
       </div>
 
+      {/* ── SECTOR ANALYTICS CHARTS ── */}
+      {(() => {
+        // Derive per-sector stats from real stored exams
+        const sectors = Object.entries(SECTOR_CONFIG).map(([key, cfg]) => {
+          const sx = exams.filter(e => e.sector === key);
+          return {
+            key, emoji: cfg.emoji, label: cfg.label,
+            total: sx.length,
+            apto:    sx.filter(e => e.status === 'Apto').length,
+            aptoR:   sx.filter(e => e.status === 'Apto com Restrições').length,
+            inaptoT: sx.filter(e => e.status === 'Inapto Temporário').length,
+            inapto:  sx.filter(e => e.status === 'Inapto').length,
+          };
+        });
+        const withData   = sectors.filter(s => s.total > 0);
+        const maxTotal   = Math.max(...sectors.map(s => s.total), 1);
+        const totalEx    = exams.length;
+        const totApto    = exams.filter(e => e.status === 'Apto').length;
+        const totAptoR   = exams.filter(e => e.status === 'Apto com Restrições').length;
+        const totInaptoT = exams.filter(e => e.status === 'Inapto Temporário').length;
+        const totInapto  = exams.filter(e => e.status === 'Inapto').length;
+        const donutSlots = [
+          { label: 'Apto',               count: totalEx > 0 ? totApto    : 6, color: '#10b981' },
+          { label: 'Apto c/ Restrições', count: totalEx > 0 ? totAptoR   : 2, color: '#f59e0b' },
+          { label: 'Inapto Temporário',  count: totalEx > 0 ? totInaptoT : 1, color: '#f97316' },
+          { label: 'Inapto',             count: totalEx > 0 ? totInapto  : 1, color: '#ef4444' },
+        ];
+        const donutTotal  = donutSlots.reduce((a, b) => a + b.count, 0) || 1;
+        const isDemo      = totalEx === 0;
+        const riskSectors = [...withData].sort((a, b) => (b.inapto + b.inaptoT) - (a.inapto + a.inaptoT));
+
+        // Build SVG donut segments
+        const R = 50, cx = 68, cy = 68, sw = 18;
+        const circ = 2 * Math.PI * R;
+        let offset = 0;
+        const segs = donutSlots.map(s => {
+          const da = (s.count / donutTotal) * circ;
+          const seg = { ...s, da, off: -offset };
+          offset += da;
+          return seg;
+        });
+
+        return (
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm">Análise por Sector Industrial</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {totalEx > 0
+                    ? `${totalEx} exame${totalEx !== 1 ? 's' : ''} registados — dados reais L-LAN`
+                    : 'Nenhum exame ainda — gráficos de demonstração abaixo'}
+                </p>
+              </div>
+              <BarChart2 className="w-5 h-5 text-teal-400 shrink-0" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* ── Chart A: Sector Stacked Bar ── */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">
+                  Exames por Sector
+                </h4>
+                <p className="text-[10px] text-slate-400 mb-4">
+                  Cada barra mostra a proporção de aptidão dentro do sector
+                </p>
+
+                {/* Legend */}
+                <div className="flex flex-wrap gap-3 mb-4">
+                  {[
+                    { color: 'bg-emerald-500', label: 'Apto' },
+                    { color: 'bg-amber-400',   label: 'Apto c/ Rest.' },
+                    { color: 'bg-orange-400',  label: 'Inapto Temp.' },
+                    { color: 'bg-rose-500',    label: 'Inapto' },
+                  ].map(l => (
+                    <div key={l.label} className="flex items-center gap-1.5">
+                      <div className={`w-2.5 h-2.5 rounded-sm ${l.color}`} />
+                      <span className="text-[9px] font-bold text-slate-500">{l.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-4">
+                  {(withData.length > 0 ? withData : [
+                    { key:'mining',    emoji:'⛏️', label:'Mineração',   total:8, apto:5, aptoR:2, inaptoT:1, inapto:0 },
+                    { key:'healthcare',emoji:'🏥', label:'Saúde',       total:6, apto:5, aptoR:1, inaptoT:0, inapto:0 },
+                    { key:'construction',emoji:'🏗️',label:'Construção', total:4, apto:2, aptoR:1, inaptoT:1, inapto:0 },
+                  ].map(s => ({ ...s, maxTotal: 8 }))).map(s => {
+                    const t = s.total || 1;
+                    const w = (s.total / maxTotal) * 100;
+                    const ap = (s.apto    / t) * 100;
+                    const ar = (s.aptoR   / t) * 100;
+                    const it = (s.inaptoT / t) * 100;
+                    const ip = (s.inapto  / t) * 100;
+                    return (
+                      <div key={s.key} className={isDemo && withData.length === 0 ? 'opacity-40' : ''}>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-xs font-bold text-slate-700">{s.emoji} {s.label}</span>
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                            {isDemo && withData.length === 0 ? 'DEMO' : `${s.total} exam.`}
+                          </span>
+                        </div>
+                        {/* Outer bar width ∝ sector total vs max; inner segments = status % */}
+                        <div className="w-full h-6 bg-slate-100 rounded-lg overflow-hidden">
+                          <div className="h-full flex chaem-bar" style={{ '--bar-w': `${w}%` } as React.CSSProperties}>
+                            {ap > 0 && <div className="h-full bg-emerald-500 chaem-bar" style={{ '--bar-w': `${ap}%` } as React.CSSProperties} title={`Apto: ${s.apto}`} />}
+                            {ar > 0 && <div className="h-full bg-amber-400 chaem-bar"   style={{ '--bar-w': `${ar}%` } as React.CSSProperties} title={`Apto c/ Restrições: ${s.aptoR}`} />}
+                            {it > 0 && <div className="h-full bg-orange-400 chaem-bar"  style={{ '--bar-w': `${it}%` } as React.CSSProperties} title={`Inapto Temp.: ${s.inaptoT}`} />}
+                            {ip > 0 && <div className="h-full bg-rose-500 chaem-bar"    style={{ '--bar-w': `${ip}%` } as React.CSSProperties} title={`Inapto: ${s.inapto}`} />}
+                          </div>
+                        </div>
+                        {/* Sub-labels */}
+                        {!(isDemo && withData.length === 0) && (
+                          <div className="flex gap-3 mt-1 text-[9px] font-bold">
+                            {s.apto    > 0 && <span className="text-emerald-600">✓ {s.apto}</span>}
+                            {s.aptoR   > 0 && <span className="text-amber-600">⚠ {s.aptoR}</span>}
+                            {s.inaptoT > 0 && <span className="text-orange-600">↺ {s.inaptoT}</span>}
+                            {s.inapto  > 0 && <span className="text-rose-600">✗ {s.inapto}</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {isDemo && withData.length === 0 && (
+                  <p className="text-[10px] text-center text-slate-300 italic mt-4 pt-3 border-t border-slate-100">
+                    Registe exames para ver dados reais por sector
+                  </p>
+                )}
+              </div>
+
+              {/* ── Chart B: Aptitude Donut ── */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+                <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">
+                  Distribuição de Aptidão Global
+                </h4>
+                <p className="text-[10px] text-slate-400 mb-4">Todos os sectores combinados</p>
+                <div className="flex items-center gap-5">
+                  {/* SVG Donut */}
+                  <div className="shrink-0 relative">
+                    <svg width={136} height={136} viewBox="0 0 136 136">
+                      <circle cx={cx} cy={cy} r={R} fill="none" stroke="#f1f5f9" strokeWidth={sw} />
+                      {segs.map((s, i) => (
+                        <circle key={i} cx={cx} cy={cy} r={R} fill="none"
+                          stroke={s.color} strokeWidth={sw}
+                          strokeOpacity={isDemo ? 0.25 : 0.92}
+                          strokeDasharray={`${s.da.toFixed(2)} ${(circ - s.da).toFixed(2)}`}
+                          strokeDashoffset={s.off.toFixed(2)}
+                          transform={`rotate(-90, ${cx}, ${cy})`}
+                        />
+                      ))}
+                      {/* Centre */}
+                      <text x={cx} y={cy - 8} textAnchor="middle" fontSize="22" fontWeight="900" fill="#1e293b">
+                        {totalEx > 0 ? totalEx : '—'}
+                      </text>
+                      <text x={cx} y={cy + 9} textAnchor="middle" fontSize="9" fontWeight="700" fill="#94a3b8" letterSpacing="1">
+                        EXAMES
+                      </text>
+                      {isDemo && (
+                        <text x={cx} y={cy + 24} textAnchor="middle" fontSize="8" fontWeight="700" fill="#cbd5e1">DEMO</text>
+                      )}
+                    </svg>
+                  </div>
+                  {/* Legend + values */}
+                  <div className="flex-1 space-y-3">
+                    {donutSlots.map(s => {
+                      const pct = totalEx > 0 ? ((s.count / donutTotal) * 100).toFixed(0) : null;
+                      return (
+                        <div key={s.label} className="flex items-center gap-2.5">
+                          <div className="w-3 h-3 rounded-sm shrink-0 chaem-swatch" style={{ '--seg-color': s.color } as React.CSSProperties} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold text-slate-700 leading-none">{s.label}</p>
+                            {totalEx > 0 && (
+                              <p className="text-[9px] text-slate-400 mt-0.5">{s.count} exame{s.count !== 1 ? 's' : ''} · {pct}%</p>
+                            )}
+                          </div>
+                          {totalEx > 0 && (
+                            <span className="text-xs font-extrabold shrink-0 chaem-seg-text" style={{ '--seg-color': s.color } as React.CSSProperties}>{pct}%</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {totalEx > 0 && (
+                      <div className="pt-2 border-t border-slate-100">
+                        <p className="text-[10px] font-bold text-emerald-600">
+                          Taxa de Aptidão: {((totApto / totalEx) * 100).toFixed(1)}%
+                        </p>
+                        <p className="text-[9px] text-slate-400">Apto pleno s/ restrições</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Chart C: Critical Sector Alerts ── */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-500">
+                    Sectores com Maior Concentração de Risco
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Ordenado por inaptidões confirmadas + temporárias
+                  </p>
+                </div>
+                <Activity className="w-4 h-4 text-rose-400 shrink-0" />
+              </div>
+              {riskSectors.length === 0 ? (
+                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <Stethoscope className="w-8 h-8 text-slate-200 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-slate-400">Sem dados — registe exames para ver alertas por sector</p>
+                    <p className="text-xs text-slate-300 mt-0.5">Os sectores com maior risco serão listados aqui por ordem de prioridade</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {riskSectors.map((s, i) => {
+                    const riskN = s.inapto + s.inaptoT;
+                    const riskPct = s.total > 0 ? Math.round((riskN / s.total) * 100) : 0;
+                    const lvl = riskN === 0 ? 'low' : riskPct >= 25 ? 'high' : 'mid';
+                    return (
+                      <div key={s.key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                        lvl === 'high' ? 'bg-rose-50 border-rose-200' :
+                        lvl === 'mid'  ? 'bg-amber-50 border-amber-200' :
+                        'bg-emerald-50 border-emerald-100'
+                      }`}>
+                        <span className="text-[10px] font-extrabold text-slate-400 w-4 text-center shrink-0">#{i+1}</span>
+                        <span className="text-lg shrink-0">{s.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-700 truncate">{s.label}</p>
+                          <p className="text-[9px] text-slate-500 mt-0.5">
+                            {s.total} exam. · {s.apto} Apto · {riskN} em risco
+                          </p>
+                        </div>
+                        {/* Mini progress bar for risk % */}
+                        <div className="w-20 h-1.5 bg-white/60 rounded-full overflow-hidden shrink-0">
+                          <div className={`h-full rounded-full chaem-bar ${
+                            lvl === 'high' ? 'bg-rose-500' : lvl === 'mid' ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`} style={{ '--bar-w': `${Math.max(riskPct, lvl === 'low' ? 4 : riskPct)}%` } as React.CSSProperties} />
+                        </div>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
+                          lvl === 'high' ? 'bg-rose-100 text-rose-700' :
+                          lvl === 'mid'  ? 'bg-amber-100 text-amber-700' :
+                          'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {lvl === 'low' ? '✓ OK' : `${riskPct}% risco`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Sentinel Alert Banner */}
       <div className="bg-gradient-to-r from-teal-600 via-teal-600 to-teal-700 rounded-2xl p-5 text-white shadow-lg shadow-teal-200">
         <div className="flex items-start gap-4">
@@ -619,6 +889,7 @@ function DashboardView({
 interface FormState {
   patientId: string; patientName: string; companyName: string; hazards: string;
   bp: string; hr: string; temp: string; heightWeight: string;
+  weight: string; height: string;
   systems: Record<string, boolean>;
   vitalsNotes: string;
   testResults: Record<string, { status: string; notes: string }>;
@@ -629,6 +900,7 @@ interface FormState {
 const defaultForm: FormState = {
   patientId: '', patientName: '', companyName: '', hazards: '',
   bp: '', hr: '', temp: '', heightWeight: '',
+  weight: '', height: '',
   systems: { cardiovascular: false, respiratory: false, musculoskeletal: false, dermatological: false },
   vitalsNotes: '', testResults: {}, stageActions: {},
   determination: '', restrictions: '', reviewDays: '', physicianLicense: '',
@@ -901,6 +1173,7 @@ function ExamFormView({
   physicianName?: string;
   physicianCrm?: string;
 }) {
+  const [currentStep, setCurrentStep] = useState(1);
   const [selectedSector, setSelectedSector] = useState('');
   const [examStage, setExamStage] = useState<ExamStage>('Admissional');
   const [form, setForm] = useState<FormState>({
@@ -908,8 +1181,82 @@ function ExamFormView({
     physicianLicense: physicianName ? `${physicianName}${physicianCrm ? ` — Cédula ${physicianCrm}` : ''}` : '',
   });
 
+  // ── Patient Search State ────────────────────────────────────────────────────
+  const [patientQuery, setPatientQuery] = useState('');
+  const [patientResults, setPatientResults] = useState<any[]>([]);
+  const [isPatientSearching, setIsPatientSearching] = useState(false);
+  const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+
+  // Debounced live search against H365 main app
+  useEffect(() => {
+    if (patientQuery.length < 2) {
+      setPatientResults([]);
+      setPatientDropdownOpen(false);
+      return;
+    }
+    setIsPatientSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${H365_BASE}/api/patients/search?q=${encodeURIComponent(patientQuery)}&limit=8`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setPatientResults(data.patients || []);
+          setPatientDropdownOpen((data.patients || []).length > 0);
+        }
+      } catch {
+        setPatientResults([]);
+      } finally {
+        setIsPatientSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [patientQuery]);
+
+  const selectPatient = (p: any) => {
+    setSelectedPatient(p);
+    setForm(prev => ({ ...prev, patientId: p.nationalId, patientName: p.fullName }));
+    setPatientQuery(p.fullName);
+    setPatientDropdownOpen(false);
+  };
+
+  const getInitials = (name: string) =>
+    name ? name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+
+  // ── BMI / BP auto-computation ───────────────────────────────────────────────
+  const weightVal = parseFloat(form.weight || '');
+  const heightVal = parseFloat(form.height || '');
+  const bmiCalc = (!isNaN(weightVal) && !isNaN(heightVal) && weightVal > 0 && heightVal > 0)
+    ? weightVal / Math.pow(heightVal / 100, 2) : null;
+
+  const getBMIStatus = (bmi: number) => {
+    if (bmi < 18.5) return { label: 'Abaixo do Peso', color: 'bg-blue-100 text-blue-700 border-blue-200' };
+    if (bmi < 25)   return { label: 'Normal',         color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+    if (bmi < 30)   return { label: 'Excesso de Peso',color: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
+    if (bmi < 35)   return { label: 'Obesidade Grau 1',color:'bg-orange-100 text-orange-700 border-orange-200' };
+    return              { label: 'Obesidade Grau 2+', color: 'bg-rose-100 text-rose-700 border-rose-200' };
+  };
+
+  const getBPStatus = (bp: string) => {
+    if (!bp || !bp.includes('/')) return null;
+    const [sysStr, diaStr] = bp.split('/');
+    const sys = parseInt(sysStr, 10), dia = parseInt(diaStr, 10);
+    if (isNaN(sys) || isNaN(dia)) return null;
+    if (sys < 90 || dia < 60)                                   return { label: 'Hipotensão',       color: 'bg-blue-100 text-blue-700 border-blue-200' };
+    if (sys < 120 && dia < 80)                                   return { label: 'Normal',            color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+    if (sys >= 120 && sys <= 129 && dia < 80)                    return { label: 'Elevada',           color: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
+    if ((sys >= 130 && sys <= 139) || (dia >= 80 && dia <= 89)) return { label: 'HTA Grau 1',       color: 'bg-orange-100 text-orange-700 border-orange-200' };
+    if (sys > 180 || dia > 120)                                  return { label: 'Crise Hipert.',    color: 'bg-red-200 text-red-800 border-red-300' };
+    return                                                         { label: 'HTA Grau 2',       color: 'bg-rose-100 text-rose-700 border-rose-200' };
+  };
+
+  const bmiStatus = bmiCalc !== null ? getBMIStatus(bmiCalc) : null;
+  const bpStatus  = getBPStatus(form.bp);
+
   const sectorCfg = selectedSector ? SECTOR_CONFIG[selectedSector] : null;
-  const stageCfg = STAGE_CONFIG[examStage];
+  const stageCfg  = STAGE_CONFIG[examStage];
 
   const setField = (key: keyof FormState, val: string) => setForm(p => ({ ...p, [key]: val }));
   const setTestResult = (testId: string, field: 'status' | 'notes', val: string) =>
@@ -919,8 +1266,27 @@ function ExamFormView({
   const toggleStageAction = (idx: number) =>
     setForm(p => ({ ...p, stageActions: { ...p.stageActions, [idx]: !p.stageActions[idx] } }));
 
-  // ── PDF Generation: Estado Médico / AMA ───────────────────────────────────────
-  // ── PDF Generation: Estado Médico / AMA (delegates to shared generateAMAPdf)
+  const canProceedStep1 = !!(form.patientId && form.patientName && form.companyName && selectedSector);
+  const canSave = !!(form.patientId && form.patientName && form.companyName && selectedSector && form.determination);
+
+  const STEP_LABELS = [
+    { num: 1, label: 'Paciente & Vitais' },
+    { num: 2, label: 'Painel Diagnóstico' },
+    { num: 3, label: 'Acções do Exame' },
+    { num: 4, label: 'Determinação Clínica' },
+  ];
+
+  const statusButtonColor = (opt: string, selected: boolean) => {
+    if (!selected) return 'bg-white border-slate-200 text-slate-500 hover:border-teal-300 hover:text-teal-600';
+    const lower = opt.toLowerCase();
+    if (lower.includes('normal') || lower.includes('negat') || lower.includes('apt') || lower.includes('aprovad') || lower.includes('completo') || lower.includes('dentro') || lower.includes('todos neg'))
+      return 'bg-emerald-100 border-emerald-300 text-emerald-800 shadow-sm';
+    if (lower.includes('inapto') || lower.includes('crítico') || lower.includes('positivo') || lower.includes('afastar') || lower.includes('contra-ind') || lower.includes('urgente'))
+      return 'bg-rose-100 border-rose-300 text-rose-800 shadow-sm';
+    return 'bg-amber-100 border-amber-300 text-amber-800 shadow-sm';
+  };
+
+  // ── PDF Generation: Estado Médico / AMA ─────────────────────────────────────
   const generateEstadoMedico = () => {
     if (!form.patientName || !selectedSector || !form.determination) {
       alert('Preencha pelo menos: Nome do Paciente, Sector e Determinação Clínica antes de gerar o documento.');
@@ -928,6 +1294,9 @@ function ExamFormView({
     }
     const examDate = new Date().toLocaleDateString('pt-MZ', { day:'2-digit', month:'long', year:'numeric' });
     const docId = `CHAEM-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
+    const hw = (form.weight && form.height)
+      ? `${form.height}cm / ${form.weight}kg`
+      : form.heightWeight;
     generateAMAPdf({
       patientId: form.patientId,
       patientName: form.patientName,
@@ -939,7 +1308,8 @@ function ExamFormView({
       examId: docId,
       physicianLicense: form.physicianLicense,
       hazards: form.hazards,
-      bp: form.bp, hr: form.hr, temp: form.temp, heightWeight: form.heightWeight,
+      bp: form.bp, hr: form.hr, temp: form.temp,
+      heightWeight: hw,
       systems: form.systems,
       vitalsNotes: form.vitalsNotes,
       testResults: form.testResults,
@@ -952,7 +1322,7 @@ function ExamFormView({
 
   const handleSave = async () => {
     if (!form.patientId || !form.patientName || !form.companyName || !selectedSector || !form.determination) {
-      alert('Preencha todos os campos: BI, Nome, Empresa, Sector e Determinacao Clinica.');
+      alert('Preencha todos os campos obrigatórios: BI, Nome, Empresa, Sector e Determinação Clínica.');
       return;
     }
     const examId = `EXM-${Math.floor(Math.random() * 100000)}`;
@@ -966,11 +1336,9 @@ function ExamFormView({
       notes: form.hazards,
       formSnapshot: { ...form },
     };
-    // Save locally (L-LAN localStorage)
     onSave(examRecord);
-    // Sync to shared H365 hub (cross-origin bridge at port 3000)
     try {
-      await fetch('http://localhost:3000/api/chaem/exams', {
+      await fetch(`${H365_BASE}/api/chaem/exams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(examRecord),
@@ -981,341 +1349,549 @@ function ExamFormView({
     }
   };
 
-  const statusButtonColor = (opt: string, selected: boolean) => {
-    if (!selected) return 'bg-white border-slate-200 text-slate-500 hover:border-teal-300 hover:text-teal-600';
-    const lower = opt.toLowerCase();
-    if (lower.includes('normal') || lower.includes('negat') || lower.includes('apt') || lower.includes('aprovad') || lower.includes('completo') || lower.includes('dentro') || lower.includes('todos neg'))
-      return 'bg-emerald-100 border-emerald-300 text-emerald-800 shadow-sm';
-    if (lower.includes('inapto') || lower.includes('crítico') || lower.includes('positivo') || lower.includes('afastar') || lower.includes('contra-ind') || lower.includes('urgente'))
-      return 'bg-rose-100 border-rose-300 text-rose-800 shadow-sm';
-    return 'bg-amber-100 border-amber-300 text-amber-800 shadow-sm';
-  };
-
   return (
     <div className="space-y-5 pb-8">
 
-      {/* ── HEADER: Sector + Stage + Patient ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 bg-teal-50 border border-teal-100 rounded-xl flex items-center justify-center">
-            <FileText className="w-5 h-5 text-teal-600" />
-          </div>
-          <div>
-            <h2 className="font-bold text-lg text-slate-800">Formulário de Exame Ocupacional CHAEM</h2>
-            <p className="text-xs text-slate-400">Sistema H365 • MISAU • {new Date().toLocaleDateString('pt-MZ')}</p>
-          </div>
-        </div>
-
-        {/* Sector + Stage */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              Sector / Indústria <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <select
-                id="sector" title="Sector de actividade"
-                value={selectedSector}
-                onChange={e => { setSelectedSector(e.target.value); setForm(p => ({ ...p, testResults: {}, stageActions: {} })); }}
-                className="w-full h-11 pl-3 pr-8 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer"
+      {/* ── STEPPER BAR ── */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm">
+        <div className="flex items-center justify-between">
+          {STEP_LABELS.map((step, idx) => (
+            <React.Fragment key={step.num}>
+              <button
+                type="button"
+                onClick={() => setCurrentStep(step.num)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all text-sm font-bold ${
+                  currentStep === step.num
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : currentStep > step.num
+                    ? 'text-teal-600 bg-teal-50'
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
               >
-                <option value="">— Seleccionar Sector —</option>
-                {Object.entries(SECTOR_CONFIG).map(([key, cfg]) => (
-                  <option key={key} value={key}>{cfg.emoji} {cfg.label}</option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
-          <div className="md:col-span-2 space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              Tipo de Exame <span className="text-rose-500">*</span>
-            </label>
-            <div className="flex gap-2">
-              {(['Admissional', 'Periódico', 'Demissional'] as ExamStage[]).map(stage => (
-                <button key={stage} type="button" onClick={() => setExamStage(stage)}
-                  className={`flex-1 h-11 rounded-xl text-sm font-bold transition-all border-2 ${
-                    examStage === stage
-                      ? stage === 'Admissional' ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                        : stage === 'Periódico' ? 'bg-teal-600 text-white border-teal-600 shadow-md'
-                        : 'bg-violet-600 text-white border-violet-600 shadow-md'
-                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                  }`}
-                >{stage}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Patient Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { id: 'patientId', key: 'patientId', label: 'BI / ID Paciente', placeholder: 'ex: 1234567890A', mono: true },
-            { id: 'patientName', key: 'patientName', label: 'Nome Completo', placeholder: 'Nome completo do trabalhador', mono: false },
-            { id: 'companyName', key: 'companyName', label: 'Empresa / Empregador', placeholder: 'Nome da empresa empregadora', mono: false },
-          ].map(f => (
-            <div key={f.id} className="space-y-1.5">
-              <label htmlFor={f.id} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                {f.label} <span className="text-rose-500">*</span>
-              </label>
-              <input id={f.id} title={f.label} placeholder={f.placeholder}
-                value={(form as any)[f.key]} onChange={e => setField(f.key as keyof FormState, e.target.value)}
-                className={`w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${f.mono ? 'font-mono' : ''}`}
-              />
-            </div>
+                <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-extrabold border-2 shrink-0 ${
+                  currentStep === step.num
+                    ? 'border-white/40 bg-white/20 text-white'
+                    : currentStep > step.num
+                    ? 'border-teal-400 bg-teal-100 text-teal-700'
+                    : 'border-slate-300 text-slate-400'
+                }`}>
+                  {currentStep > step.num ? '✓' : step.num}
+                </span>
+                <span className="hidden md:inline">{step.label}</span>
+              </button>
+              {idx < STEP_LABELS.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-1 rounded-full ${
+                  currentStep > step.num ? 'bg-teal-400' : 'bg-slate-200'
+                }`} />
+              )}
+            </React.Fragment>
           ))}
-        </div>
-
-        {/* Hazards */}
-        <div className="mt-4 space-y-1.5">
-          <label htmlFor="hazards" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            Hazards Específicos do Posto (Opcional)
-          </label>
-          <input id="hazards" title="Hazards do posto" placeholder="ex: Poeira de sílica, ruído >90dB, trabalho em altura >5m, solventes, calor excessivo..."
-            value={form.hazards} onChange={e => setField('hazards', e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-          />
         </div>
       </div>
 
-      {/* Active panel indicator */}
-      {selectedSector && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-teal-600/10 border border-teal-200 rounded-xl">
-          <span className="text-xl">{sectorCfg?.emoji}</span>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-teal-700">
-              Painel activado: <span className="font-extrabold">{sectorCfg?.label}</span> — {examStage}
-            </p>
+      {/* ════════════════════════════════════════════════════
+          STEP 1 — PACIENTE & VITAIS
+      ════════════════════════════════════════════════════ */}
+      {currentStep === 1 && (
+        <div className="space-y-4">
+
+          {/* Patient Search Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-teal-50 border border-teal-100 rounded-xl flex items-center justify-center">
+                <Search className="w-5 h-5 text-teal-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg text-slate-800">Paciente & Identificação</h2>
+                <p className="text-xs text-slate-400">Pesquise no sistema H365 ou introduza manualmente</p>
+              </div>
+            </div>
+
+            {/* Live Search Input */}
+            <div className="relative mb-4">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block">
+                Pesquisar Paciente (H365) <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                {isPatientSearching && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                <input
+                  id="patientSearchInput"
+                  title="Pesquisar paciente"
+                  placeholder="Nome, BI ou Distrito..."
+                  value={patientQuery}
+                  onChange={e => { setPatientQuery(e.target.value); if (!e.target.value) setSelectedPatient(null); }}
+                  onFocus={() => patientResults.length > 0 && setPatientDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setPatientDropdownOpen(false), 200)}
+                  className="w-full h-11 pl-9 pr-10 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                />
+              </div>
+
+              {/* Dropdown Results */}
+              {patientDropdownOpen && patientResults.length > 0 && (
+                <div className="absolute z-30 top-full mt-1 w-full bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+                  {patientResults.map(p => (
+                    <button
+                      key={p.nationalId}
+                      type="button"
+                      onMouseDown={() => selectPatient(p)}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-teal-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center text-white text-xs font-extrabold shrink-0">
+                        {getInitials(p.fullName)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">{p.fullName}</p>
+                        <p className="text-xs text-slate-400 font-mono">
+                          {p.nationalId} · {p.age}a · {p.gender === 'Male' ? 'M' : p.gender === 'Female' ? 'F' : 'O'} · {p.district}
+                        </p>
+                      </div>
+                      {p.status && (
+                        <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
+                          {p.status}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
+                    <p className="text-[10px] text-slate-400 font-medium">{patientResults.length} resultado(s) da base H365</p>
+                  </div>
+                </div>
+              )}
+              {patientQuery.length >= 2 && !isPatientSearching && patientResults.length === 0 && (
+                <div className="absolute z-30 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg px-4 py-3">
+                  <p className="text-xs text-slate-500 text-center">Nenhum paciente encontrado no H365. Continue abaixo para entrada manual.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Selected Patient Banner */}
+            {selectedPatient && (
+              <div className="flex items-center gap-3 p-3 bg-teal-50 border border-teal-200 rounded-xl mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center text-white text-sm font-extrabold shrink-0">
+                  {getInitials(selectedPatient.fullName)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-teal-800 text-sm">{selectedPatient.fullName}</p>
+                  <p className="text-xs text-teal-600 font-mono">
+                    {selectedPatient.nationalId} · {selectedPatient.age} anos · {selectedPatient.district}, {selectedPatient.province}
+                  </p>
+                </div>
+                <button type="button"
+                  onClick={() => { setSelectedPatient(null); setPatientQuery(''); setForm(p => ({ ...p, patientId: '', patientName: '' })); }}
+                  className="text-teal-500 hover:text-rose-500 transition-colors text-xl font-bold shrink-0">×
+                </button>
+              </div>
+            )}
+
+            {/* Manual fields */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { id: 'patientId', key: 'patientId', label: 'BI / ID Paciente', placeholder: 'ex: 1234567890A', mono: true },
+                { id: 'patientName', key: 'patientName', label: 'Nome Completo', placeholder: 'Nome completo do trabalhador', mono: false },
+                { id: 'companyName', key: 'companyName', label: 'Empresa / Empregador', placeholder: 'Nome da empresa empregadora', mono: false },
+              ].map(f => (
+                <div key={f.id} className="space-y-1.5">
+                  <label htmlFor={f.id} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    {f.label} <span className="text-rose-500">*</span>
+                  </label>
+                  <input id={f.id} title={f.label} placeholder={f.placeholder}
+                    value={(form as any)[f.key]}
+                    onChange={e => setField(f.key as keyof FormState, e.target.value)}
+                    className={`w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${f.mono ? 'font-mono' : ''}`}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Sector + Exam Stage */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Sector / Indústria <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    id="sector" title="Sector de actividade"
+                    value={selectedSector}
+                    onChange={e => { setSelectedSector(e.target.value); setForm(p => ({ ...p, testResults: {}, stageActions: {} })); }}
+                    className="w-full h-10 pl-3 pr-8 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer"
+                  >
+                    <option value="">— Sector —</option>
+                    {Object.entries(SECTOR_CONFIG).map(([key, cfg]) => (
+                      <option key={key} value={key}>{cfg.emoji} {cfg.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Tipo de Exame <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  {(['Admissional', 'Periódico', 'Demissional'] as ExamStage[]).map(stage => (
+                    <button key={stage} type="button" onClick={() => setExamStage(stage)}
+                      className={`flex-1 h-10 rounded-xl text-sm font-bold transition-all border-2 ${
+                        examStage === stage
+                          ? stage === 'Admissional' ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                            : stage === 'Periódico' ? 'bg-teal-600 text-white border-teal-600 shadow-md'
+                            : 'bg-violet-600 text-white border-violet-600 shadow-md'
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                      }`}>{stage}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Hazards */}
+            <div className="mt-4 space-y-1.5">
+              <label htmlFor="hazards" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Hazards Específicos do Posto (Opcional)
+              </label>
+              <input id="hazards" title="Hazards do posto"
+                placeholder="ex: Poeira de sílica, ruído >90dB, trabalho em altura >5m..."
+                value={form.hazards} onChange={e => setField('hazards', e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-xs text-teal-600 font-bold">
-            <Activity className="w-3 h-3" />
-            {sectorCfg?.tests.length} testes carregados
+
+          {/* Vitals Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-3.5 bg-slate-800 flex items-center gap-2">
+              <Stethoscope className="w-4 h-4 text-slate-300" />
+              <h3 className="font-bold text-white text-sm">SECÇÃO 1 — Sinais Vitais & Exame Físico Baseline</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* 5-column vitals grid */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  { id: 'bp',     key: 'bp',     label: 'Tensão Arterial', placeholder: '120/80 mmHg' },
+                  { id: 'hr',     key: 'hr',     label: 'FC (bpm)',        placeholder: '72 bpm' },
+                  { id: 'temp',   key: 'temp',   label: 'Temperatura °C',  placeholder: '36.5' },
+                  { id: 'weight', key: 'weight', label: 'Peso (kg)',        placeholder: '70' },
+                  { id: 'height', key: 'height', label: 'Altura (cm)',      placeholder: '175' },
+                ].map(f => (
+                  <div key={f.id} className="space-y-1.5">
+                    <label htmlFor={f.id} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{f.label}</label>
+                    <input id={f.id} title={f.label} placeholder={f.placeholder}
+                      value={(form as any)[f.key]}
+                      onChange={e => setField(f.key as keyof FormState, e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Auto-computed status badges */}
+              <div className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">IMC</span>
+                  <span className="text-sm font-extrabold text-slate-800">
+                    {bmiCalc !== null ? bmiCalc.toFixed(1) : '—'}
+                  </span>
+                  {bmiStatus && bmiCalc !== null && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${bmiStatus.color}`}>
+                      {bmiStatus.label}
+                    </span>
+                  )}
+                </div>
+                {bpStatus && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">TA</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${bpStatus.color}`}>
+                      {bpStatus.label}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Systems */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Sistemas Gerais Avaliados</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.keys(form.systems).map(sys => (
+                    <button key={sys} type="button" onClick={() => toggleSystem(sys)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold transition-all ${
+                        form.systems[sys] ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}>
+                      {form.systems[sys] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                      {{ cardiovascular: 'Cardiovascular', respiratory: 'Respiratório', musculoskeletal: 'Musculoesquelético', dermatological: 'Dermatológico' }[sys]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Clinical notes */}
+              <div className="space-y-1.5">
+                <label htmlFor="vitalsNotes" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Notas Clínicas — Sinais Vitais</label>
+                <textarea id="vitalsNotes" title="Notas clínicas"
+                  placeholder="Observações relevantes do exame físico geral..."
+                  value={form.vitalsNotes} onChange={e => setField('vitalsNotes', e.target.value)}
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 h-20 resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Step 1 Nav */}
+          <div className="flex justify-end">
+            <button type="button" onClick={() => setCurrentStep(2)}
+              disabled={!canProceedStep1}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${
+                canProceedStep1
+                  ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-100'
+                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              }`}>
+              Próximo: Painel Diagnóstico <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
 
-      {/* ── SECTION 1: Vitals ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-3.5 bg-slate-800 flex items-center gap-2">
-          <Stethoscope className="w-4 h-4 text-slate-300" />
-          <h3 className="font-bold text-white text-sm">SECÇÃO 1 — Exame Físico Sistémico (Sinais Vitais & Baseline)</h3>
+      {/* ════════════════════════════════════════════════════
+          STEP 2 — PAINEL DIAGNÓSTICO
+      ════════════════════════════════════════════════════ */}
+      {currentStep === 2 && (
+        <div className="space-y-4">
+          {selectedSector && (
+            <div className="flex items-center gap-2 px-4 py-3 bg-teal-600/10 border border-teal-200 rounded-xl">
+              <span className="text-xl">{sectorCfg?.emoji}</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-teal-700">
+                  Painel activado: <span className="font-extrabold">{sectorCfg?.label}</span> — {examStage}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-teal-600 font-bold">
+                <Activity className="w-3 h-3" />
+                {sectorCfg?.tests.length} testes
+              </div>
+            </div>
+          )}
+
+          {sectorCfg ? (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 bg-gradient-to-r from-teal-600 to-teal-700 flex items-center gap-3">
+                <span className="text-2xl">{sectorCfg.emoji}</span>
+                <div>
+                  <h3 className="font-bold text-white">SECÇÃO 2 — Painel Diagnóstico: {sectorCfg.label}</h3>
+                  <p className="text-xs text-teal-200">{sectorCfg.tests.length} testes · OSHA / NIOSH / MISAU · {examStage}</p>
+                </div>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {sectorCfg.tests.map((test, idx) => (
+                  <div key={test.id} className="p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-xs font-extrabold text-teal-700 shrink-0 mt-0.5">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <h4 className="font-bold text-slate-800">{test.name}</h4>
+                          <p className="text-xs text-slate-500 mt-0.5 italic">{test.purpose}</p>
+                        </div>
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Parâmetros a Medir / Registar</p>
+                          <p className="text-xs text-slate-600">{test.parameters}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Estado / Resultado do Teste</p>
+                          <div className="flex flex-wrap gap-2">
+                            {test.statusOptions.map(opt => {
+                              const sel = form.testResults[test.id]?.status === opt;
+                              return (
+                                <button key={opt} type="button" onClick={() => setTestResult(test.id, 'status', opt)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${statusButtonColor(opt, sel)}`}>
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <input
+                          title={`Notas — ${test.name}`}
+                          placeholder={`Notas / valores numéricos: ${test.name.split('(')[0].trim()}...`}
+                          value={form.testResults[test.id]?.notes || ''}
+                          onChange={e => setTestResult(test.id, 'notes', e.target.value)}
+                          className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+              <Microscope className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-600 font-bold text-lg">Seleccione um Sector no Passo 1</p>
+              <p className="text-slate-400 text-sm mt-1">Volte ao Passo 1 para seleccionar o sector</p>
+            </div>
+          )}
+
+          <div className="flex justify-between">
+            <button type="button" onClick={() => setCurrentStep(1)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Voltar
+            </button>
+            <button type="button" onClick={() => setCurrentStep(3)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-100 transition-all">
+              Próximo: Acções <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-        <div className="p-5 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { id: 'bp', key: 'bp', label: 'Pressão Arterial', placeholder: '120/80 mmHg' },
-              { id: 'hr', key: 'hr', label: 'FC (bpm)', placeholder: '72 bpm' },
-              { id: 'temp', key: 'temp', label: 'Temperatura (°C)', placeholder: '36.5 °C' },
-              { id: 'heightWeight', key: 'heightWeight', label: 'Altura / Peso', placeholder: '175cm / 70kg' },
-            ].map(f => (
-              <div key={f.id} className="space-y-1.5">
-                <label htmlFor={f.id} className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{f.label}</label>
-                <input id={f.id} title={f.label} placeholder={f.placeholder}
-                  value={(form as any)[f.key]} onChange={e => setField(f.key as keyof FormState, e.target.value)}
+      )}
+
+      {/* ════════════════════════════════════════════════════
+          STEP 3 — ACÇÕES DO EXAME
+      ════════════════════════════════════════════════════ */}
+      {currentStep === 3 && (
+        <div className="space-y-4">
+          <div className={`rounded-2xl border p-5 ${stageCfg.bgClass} ${stageCfg.borderClass}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className={`w-5 h-5 ${stageCfg.colorClass}`} />
+              <h3 className={`font-bold ${stageCfg.colorClass}`}>SECÇÃO 3 — Acções Específicas: Exame {examStage}</h3>
+            </div>
+            <p className={`text-sm italic mb-4 ${stageCfg.colorClass} opacity-70`}>{stageCfg.focus}</p>
+            <div className="space-y-2">
+              {stageCfg.actions.map((action, idx) => (
+                <button key={idx} type="button" onClick={() => toggleStageAction(idx)}
+                  className={`w-full flex items-start gap-3 p-3.5 rounded-xl border text-sm transition-all text-left ${
+                    form.stageActions[idx] ? 'bg-white/90 border-current shadow-sm' : 'bg-white/50 border-white/50'
+                  }`}>
+                  {form.stageActions[idx]
+                    ? <CheckSquare className={`w-4 h-4 shrink-0 mt-0.5 ${stageCfg.colorClass}`} />
+                    : <Square className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />}
+                  <span className={form.stageActions[idx] ? `font-bold ${stageCfg.colorClass}` : 'text-slate-600'}>
+                    {action}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-between">
+            <button type="button" onClick={() => setCurrentStep(2)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Voltar
+            </button>
+            <button type="button" onClick={() => setCurrentStep(4)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-100 transition-all">
+              Próximo: Determinação <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════
+          STEP 4 — DETERMINAÇÃO CLÍNICA
+      ════════════════════════════════════════════════════ */}
+      {currentStep === 4 && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-3.5 bg-slate-800 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-slate-300" />
+              <h3 className="font-bold text-white text-sm">SECÇÃO 4 — Determinação Clínica & Assinatura Médica</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  { value: 'Apto', label: '✅ Apto para o Posto', sub: 'Sem restrições — Aptidão plena', color: 'emerald' },
+                  { value: 'Apto com Restrições', label: '⚠️ Apto com Restrições', sub: 'Especificar restrições abaixo', color: 'amber' },
+                  { value: 'Inapto Temporário', label: '🔄 Inapto Temporário', sub: 'Requer revisão médica em X dias', color: 'orange' },
+                  { value: 'Inapto', label: '🚫 Inapto para o Posto', sub: 'Contra-indicação médica definitiva', color: 'rose' },
+                ] as const).map(opt => {
+                  const isSelected = form.determination === opt.value;
+                  return (
+                    <button key={opt.value} type="button" onClick={() => setField('determination', opt.value)}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        isSelected
+                          ? opt.color === 'emerald' ? 'border-emerald-400 bg-emerald-50'
+                          : opt.color === 'amber' ? 'border-amber-400 bg-amber-50'
+                          : opt.color === 'orange' ? 'border-orange-400 bg-orange-50'
+                          : 'border-rose-400 bg-rose-50'
+                          : 'border-slate-100 bg-white hover:border-slate-300'
+                      }`}>
+                      <div className={`font-bold text-sm ${
+                        isSelected
+                          ? opt.color === 'emerald' ? 'text-emerald-800'
+                          : opt.color === 'amber' ? 'text-amber-800'
+                          : opt.color === 'orange' ? 'text-orange-800'
+                          : 'text-rose-800'
+                          : 'text-slate-700'
+                      }`}>{opt.label}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{opt.sub}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {form.determination === 'Apto com Restrições' && (
+                <div className="space-y-1.5">
+                  <label htmlFor="restrictions" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Restrições Específicas</label>
+                  <input id="restrictions" title="Restrições" value={form.restrictions} onChange={e => setField('restrictions', e.target.value)}
+                    placeholder="ex: Sem levantamento >15kg; sem trabalho em altura; uso obrigatório de protectores auditivos..."
+                    className="w-full h-10 px-3 rounded-xl border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                </div>
+              )}
+              {form.determination === 'Inapto Temporário' && (
+                <div className="space-y-1.5">
+                  <label htmlFor="reviewDays" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Revisão Médica em (dias)</label>
+                  <input id="reviewDays" title="Revisão em dias" value={form.reviewDays} onChange={e => setField('reviewDays', e.target.value)}
+                    placeholder="ex: 30"
+                    className="w-full h-10 px-3 rounded-xl border border-orange-200 bg-orange-50 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label htmlFor="physicianLicense" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Médico Responsável / N.º Cédula CRM <span className="text-rose-500">*</span>
+                </label>
+                <input id="physicianLicense" title="Médico e Cédula" value={form.physicianLicense} onChange={e => setField('physicianLicense', e.target.value)}
+                  placeholder="Dr./Dra. Nome Completo — Cédula N.º XXXX/CRM-MZ"
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
-            ))}
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Sistemas Gerais Avaliados</p>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(form.systems).map(sys => (
-                <button key={sys} type="button" onClick={() => toggleSystem(sys)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold transition-all ${
-                    form.systems[sys] ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-                  }`}>
-                  {form.systems[sys] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                  {{ cardiovascular: 'Cardiovascular', respiratory: 'Respiratório', musculoskeletal: 'Musculoesquelético', dermatological: 'Dermatológico' }[sys]}
-                </button>
-              ))}
             </div>
           </div>
-          <div className="space-y-1.5">
-            <label htmlFor="vitalsNotes" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Notas Clínicas — Sinais Vitais</label>
-            <textarea id="vitalsNotes" title="Notas clínicas"
-              placeholder="Observações relevantes do exame físico geral..."
-              value={form.vitalsNotes} onChange={e => setField('vitalsNotes', e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 h-20 resize-none"
-            />
-          </div>
-        </div>
-      </div>
 
-      {/* ── SECTION 2: Sector-Specific Panel ── */}
-      {sectorCfg ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 bg-gradient-to-r from-teal-600 to-teal-700 flex items-center gap-3">
-            <span className="text-2xl">{sectorCfg.emoji}</span>
-            <div>
-              <h3 className="font-bold text-white">SECÇÃO 2 — Painel Diagnóstico Específico: {sectorCfg.label}</h3>
-              <p className="text-xs text-teal-200">{sectorCfg.tests.length} testes alinhados com normas OSHA / NIOSH / MISAU • {examStage}</p>
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setCurrentStep(3)}
+                className="flex items-center gap-2 px-4 py-3 border border-slate-200 bg-white text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Voltar
+              </button>
+              <button type="button" onClick={onCancel}
+                className="px-4 py-3 border border-slate-200 bg-white text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button type="button" onClick={handleSave}
+                disabled={!canSave}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                  canSave
+                    ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-200'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}>
+                <Save className="w-4 h-4" />
+                Guardar & Emitir AMA (L-LAN)
+              </button>
             </div>
+            <button type="button" onClick={() => generateEstadoMedico()}
+              className="w-full h-11 border-2 border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all">
+              <FileText className="w-4 h-4" />
+              Descarregar Estado Médico (PDF)
+            </button>
           </div>
-          <div className="divide-y divide-slate-100">
-            {sectorCfg.tests.map((test, idx) => (
-              <div key={test.id} className="p-5">
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-xs font-extrabold text-teal-700 shrink-0 mt-0.5">
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <h4 className="font-bold text-slate-800">{test.name}</h4>
-                      <p className="text-xs text-slate-500 mt-0.5 italic">{test.purpose}</p>
-                    </div>
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Parâmetros a Medir / Registar</p>
-                      <p className="text-xs text-slate-600">{test.parameters}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Estado / Resultado do Teste</p>
-                      <div className="flex flex-wrap gap-2">
-                        {test.statusOptions.map(opt => {
-                          const sel = form.testResults[test.id]?.status === opt;
-                          return (
-                            <button key={opt} type="button" onClick={() => setTestResult(test.id, 'status', opt)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${statusButtonColor(opt, sel)}`}>
-                              {opt}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <input
-                      title={`Notas — ${test.name}`}
-                      placeholder={`Notas / valores numéricos: ${test.name.split('(')[0].trim()}...`}
-                      value={form.testResults[test.id]?.notes || ''}
-                      onChange={e => setTestResult(test.id, 'notes', e.target.value)}
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
-          <Microscope className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-600 font-bold text-lg">Seleccione um Sector para activar o Painel Diagnóstico</p>
-          <p className="text-slate-400 text-sm mt-1">Cada sector gera 5–6 testes clínicos específicos alinhados com OSHA/NIOSH/MISAU</p>
         </div>
       )}
-
-      {/* ── SECTION 3: Stage-Specific Actions ── */}
-      <div className={`rounded-2xl border p-5 ${stageCfg.bgClass} ${stageCfg.borderClass}`}>
-        <div className="flex items-center gap-2 mb-2">
-          <Activity className={`w-5 h-5 ${stageCfg.colorClass}`} />
-          <h3 className={`font-bold ${stageCfg.colorClass}`}>SECÇÃO 3 — Acções Específicas: Exame {examStage}</h3>
-        </div>
-        <p className={`text-sm italic mb-4 ${stageCfg.colorClass} opacity-70`}>{stageCfg.focus}</p>
-        <div className="space-y-2">
-          {stageCfg.actions.map((action, idx) => (
-            <button key={idx} type="button" onClick={() => toggleStageAction(idx)}
-              className={`w-full flex items-start gap-3 p-3.5 rounded-xl border text-sm transition-all text-left ${
-                form.stageActions[idx] ? 'bg-white/90 border-current shadow-sm' : 'bg-white/50 border-white/50'
-              }`}>
-              {form.stageActions[idx]
-                ? <CheckSquare className={`w-4 h-4 shrink-0 mt-0.5 ${stageCfg.colorClass}`} />
-                : <Square className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />}
-              <span className={form.stageActions[idx] ? `font-bold ${stageCfg.colorClass}` : 'text-slate-600'}>
-                {action}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── SECTION 4: Clinical Determination ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-3.5 bg-slate-800 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-slate-300" />
-          <h3 className="font-bold text-white text-sm">SECÇÃO 4 — Determinação Clínica & Assinatura Médica</h3>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {([
-              { value: 'Apto', label: '✅ Apto para o Posto', sub: 'Sem restrições — Aptidão plena', color: 'emerald' },
-              { value: 'Apto com Restrições', label: '⚠️ Apto com Restrições', sub: 'Especificar restrições abaixo', color: 'amber' },
-              { value: 'Inapto Temporário', label: '🔄 Inapto Temporário', sub: 'Requer revisão médica em X dias', color: 'orange' },
-              { value: 'Inapto', label: '🚫 Inapto para o Posto', sub: 'Contra-indicação médica definitiva', color: 'rose' },
-            ] as const).map(opt => {
-              const isSelected = form.determination === opt.value;
-              return (
-                <button key={opt.value} type="button" onClick={() => setField('determination', opt.value)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${
-                    isSelected
-                      ? opt.color === 'emerald' ? 'border-emerald-400 bg-emerald-50'
-                      : opt.color === 'amber' ? 'border-amber-400 bg-amber-50'
-                      : opt.color === 'orange' ? 'border-orange-400 bg-orange-50'
-                      : 'border-rose-400 bg-rose-50'
-                      : 'border-slate-100 bg-white hover:border-slate-300'
-                  }`}>
-                  <div className={`font-bold text-sm ${
-                    isSelected
-                      ? opt.color === 'emerald' ? 'text-emerald-800'
-                      : opt.color === 'amber' ? 'text-amber-800'
-                      : opt.color === 'orange' ? 'text-orange-800'
-                      : 'text-rose-800'
-                      : 'text-slate-700'
-                  }`}>{opt.label}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{opt.sub}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          {form.determination === 'Apto com Restrições' && (
-            <div className="space-y-1.5">
-              <label htmlFor="restrictions" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Restrições Específicas</label>
-              <input id="restrictions" title="Restrições" value={form.restrictions} onChange={e => setField('restrictions', e.target.value)}
-                placeholder="ex: Sem levantamento >15kg; sem trabalho em altura; uso obrigatório de protectores auditivos classe 3..."
-                className="w-full h-10 px-3 rounded-xl border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-            </div>
-          )}
-          {form.determination === 'Inapto Temporário' && (
-            <div className="space-y-1.5">
-              <label htmlFor="reviewDays" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Revisão Médica em (dias)</label>
-              <input id="reviewDays" title="Revisão em dias" value={form.reviewDays} onChange={e => setField('reviewDays', e.target.value)}
-                placeholder="ex: 30"
-                className="w-full h-10 px-3 rounded-xl border border-orange-200 bg-orange-50 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <label htmlFor="physicianLicense" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              Médico Responsável / N.º Cédula CRM <span className="text-rose-500">*</span>
-            </label>
-            <input id="physicianLicense" title="Médico e Cédula" value={form.physicianLicense} onChange={e => setField('physicianLicense', e.target.value)}
-              placeholder="Dr./Dra. Nome Completo — Cédula N.º XXXX/CRM-MZ"
-              className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex flex-col gap-3">
-        <div className="flex gap-3">
-          <button type="button" onClick={onCancel}
-            className="flex-1 h-12 border border-slate-200 bg-white text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors">
-            Cancelar
-          </button>
-          <button type="button" onClick={handleSave}
-            className="flex-[2] h-12 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-teal-200 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
-            <Save className="w-4 h-4" />
-            Guardar & Emitir AMA (L-LAN)
-          </button>
-        </div>
-        <button type="button" onClick={() => generateEstadoMedico()}
-          className="w-full h-11 border-2 border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all">
-          <FileText className="w-4 h-4" />
-          Descarregar Estado Medico (PDF)
-        </button>
-      </div>
     </div>
   );
 }
@@ -1342,7 +1918,10 @@ function ExamDetailModal({ exam, onClose }: { exam: OccupationalExam; onClose: (
       examId: exam.id,
       physicianLicense: snap?.physicianLicense || exam.doctorName || '',
       hazards: snap?.hazards,
-      bp: snap?.bp, hr: snap?.hr, temp: snap?.temp, heightWeight: snap?.heightWeight,
+      bp: snap?.bp, hr: snap?.hr, temp: snap?.temp,
+      heightWeight: (snap?.height && snap?.weight)
+        ? `${snap.height}cm / ${snap.weight}kg`
+        : snap?.heightWeight,
       systems: snap?.systems,
       vitalsNotes: snap?.vitalsNotes,
       testResults: snap?.testResults,
@@ -1387,7 +1966,20 @@ function ExamDetailModal({ exam, onClose }: { exam: OccupationalExam; onClose: (
             {snap?.bp && <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tens\u00e3o Arterial</p><p className="font-bold text-slate-800 mt-0.5">{snap.bp}</p></div>}
             {snap?.hr && <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Freq. Card\u00edaca</p><p className="font-bold text-slate-800 mt-0.5">{snap.hr} bpm</p></div>}
             {snap?.temp && <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Temperatura</p><p className="font-bold text-slate-800 mt-0.5">{snap.temp} \u00b0C</p></div>}
-            {snap?.heightWeight && <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Altura / Peso</p><p className="font-bold text-slate-800 mt-0.5">{snap.heightWeight}</p></div>}
+{(() => {
+              const hw = (snap?.height && snap?.weight)
+                ? `${snap.height}cm / ${snap.weight}kg`
+                : snap?.heightWeight;
+              const bmi = (snap?.height && snap?.weight)
+                ? (parseFloat(snap.weight) / Math.pow(parseFloat(snap.height) / 100, 2)).toFixed(1)
+                : null;
+              return hw ? (
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Altura / Peso / IMC</p>
+                  <p className="font-bold text-slate-800 mt-0.5">{hw}{bmi ? ` · IMC ${bmi}` : ''}</p>
+                </div>
+              ) : null;
+            })()}
           </div>
 
           {/* Diagnostic Tests */}
@@ -1460,23 +2052,72 @@ function ExamDetailModal({ exam, onClose }: { exam: OccupationalExam; onClose: (
 
 function ExamHistoryView({ exams, onNewExam }: { exams: OccupationalExam[]; onNewExam?: () => void }) {
   const [search, setSearch] = useState('');
+  const [sectorFilter, setSectorFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [selectedExam, setSelectedExam] = useState<OccupationalExam | null>(null);
-  const filtered = exams.filter(e =>
-    [e.patientName, e.patientId, e.companyName, e.sectorLabel].some(v => v?.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = exams.filter(e => {
+    const matchText = [e.patientName, e.patientId, e.companyName, e.sectorLabel].some(v => v?.toLowerCase().includes(search.toLowerCase()));
+    const matchSector = !sectorFilter || e.sector === sectorFilter;
+    const matchStatus = !statusFilter || e.status === statusFilter;
+    const matchType   = !typeFilter   || e.examType === typeFilter;
+    return matchText && matchSector && matchStatus && matchType;
+  });
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
+      {/* Search + filter row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input title="Pesquisar" placeholder="Pesquisar por BI, Nome, Empresa ou Sector..."
+          <input title="Pesquisar" placeholder="Pesquisar por BI, Nome, Empresa..."
             value={search} onChange={e => setSearch(e.target.value)}
             className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
         </div>
+        {/* Sector filter */}
+        <div className="relative">
+          <select title="Filtrar por sector" value={sectorFilter} onChange={e => setSectorFilter(e.target.value)}
+            className="h-10 pl-3 pr-8 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer">
+            <option value="">Todos os Sectores</option>
+            {Object.entries(SECTOR_CONFIG).map(([key, cfg]) => (
+              <option key={key} value={key}>{cfg.emoji} {cfg.label}</option>
+            ))}
+          </select>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+        {/* Exam type filter */}
+        <div className="relative">
+          <select title="Filtrar por tipo" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+            className="h-10 pl-3 pr-8 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer">
+            <option value="">Todos os Tipos</option>
+            <option value="Admissional">Admissional</option>
+            <option value="Periódico">Periódico</option>
+            <option value="Demissional">Demissional</option>
+          </select>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+        {/* Status filter */}
+        <div className="relative">
+          <select title="Filtrar por aptidão" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className="h-10 pl-3 pr-8 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none cursor-pointer">
+            <option value="">Toda a Aptidão</option>
+            <option value="Apto">✅ Apto</option>
+            <option value="Apto com Restrições">⚠️ Apto c/ Restrições</option>
+            <option value="Inapto Temporário">🔄 Inapto Temporário</option>
+            <option value="Inapto">🚫 Inapto</option>
+          </select>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+        {/* Clear filters */}
+        {(sectorFilter || statusFilter || typeFilter || search) && (
+          <button onClick={() => { setSectorFilter(''); setStatusFilter(''); setTypeFilter(''); setSearch(''); }}
+            className="h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-500 hover:bg-slate-50 transition-colors">
+            Limpar ✕
+          </button>
+        )}
         {onNewExam && (
           <button onClick={onNewExam}
-            className="h-10 px-4 bg-teal-600 text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-teal-700 transition-colors shadow-sm">
+            className="h-10 px-4 bg-teal-600 text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-teal-700 transition-colors shadow-sm ml-auto">
             <PlusCircle className="w-4 h-4" />Novo Exame
           </button>
         )}

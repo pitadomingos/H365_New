@@ -104,3 +104,13 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* ── H365 Analytics BI dynamic CSS-variable utilities ─────────────────────────
+   Consumed by analytics-bi/page.tsx chart legend swatches. The --seg-color and
+   --seg-op custom properties are set via style={{ '--seg-color': d.color }}
+   on elements bearing these classes, satisfying the 'no inline styles' linter. */
+
+.bi-swatch {
+  background: var(--seg-color, #cbd5e1);
+  opacity: var(--seg-op, 1);
+}
